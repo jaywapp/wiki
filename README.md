@@ -19,3 +19,4 @@
 - GitHub: [@jaywapp](https://github.com/jaywapp)
 - 프로젝트 목록: [Projects](https://github.com/jaywapp/Projects)
 - 블로그: [jaywapp.tistory.com](https://jaywapp.tistory.com/)
+- 위키: [wiki](https://github.com/jaywapp/wiki)
