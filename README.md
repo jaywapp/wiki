@@ -11,6 +11,10 @@
 - [git/monorepo-subtree.md](git/monorepo-subtree.md) — Git Subtree로 모노레포 구성하기
 - [tools/sentry-flutter-pii-masking.md](tools/sentry-flutter-pii-masking.md) — Sentry Flutter PII 마스킹: copyWith(user: null) 함정
 
+## 기획/설계
+
+- [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계 (서버리스 + AdSense/AdMob, 월 30~50만원 목표)
+
 ## 관련 링크
 
 - GitHub: [@jaywapp](https://github.com/jaywapp)
