@@ -36,6 +36,7 @@ tool-factory/
         ├── tsconfig.json
         ├── vite.config.ts
         ├── index.html            # SEO 메타 포함
+        ├── DESIGN.md             # 선택한 디자인 컨셉 (awesome-design-md에서 fetch)
         └── src/
             ├── main.tsx
             ├── App.tsx           # UI (입력 폼 + 결과 표)
@@ -46,9 +47,18 @@ tool-factory/
 ```
 
 **책임 분리:**
-- `packages/ui` — 모든 툴이 공유하는 시각 요소. 툴 로직을 모름.
+- `packages/ui` — 모든 툴이 공유하는 **구조** (광고 슬롯 배치, 페이지 골격). 시각 컨셉을 강제하지 않음.
+- `apps/*/DESIGN.md` — 툴별 **시각 컨셉**. [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md)의 73개 브랜드 디자인 시스템 중 선택해 fetch. AI가 UI 생성/수정 시 이 파일을 따른다.
 - `apps/*/src/lib/` — 계산 로직. React를 모름(순수 TypeScript). 테스트는 여기에 집중.
 - `apps/*/src/App.tsx` — lib 함수를 호출해 화면에 뿌리는 접착 코드.
+
+**디자인 컨셉 선택 흐름:** [getdesign.md](https://getdesign.md)에서 카탈로그를 둘러보고 → 툴 성격에 맞는 브랜드를 고른 뒤 → 아래 명령으로 raw 파일을 가져온다 (레포 구조: `design-md/<브랜드>/DESIGN.md`):
+
+```powershell
+curl.exe -o apps/<툴이름>/DESIGN.md https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<브랜드>/DESIGN.md
+```
+
+주의: 브랜드 분석 파일은 색·타이포·간격 등 **디자인 언어의 영감**으로만 사용한다. 로고·브랜드명·고유 일러스트를 모방하지 않는다.
 
 ---
 
@@ -406,7 +416,15 @@ export function App() {
 }
 ```
 
-- [ ] **Step 6: 설치 및 dev 서버 기동 확인**
+- [ ] **Step 6: 디자인 컨셉 fetch (stripe — 금융 툴에 적합)**
+
+```powershell
+curl.exe -o apps/loan-calculator/DESIGN.md https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/stripe/DESIGN.md
+```
+
+Expected: `apps/loan-calculator/DESIGN.md` 생성, 내용에 색상·타이포그래피 토큰 포함
+
+- [ ] **Step 7: 설치 및 dev 서버 기동 확인**
 
 ```powershell
 pnpm install
@@ -415,11 +433,11 @@ pnpm --filter loan-calculator dev
 
 Expected: `http://localhost:5173` 접속 시 제목·회색 AD 자리표시자 2개·"구현 예정" 표시. 확인 후 Ctrl+C로 종료.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```powershell
 git add apps/
-git commit -m "feat: scaffold loan-calculator app with shared layout"
+git commit -m "feat: scaffold loan-calculator app with shared layout and design concept"
 ```
 
 ---
@@ -648,26 +666,34 @@ export function App() {
 }
 ```
 
-- [ ] **Step 2: dev 서버에서 수동 확인**
+- [ ] **Step 2: DESIGN.md 컨셉 적용**
+
+`apps/loan-calculator/DESIGN.md`를 읽고, Step 1의 App.tsx Tailwind 클래스를 컨셉에 맞게 조정한다(색상 팔레트, 폰트 굵기, 버튼·카드 스타일, 모서리 곡률, 간격). 로직(`lib/loan.ts` 호출부)과 컴포넌트 구조는 변경하지 않는다 — className과 시각 요소만 수정.
+
+AI에게 맡길 경우 프롬프트:
+> apps/loan-calculator/DESIGN.md를 읽고, src/App.tsx의 Tailwind 클래스를 이 디자인 시스템의 색상·타이포그래피·컴포넌트 스타일에 맞게 수정해줘. 컴포넌트 구조와 로직은 그대로 두고 className만 바꿔. 브랜드명·로고는 사용하지 마.
+
+- [ ] **Step 3: dev 서버에서 수동 확인**
 
 Run: `pnpm --filter loan-calculator dev`
 확인 항목:
 1. 기본값(1억/5%/360개월)으로 원리금균등 월 상환액 536,822원이 표시됨
 2. 원금을 0으로 바꾸면 빨간 안내 문구 표시, 크래시 없음
 3. 광고 자리표시자 2개(상단/하단) 표시
+4. DESIGN.md 컨셉(색·타이포)이 반영된 모습
 
 확인 후 Ctrl+C로 종료.
 
-- [ ] **Step 3: 빌드 확인**
+- [ ] **Step 4: 빌드 확인**
 
 Run: `pnpm --filter loan-calculator build`
 Expected: `dist/` 생성, 에러 없음
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```powershell
 git add apps/loan-calculator/src/App.tsx
-git commit -m "feat: wire loan calculator UI to calculation logic"
+git commit -m "feat: wire loan calculator UI with stripe design concept"
 ```
 
 ---
@@ -703,9 +729,14 @@ pnpm build                            # 전체 빌드
 
 1. `apps/loan-calculator`를 복사해 `apps/<새이름>`으로 붙여넣기
 2. `package.json`의 `name`, `index.html`의 title/description 변경
-3. `src/lib/`에 계산 로직 + 테스트 작성 (TDD)
-4. `src/App.tsx`에서 UI 연결
-5. Vercel에서 새 프로젝트 생성 (아래 배포 설정 참고)
+3. **디자인 컨셉 선택** — [getdesign.md](https://getdesign.md)에서 툴 성격에 맞는 브랜드를 고르고:
+   ```bash
+   curl -o apps/<새이름>/DESIGN.md https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<브랜드>/DESIGN.md
+   ```
+   (브랜드 예: `stripe` 금융, `linear.app` 미니멀, `notion` 문서, `nintendo-2001` 플레이풀)
+4. `src/lib/`에 계산 로직 + 테스트 작성 (TDD)
+5. `src/App.tsx`에서 UI 연결 — AI에게 "DESIGN.md를 따라 스타일링해줘" 프롬프트
+6. Vercel에서 새 프로젝트 생성 (아래 배포 설정 참고)
 
 ## Vercel 배포 설정 (앱마다 1회)
 
