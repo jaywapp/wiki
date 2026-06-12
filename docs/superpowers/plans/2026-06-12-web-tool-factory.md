@@ -826,7 +826,33 @@ Expected: `https://github.com/jaywapp/tool-factory` 생성, main 브랜치 push 
 
 ---
 
+### Task 8: new-tool 스킬 작성 (1호기 완성 후)
+
+공장 워크플로우를 워크스페이스 스킬로 만들어 2호기부터 자동화한다.
+
+**Files:**
+- Create: `D:\workspace\.claude\skills\new-tool\SKILL.md`
+
+- [ ] **Step 1: superpowers:writing-skills 스킬을 사용해 작성**
+
+스킬 내용 요구사항:
+- 트리거: "/new-tool <툴 이름>" 또는 "새 툴 만들어줘"
+- ① 목표 설정: 핵심 기능 1개 + 광고 포인트 확정 (사용자에게 질문)
+- ② design.md 선정: 툴 성격 분류 → 컨셉 2~3개 제안 → 사용자 선택 → awesome-design-md에서 curl fetch
+- ③ 작업 시작: `apps/loan-calculator` 복사 → 메타 변경 → 계산 로직 TDD → App.tsx UI + DESIGN.md 스타일 → 빌드 확인 → 커밋 → Vercel 배포 안내
+- 1호기 실행에서 드러난 함정(빌드 에러, 설정 이슈)을 스킬 본문에 반영
+
+- [ ] **Step 2: 스킬 등록 확인**
+
+D:\workspace\CLAUDE.md의 스킬 표에 `new-tool` 행 추가
+
+- [ ] **Step 3: 검증**
+
+`/new-tool` 호출로 2호기 1개를 실제 생산해 절차가 막힘없이 도는지 확인
+
+---
+
 ## 이후 계획 (이 plan 범위 밖)
 
-- 툴 2~4호 추가 (월 2~4개 목표) — "새 툴 추가 절차"를 따라 반복
+- 툴 2~4호 추가 (월 2~4개 목표) — `/new-tool` 스킬로 반복
 - 2주 트래픽 모니터링 후 Flutter 포팅 후보 선별 → Phase 2 plan 별도 작성
