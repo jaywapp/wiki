@@ -725,18 +725,38 @@ pnpm --filter <앱이름> test           # 테스트
 pnpm build                            # 전체 빌드
 ```
 
-## 새 툴 추가 절차
+## 공장 워크플로우
+
+새 툴은 항상 3단계로 만든다: **목표 설정 → design.md 선정 → 작업 시작**
+
+### ① 목표 설정
+
+- 무엇을 만들지 한 문장으로 정의 (예: "전세 vs 월세 비교 계산기")
+- Google Trends / 네이버 검색량으로 수요 확인 (30분 이내)
+- 핵심 기능 1개 + 광고 포인트 위치 결정
+
+### ② design.md 선정
+
+[getdesign.md](https://getdesign.md)에서 툴 성격에 맞는 브랜드 컨셉을 고른다:
+
+| 툴 성격 | 컨셉 예시 |
+|---------|----------|
+| 금융 계산기 | `stripe`, `revolut`, `wise` |
+| 개발자 도구 | `linear.app`, `vercel`, `raycast` |
+| 문서/정보 | `notion`, `mintlify` |
+| 퀴즈/재미 | `nintendo-2001`, `spotify` |
+
+```bash
+curl -o apps/<새이름>/DESIGN.md https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<브랜드>/DESIGN.md
+```
+
+### ③ 작업 시작
 
 1. `apps/loan-calculator`를 복사해 `apps/<새이름>`으로 붙여넣기
 2. `package.json`의 `name`, `index.html`의 title/description 변경
-3. **디자인 컨셉 선택** — [getdesign.md](https://getdesign.md)에서 툴 성격에 맞는 브랜드를 고르고:
-   ```bash
-   curl -o apps/<새이름>/DESIGN.md https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<브랜드>/DESIGN.md
-   ```
-   (브랜드 예: `stripe` 금융, `linear.app` 미니멀, `notion` 문서, `nintendo-2001` 플레이풀)
-4. `src/lib/`에 계산 로직 + 테스트 작성 (TDD)
-5. `src/App.tsx`에서 UI 연결 — AI에게 "DESIGN.md를 따라 스타일링해줘" 프롬프트
-6. Vercel에서 새 프로젝트 생성 (아래 배포 설정 참고)
+3. `src/lib/`에 계산 로직 + 테스트 작성 (TDD)
+4. `src/App.tsx`에서 UI 연결 — AI에게 "DESIGN.md를 따라 스타일링해줘" 프롬프트
+5. Vercel에서 새 프로젝트 생성 (아래 배포 설정 참고)
 
 ## Vercel 배포 설정 (앱마다 1회)
 
