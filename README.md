@@ -10,6 +10,7 @@
 - [github/repo-structure.md](github/repo-structure.md) — GitHub 레포지토리 구조 및 역할
 - [git/monorepo-subtree.md](git/monorepo-subtree.md) — Git Subtree로 모노레포 구성하기
 - [tools/sentry-flutter-pii-masking.md](tools/sentry-flutter-pii-masking.md) — Sentry Flutter PII 마스킹: copyWith(user: null) 함정
+- [ai-workflow/token-optimization-claude-codex.md](ai-workflow/token-optimization-claude-codex.md) — Claude+Codex 토큰 최적화 워크플로우(원리·전략·오픈소스 도구·SOP)
 
 ## 기획/설계
 
