@@ -1,6 +1,6 @@
 {
   "name": "max",
-  "description": "심층형 - 최난도/정확성 우선, 장기 에이전트 작업",
+  "description": "Max - hardest/correctness-first, long-horizon agent work",
   "claudeSettings": {
     "model": "claude-opus-4-8"
   },
@@ -11,5 +11,5 @@
   "env": {},
   "compression": "headroom",
   "recommendedEffort": "xhigh-max",
-  "notes": "긴 세션 → compaction/context editing 적극 사용. tokscale 상시 모니터링. 대량 비실시간 작업은 Batch API(50%). 최난도엔 claude-fable-5 opt-in(고비용)."
+  "notes": "Long sessions -> use compaction/context editing. Monitor with tokscale. Batch API (50%) for bulk. claude-fable-5 opt-in for the hardest (costly)."
 }

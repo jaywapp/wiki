@@ -167,9 +167,9 @@ function Use-Profile($name) {
   Write-Host ""
   Show-Status
   Write-Host ""
-  Write-Host "  effort 권장 : $($profile.recommendedEffort)  (세션에서 /model 또는 effort 로 설정)" -ForegroundColor DarkGray
-  Write-Host "  메모        : $($profile.notes)" -ForegroundColor DarkGray
-  Write-Host "  ! 새 env 변수는 새 터미널/에이전트 재시작 후 적용됩니다." -ForegroundColor Yellow
+  Write-Host "  effort hint : $($profile.recommendedEffort)  (set via /model or effort in-session)" -ForegroundColor DarkGray
+  Write-Host "  notes       : $($profile.notes)" -ForegroundColor DarkGray
+  Write-Host "  ! New env vars apply after a fresh terminal/agent restart." -ForegroundColor Yellow
 }
 
 switch ($Command.ToLower()) {

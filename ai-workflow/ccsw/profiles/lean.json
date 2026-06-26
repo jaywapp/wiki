@@ -1,6 +1,6 @@
 {
   "name": "lean",
-  "description": "절약형 - 일상/단순 작업, 최소 토큰 (입력 누적·출력 verbosity 억제 중심)",
+  "description": "Lean - daily/simple tasks, minimal tokens",
   "claudeSettings": {
     "model": "claude-sonnet-4-6"
   },
@@ -11,5 +11,5 @@
   "env": {},
   "compression": "rtk",
   "recommendedEffort": "low-medium",
-  "notes": "탐색 서브에이전트는 Haiku. 작업당 세션 분리 엄격(/clear). CLAUDE.md에 terse 출력 규칙 적용. 캐시 5분 TTL 가정."
+  "notes": "Use Haiku for explore subagents. Strict per-task session isolation (/clear). Apply terse output rules in CLAUDE.md. Assume 5-min cache TTL."
 }

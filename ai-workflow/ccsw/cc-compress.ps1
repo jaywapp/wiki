@@ -51,6 +51,27 @@ function Invoke-RtkOff {
   Write-Host "RTK hook removed. Restart Claude Code to apply." -ForegroundColor Green
 }
 
+function Invoke-RtkInstall {
+  if (Test-RtkInstalled) { Write-Host "RTK already installed: $(rtk --version)" -ForegroundColor Green; return }
+  if (Get-Command cargo -ErrorAction SilentlyContinue) {
+    Write-Host "Installing RTK via cargo (this may take a few minutes)..."
+    cargo install --git https://github.com/rtk-ai/rtk
+    if (Test-RtkInstalled) { Write-Host "RTK installed. Run: cc-compress rtk on" -ForegroundColor Green }
+  } else {
+    Write-Host "cargo not found. Opening the RTK releases page..." -ForegroundColor Yellow
+    Start-Process "https://github.com/rtk-ai/rtk/releases"
+    Write-Host "  Download the Windows binary, add it to PATH, then: cc-compress rtk on" -ForegroundColor DarkGray
+    Write-Host "  (auto-rewrite hook needs WSL on Windows)" -ForegroundColor DarkGray
+  }
+}
+
+function Invoke-HeadroomInstall {
+  Write-Host "Opening the Headroom download page..."
+  Start-Process "https://extraheadroom.com/"
+  Write-Host "  Headroom is macOS-centric; verify Windows availability before installing." -ForegroundColor DarkGray
+  Write-Host "  After install, set `$env:HEADROOM_PATH (Windows) then: cc-compress headroom start" -ForegroundColor DarkGray
+}
+
 function Invoke-HeadroomStart {
   $p = Get-HeadroomProc
   if ($p) { Write-Host "Headroom already running (pid $($p.Id))." -ForegroundColor Green; return }
@@ -92,18 +113,20 @@ switch ($Command.ToLower()) {
   "status"   { Show-Status }
   "rtk"      {
     switch ($Arg) {
-      "on"  { Invoke-RtkOn }
-      "off" { Invoke-RtkOff }
-      default { Write-Host "usage: cc-compress rtk on|off" }
+      "install" { Invoke-RtkInstall }
+      "on"      { Invoke-RtkOn }
+      "off"     { Invoke-RtkOff }
+      default   { Write-Host "usage: cc-compress rtk install|on|off" }
     }
   }
   "headroom" {
     switch ($Arg) {
-      "start" { Invoke-HeadroomStart }
-      "stop"  { Invoke-HeadroomStop }
-      default { Write-Host "usage: cc-compress headroom start|stop" }
+      "install" { Invoke-HeadroomInstall }
+      "start"   { Invoke-HeadroomStart }
+      "stop"    { Invoke-HeadroomStop }
+      default   { Write-Host "usage: cc-compress headroom install|start|stop" }
     }
   }
-  "help"     { Write-Host "Commands:`n  cc-compress status`n  cc-compress rtk on|off`n  cc-compress headroom start|stop" }
-  default    { Write-Host "Unknown command '$Command'. Try: status | rtk on|off | headroom start|stop | help" }
+  "help"     { Write-Host "Commands:`n  cc-compress status`n  cc-compress rtk install|on|off`n  cc-compress headroom install|start|stop" }
+  default    { Write-Host "Unknown command '$Command'. Try: status | rtk install|on|off | headroom install|start|stop | help" }
 }

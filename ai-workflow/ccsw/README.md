@@ -5,6 +5,28 @@
 
 ---
 
+## 0. GUI 런처 (ccsw-gui) — Claude/Codex 진입점 (권장)
+
+`ccsw-gui`는 **Claude/Codex를 쓰기 위해 가장 먼저 여는 진입 프로그램**이다. 추가 런타임 없이 Windows .NET의 WPF로 동작한다.
+
+**실행**: `ccsw-gui.cmd` 더블클릭 (또는 `powershell -STA -File ccsw-gui.ps1`).
+
+**탭 구성**
+- **Session** — 프로파일 선택 → 프로젝트 폴더 → 에이전트(Claude/Codex) → 터미널(External / VS Code) → **Launch session**.
+  - "Apply selected profile before launch" 체크 시: 실행 직전에 프로파일을 적용한 뒤 **새 프로세스로 에이전트를 띄운다.** 모델/압축이 파일 기반(`settings.json`·`config.toml`)이라 새로 뜬 에이전트가 갱신된 설정을 읽는다 → 앞서 논의한 "세션 내 reload" 문제를 **새 세션 실행으로 자연 해결**.
+- **Compression** — RTK/Headroom **설치(Install)**, **On/Off**, 상태 표시.
+- **Recommend** — 작업유형(일상/설계/최난도) · 동시세션(단일/다수) · VCS(git/perforce)를 고르면 **프로파일+압축 레이어를 추천**하고 `Apply recommended`로 즉시 적용.
+
+**VS Code 통합 터미널 실행**: 터미널을 "VS Code"로 선택하면, 프로젝트의 `.vscode/tasks.json`에 `folderOpen` 태스크를 써넣고 `code <folder>`로 연다 → 폴더가 열릴 때 **통합 터미널에서 agent가 자동 실행**된다.
+- 최초 1회 VS Code에서 **"Allow Automatic Tasks"** 허용 필요.
+- 기존 `tasks.json`은 `tasks.json.ccsw-bak`으로 백업.
+
+**플랫폼 주의**: RTK 자동 재작성 훅은 Windows에서 WSL 필요 / Headroom은 macOS 중심(로컬 프록시, Windows 지원은 확인).
+
+> GUI는 얇은 프런트엔드다 — 모든 동작은 `ccsw.ps1`/`cc-compress.ps1`을 호출하므로 CLI와 동작이 동일하다.
+
+---
+
 ## 1. 환경 구축안 (프리셋 3종)
 
 | 프로파일 | 대상 작업 | Claude 모델 | Codex effort | 압축 | 권장 effort |

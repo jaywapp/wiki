@@ -1,6 +1,6 @@
 {
   "name": "balanced",
-  "description": "균형형 - 기본 데일리 드라이버 (품질/비용 스위트스폿)",
+  "description": "Balanced - default daily driver (quality/cost sweet spot)",
   "claudeSettings": {
     "model": "claude-opus-4-8"
   },
@@ -11,5 +11,5 @@
   "env": {},
   "compression": "headroom",
   "recommendedEffort": "high",
-  "notes": "설계=Opus, 구현=Codex/Sonnet, 탐색=Haiku. Claude diff는 Codex가 교차 리뷰. 도구 전환은 작업 경계에서만."
+  "notes": "Design=Opus, implement=Codex/Sonnet, explore=Haiku. Cross-review Claude diffs with Codex. Switch tools only at task boundaries."
 }
