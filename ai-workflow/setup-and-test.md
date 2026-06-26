@@ -73,6 +73,8 @@ rtk gain             # 절감 통계 확인
 - [extraheadroom.com](https://extraheadroom.com/) 앱 설치 → 실행 → 최적화 활성화.
 - Claude Code + Codex 둘 다 로컬 프록시로 가역 압축. 내부에 RTK 번들 포함.
 
+> **Perforce(P4) 워크스페이스라면**: RTK는 git 중심이라 적합하지 않다. Headroom(옵션 B)을 쓰고, p4 전용 적응안은 [perforce-p4.md](perforce-p4.md) 참고.
+
 ---
 
 ## STEP 3 — ccsw 스위처 셋업
