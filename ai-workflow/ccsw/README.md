@@ -80,7 +80,6 @@ function ccsw { & "D:\workspace\repositories\wiki\ai-workflow\ccsw\ccsw.ps1" @ar
 
 ## 5. 향후 확장 아이디어
 
-- MCP 서버 세트 프로파일별 스위칭(`.mcp.json` 병합)
 - 프로파일별 `CLAUDE.md` 스니펫 자동 주입(terse 규칙 등)
 - 전환 시 `tokscale` 스냅샷 자동 기록으로 프로파일 간 비용 A/B
 - 독립 저장소로 분리 후 scoop/winget 패키징
