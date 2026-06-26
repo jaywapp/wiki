@@ -113,11 +113,11 @@ function Apply-Env($profile, $prev) {
 function Apply-Compression($profile, $prev) {
   $hasRtk = [bool](Get-Command rtk -ErrorAction SilentlyContinue)
   if ($prev -and $prev.compression -eq "rtk" -and $profile.compression -ne "rtk" -and $hasRtk) {
-    try { rtk uninstall 2>$null } catch {}
+    try { rtk init -g --uninstall 2>$null } catch {}
   }
   switch ($profile.compression) {
     "rtk" {
-      if ($hasRtk) { rtk install }
+      if ($hasRtk) { rtk init -g }   # installs the Claude Code bash hook (auto-rewrite needs WSL on Windows)
       else { Write-Host "  ! RTK not found on PATH. Install: https://github.com/rtk-ai/rtk" -ForegroundColor Yellow }
     }
     "headroom" {

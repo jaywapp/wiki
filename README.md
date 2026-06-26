@@ -12,6 +12,7 @@
 - [tools/sentry-flutter-pii-masking.md](tools/sentry-flutter-pii-masking.md) — Sentry Flutter PII 마스킹: copyWith(user: null) 함정
 - [ai-workflow/token-optimization-claude-codex.md](ai-workflow/token-optimization-claude-codex.md) — Claude+Codex 토큰 최적화 워크플로우(원리·전략·오픈소스 도구·SOP)
 - [ai-workflow/ccsw/](ai-workflow/ccsw/README.md) — ccsw: Claude+Codex 환경 프리셋(lean/balanced/max) 스위처 + 인프라 설계
+- [ai-workflow/setup-and-test.md](ai-workflow/setup-and-test.md) — 직접 구성 & A/B 테스트 가이드(측정→압축→ccsw→실측)
 
 ## 기획/설계
 

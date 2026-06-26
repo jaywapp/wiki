@@ -37,7 +37,7 @@ ccsw가 전환 시 자동으로 하는 일:
 1. `~/.claude/settings.json` 에 모델 등 설정 병합(기존 파일 `.ccsw-bak` 백업)
 2. `~/.codex/config.toml` 의 관리 키(model, reasoning effort) 갱신(다른 줄 보존, 백업)
 3. 프로파일 env 변수 User 스코프 설정(이전 프로파일 키는 정리)
-4. 압축 레이어 토글 — RTK는 `rtk install/uninstall` 호출, Headroom은 시작 안내
+4. 압축 레이어 토글 — RTK는 `rtk init -g` / `--uninstall` 호출, Headroom은 시작 안내 (RTK 자동 재작성은 Windows에서 WSL 필요)
 5. 활성 상태를 `~/.ccsw/active.json` 에 기록
 6. 권장 effort/메모 출력
 
