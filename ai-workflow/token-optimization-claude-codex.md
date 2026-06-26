@@ -261,6 +261,33 @@ LLM API는 **stateless**다. 매 턴마다 전체 대화 히스토리(시스템 
 
 ---
 
+## 8. 효율적 환경 구축안 + 스위처 (ccsw)
+
+위 전략을 실제로 굴리려면 "프로파일"로 묶어 한 번에 적용/전환하는 게 효율적이다. 권장 프리셋 3종:
+
+| 프로파일 | 대상 | Claude | Codex effort | 압축 | 권장 effort |
+|----------|------|--------|--------------|------|-------------|
+| **lean** | 일상·단순·반복 | Sonnet 4.6 (+탐색 Haiku) | low | RTK 훅 | low–medium |
+| **balanced** | 기본 데일리 | Opus 4.8(설계)/Codex·Sonnet(구현) | high | Headroom | high |
+| **max** | 최난도·장기 에이전트 | Opus 4.8(필요시 Fable 5) | high | Headroom | xhigh–max |
+
+**인프라 선택**: 어느 단일 기존 도구도 (Claude 모델 + Codex config + 압축 레이어)를 함께 토글하지 못한다.
+- Headroom 단독 → 압축·캐시 안정화만, 모델/Codex 라우팅 스위칭 불가
+- mise/direnv + dotfiles → env/버전 관리엔 좋지만 Claude/Codex/압축을 묶어주진 않음
+- **권장: `ccsw`(경량 스위처)로 오케스트레이션 + 압축은 RTK/Headroom에 위임**
+
+`ccsw` (레퍼런스 구현 포함, [ai-workflow/ccsw](ccsw/README.md))는 `ccsw use <profile>` 한 번에:
+모델 설정(`settings.json` 병합·백업) → Codex `config.toml` 관리 키 갱신 → env 변수 전환 → 압축 레이어 토글(RTK install/uninstall, Headroom 안내) → 활성 상태 기록.
+프로파일은 JSON으로 버전관리(`profiles/*.json`)되어 팀 표준화/A-B가 쉽다.
+
+```powershell
+ccsw list            # balanced, lean, max
+ccsw use balanced    # 한 번에 전환
+ccsw status          # 활성 프로파일 확인
+```
+
+---
+
 ## 참고 링크
 
 - [Headroom](https://extraheadroom.com/) / [headroom-desktop (MIT)](https://github.com/gglucass/headroom-desktop)
