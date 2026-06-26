@@ -78,7 +78,32 @@ function ccsw { & "D:\workspace\repositories\wiki\ai-workflow\ccsw\ccsw.ps1" @ar
 
 ---
 
-## 5. 향후 확장 아이디어
+## 5. 압축 레이어 런처 (cc-compress)
+
+`ccsw`가 프로파일 전환 시 압축을 토글한다면, `cc-compress.ps1`은 **압축 도구만 독립적으로 켜고 끄고 상태 확인**하는 런처다(아침에 Headroom 켜고 밤에 끄는 식).
+
+```powershell
+./cc-compress.ps1 status            # RTK 훅/Headroom 프로세스 상태
+./cc-compress.ps1 rtk on            # rtk init -g (Claude Code 훅 설치)
+./cc-compress.ps1 rtk off           # rtk init -g --uninstall
+./cc-compress.ps1 headroom start    # Headroom 앱 실행
+./cc-compress.ps1 headroom stop     # Headroom 종료
+```
+
+별칭 등록(선택):
+
+```powershell
+Add-Content $PROFILE 'function ccx { & "D:\workspace\repositories\wiki\ai-workflow\ccsw\cc-compress.ps1" @args }'
+```
+
+**플랫폼 주의**:
+- RTK 자동 재작성 훅은 **Windows에서 WSL 필요**(네이티브는 명시적 `rtk` 사용만).
+- **Headroom은 로컬 프록시**(원격 서버 아님 → 다중 세션이 중앙 서버에 부하를 주지 않음). 다만 macOS 중심 앱이라 **Windows 지원은 확인 필요**. Windows에서 경로 지정 실행은 `$env:HEADROOM_PATH` 설정 후 `headroom start`.
+- **성능·동시성**: Headroom은 단일 로컬 프록시 + ~2GB 런타임 상주(요청당 ~52ms). 세션을 **동시에 많이** 띄우면 로컬 CPU/메모리 경합 가능 → 그런 워크로드는 RTK(상주 프로세스 없음, <10ms)를 권장.
+
+---
+
+## 6. 향후 확장 아이디어
 
 - 프로파일별 `CLAUDE.md` 스니펫 자동 주입(terse 규칙 등)
 - 전환 시 `tokscale` 스냅샷 자동 기록으로 프로파일 간 비용 A/B

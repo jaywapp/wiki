@@ -155,6 +155,12 @@ LLM API는 **stateless**다. 매 턴마다 전체 대화 히스토리(시스템 
 - 명령어 출력 압축 + 비대한 config·미사용 skill·낡은 메모리·compaction 손실·모델 미스라우팅 등 "나머지 75%"를 함께 다룸.
 - 자동 압축, 체크포인트, 품질 스코어링, 대시보드. Claude Code/OpenCode/Codex/Copilot(beta) 지원.
 
+> **성능·동시성 주의 (RTK vs Headroom)**
+> - **Headroom은 로컬 프록시** — 원격/공유 서버가 아니다. 프롬프트는 기기 밖으로 나가지 않으며, "세션을 많이 써도 중앙 서버 부하"는 발생하지 않는다. 대신 **부하 대상은 본인 PC**다. 요청당 지연 중앙값 ~52ms, 단일 프록시 프로세스 + ~2GB 런타임이 상주하므로 **세션을 동시에 많이 띄우면 로컬 CPU/메모리 경합·병목**이 생길 수 있다(동시성 한계는 공식 미명시).
+> - **RTK는 PreToolUse 훅** — 상주 프로세스 없이 명령 1회 재작성(<10ms)이라 다중·동시 세션에 로컬 부담이 거의 없다.
+> - → **다중 동시 세션은 RTK, 강력 압축이 필요한 단일/소수 세션은 Headroom.** (프리셋: lean=RTK, balanced/max=Headroom 이 이 점과도 일치)
+> - RTK/Headroom을 켜고 끄고 상태 확인하는 런처: [ccsw/cc-compress.ps1](ccsw/README.md)
+
 ### 4.3 컨텍스트 정밀 선택
 
 **code-review-graph** — Tree-sitter로 레포를 AST 파싱, 리뷰/작업에 **실제로 필요한 최소 파일 집합**만 계산. MCP 설정. 주장: 코드리뷰 6.8배, 일상 작업 최대 49배 토큰 절감.
