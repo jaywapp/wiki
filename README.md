@@ -15,6 +15,7 @@
 - [ai-workflow/setup-and-test.md](ai-workflow/setup-and-test.md) — 직접 구성 & A/B 테스트 가이드(측정→압축→ccsw→실측)
 - [ai-workflow/perforce-p4.md](ai-workflow/perforce-p4.md) — Perforce(P4) 환경 토큰 최적화 적응안(git 미사용 환경)
 - [dotnet/wpf-drawingvisual-hittest-and-fts5-escape.md](dotnet/wpf-drawingvisual-hittest-and-fts5-escape.md) — WPF DrawingVisual 빈 공간 히트테스트 함정 · SQLite FTS5 검색어 escape · Undo와 FK cascade
+- [dotnet/csharp-from-variable-with-expression-parse-error.md](dotnet/csharp-from-variable-with-expression-parse-error.md) — `from` 변수명 + `with` 식이 LINQ 쿼리로 오파싱되는 함정과 연쇄 오류 판독법
 
 ## 기획/설계
 
