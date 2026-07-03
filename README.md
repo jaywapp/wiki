@@ -14,6 +14,7 @@
 - [ai-workflow/ccsw/](ai-workflow/ccsw/README.md) — ccsw: Claude+Codex 진입 런처(WPF GUI) + 프리셋 스위처 + RTK/Headroom 설치·토글·세션 실행·VS Code 연동
 - [ai-workflow/setup-and-test.md](ai-workflow/setup-and-test.md) — 직접 구성 & A/B 테스트 가이드(측정→압축→ccsw→실측)
 - [ai-workflow/perforce-p4.md](ai-workflow/perforce-p4.md) — Perforce(P4) 환경 토큰 최적화 적응안(git 미사용 환경)
+- [dotnet/wpf-drawingvisual-hittest-and-fts5-escape.md](dotnet/wpf-drawingvisual-hittest-and-fts5-escape.md) — WPF DrawingVisual 빈 공간 히트테스트 함정 · SQLite FTS5 검색어 escape · Undo와 FK cascade
 
 ## 기획/설계
 
