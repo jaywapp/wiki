@@ -18,6 +18,7 @@
 - [dotnet/csharp-from-variable-with-expression-parse-error.md](dotnet/csharp-from-variable-with-expression-parse-error.md) — `from` 변수명 + `with` 식이 LINQ 쿼리로 오파싱되는 함정과 연쇄 오류 판독법
 - [dotnet/wpf-implicit-usings-system-io.md](dotnet/wpf-implicit-usings-system-io.md) — UseWPF 프로젝트에서 ImplicitUsings의 System.IO가 제거되어 Path/File이 CS0103 나는 함정
 - [architecture/tokenless-feedback-vercel-proxy.md](architecture/tokenless-feedback-vercel-proxy.md) — 배포형 데스크톱 앱의 토큰 없는 피드백→GitHub 이슈 (Vercel 서버리스 프록시 패턴)
+- [dotnet/dotnet-desktop-release-automation.md](dotnet/dotnet-desktop-release-automation.md) — .NET 데스크톱 앱: 버전 변경 감지 릴리스 자동화 + Inno Setup per-user 설치본 (GitHub Actions)
 
 ## 기획/설계
 
