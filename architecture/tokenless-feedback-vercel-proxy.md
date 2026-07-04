@@ -55,5 +55,29 @@
 
 - `GET → 405`, `빈 제목 POST → 400`은 이슈를 만들지 않고 함수 동작을 확인할 수 있다.
 - 실제 등록 테스트는 진짜 이슈를 만든다 — 앱의 피드백 창에서 1회 보내고 닫는 것이 가장 자연스럽다.
+- 위 두 프로브(405/400)는 GitHub `fetch`에 **도달하기 전**에 끝나므로, 헤더/토큰 관련
+  런타임 버그는 잡아내지 못한다. 성공 경로(실제 fetch)는 진짜 이슈 등록으로만 검증된다.
+
+## 함정: 토큰에 붙는 BOM → `fetch` 헤더 크래시 (500 FUNCTION_INVOCATION_FAILED)
+
+PowerShell에서 토큰을 `vercel env add`로 **파이프**하면 값 앞에 UTF-8 BOM(U+FEFF, 65279)이
+딸려 들어갈 수 있다. 이 값을 그대로 `Authorization: Bearer <token>` 헤더에 쓰면 Node의
+`fetch`가 던진다:
+
+```
+TypeError: Cannot convert argument to a ByteString because the character
+at index 7 has a value of 65279 which is greater than 255.
+```
+
+- index 7 = `"Bearer "` 바로 다음 = 토큰 첫 글자에 BOM.
+- **직통 경로에선 안 드러난다** — 로컬 `.env`/OS API는 BOM 없이 읽히기도 하고, .NET
+  HttpClient는 관대하다. 프록시(Node fetch)를 **처음 실제로 태울 때** 터지는 잠복 버그.
+- Vercel 로그로 원인 확정: `vercel logs <deployment-url> --json`의 message 필드.
+- **해결(방어)**: 서버에서 토큰을 `.trim()` — JS `trim`은 U+FEFF(BOM)와 공백을 함께
+  제거하므로 env를 어떻게 넣었든 안전해진다.
+  ```js
+  const token = process.env.WAM_GITHUB_TOKEN?.trim();
+  ```
+- 교훈: 파이프로 넣은 시크릿은 인코딩 아티팩트를 의심하고, 서버 쪽에서 정규화(trim)한다.
 
 적용: 2026-07-04, WAM (`github.com/jaywapp/wam`, Vercel 프로젝트 `wam-feedback`).
