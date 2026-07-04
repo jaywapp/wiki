@@ -19,6 +19,7 @@
 - [dotnet/wpf-implicit-usings-system-io.md](dotnet/wpf-implicit-usings-system-io.md) — UseWPF 프로젝트에서 ImplicitUsings의 System.IO가 제거되어 Path/File이 CS0103 나는 함정
 - [architecture/tokenless-feedback-vercel-proxy.md](architecture/tokenless-feedback-vercel-proxy.md) — 배포형 데스크톱 앱의 토큰 없는 피드백→GitHub 이슈 (Vercel 서버리스 프록시 패턴)
 - [dotnet/dotnet-desktop-release-automation.md](dotnet/dotnet-desktop-release-automation.md) — .NET 데스크톱 앱: 버전 변경 감지 릴리스 자동화 + Inno Setup per-user 설치본 (GitHub Actions)
+- [dotnet/dotnet-plugin-external-repos-alc.md](dotnet/dotnet-plugin-external-repos-alc.md) — 외부 레포 플러그인: 계약 NuGet + 공유 AssemblyLoadContext 타입 정체성 함정 + 스키마 설정
 
 ## 기획/설계
 
