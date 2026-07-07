@@ -20,6 +20,8 @@
 - [architecture/tokenless-feedback-vercel-proxy.md](architecture/tokenless-feedback-vercel-proxy.md) — 배포형 데스크톱 앱의 토큰 없는 피드백→GitHub 이슈 (Vercel 서버리스 프록시 패턴)
 - [dotnet/dotnet-desktop-release-automation.md](dotnet/dotnet-desktop-release-automation.md) — .NET 데스크톱 앱: 버전 변경 감지 릴리스 자동화 + Inno Setup per-user 설치본 (GitHub Actions)
 - [dotnet/dotnet-plugin-external-repos-alc.md](dotnet/dotnet-plugin-external-repos-alc.md) — 외부 레포 플러그인: 계약 NuGet + 공유 AssemblyLoadContext 타입 정체성 함정 + 스키마 설정
+- [ue5/ue5-build-farm.md](ue5/ue5-build-farm.md) — UE5 빌드 구성 키워드 분석 (Horde·HLOD·DCC Nightly·Zen Streaming·Shader Build·stat/telemetry)
+- [ue5/build-env/](ue5/build-env/README.md) — UE5 조직 빌드 환경 구축 가이드 (초보자용 10챕터: 인프라→Perforce→DDC→Horde→CI/CD→Zen Streaming→관측→로드맵)
 
 ## 기획/설계
 
