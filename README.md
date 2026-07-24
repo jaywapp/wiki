@@ -27,6 +27,14 @@
 - [ue5/ue5-build-farm.md](ue5/ue5-build-farm.md) — UE5 빌드 구성 키워드 분석 (Horde·HLOD·DCC Nightly·Zen Streaming·Shader Build·stat/telemetry)
 - [ue5/build-env/](ue5/build-env/README.md) — UE5 조직 빌드 환경 구축 가이드 (초보자용 10챕터: 인프라→Perforce→DDC→Horde→CI/CD→Zen Streaming→관측→로드맵)
 
+## 디자인 자료
+
+- [design/gaudi/brief.md](design/gaudi/brief.md) — GAUDI 사내 업무 허브 랜딩 페이지 디자인 브리프
+- [design/gaudi/copy.md](design/gaudi/copy.md) — GAUDI 사내 업무 허브의 화면 구조·카피·상태 문구 가이드
+- [design/gaudi/designs/cohere.md](design/gaudi/designs/cohere.md) — Cohere 웹 디자인 시스템 분석 및 구현 가이드
+- [design/gaudi/designs/kraken.md](design/gaudi/designs/kraken.md) — Kraken 웹 디자인 시스템 분석 및 구현 가이드
+- [design/gaudi/designs/stripe.md](design/gaudi/designs/stripe.md) — Stripe 웹 디자인 시스템 분석 및 구현 가이드
+
 ## 기획/설계
 
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계 (서버리스 + AdSense/AdMob, 월 30~50만원 목표)
