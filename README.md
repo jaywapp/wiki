@@ -13,6 +13,7 @@
 - [tools/npm-postinstall-prisma-vercel-trap.md](tools/npm-postinstall-prisma-vercel-trap.md) — 모노레포 postinstall의 npx prisma가 Vercel에서 v7을 받아와 깨지는 함정 (+ OAuth workflow scope push 거부)
 - [tools/headless-chrome-ui-testing.md](tools/headless-chrome-ui-testing.md) — 헤드리스 Chrome UI 검증: 최소 창 폭 500px 클램프 함정, iframe 하니스 패턴, PS5.1 gh CLI 멀티라인 함정
 - [tools/keyman-local-mcp-install.md](tools/keyman-local-mcp-install.md) — KeyMan 로컬 설치, Codex·Claude 전역 MCP 플러그인 등록, Windows 실행 파일명 충돌 주의사항
+- [teamcity/teamcity-perforce-workspace-optimization.md](teamcity/teamcity-perforce-workspace-optimization.md) — TeamCity + Perforce Persistent Workspace 최적화 설계 (TeamCity / TeamCitizen / perforce-syncer 책임 분리)
 - [ai-workflow/token-optimization-claude-codex.md](ai-workflow/token-optimization-claude-codex.md) — Claude+Codex 토큰 최적화 워크플로우(원리·전략·오픈소스 도구·SOP)
 - [ai-workflow/ccsw/](ai-workflow/ccsw/README.md) — ccsw: Claude+Codex 진입 런처(WPF GUI) + 프리셋 스위처 + RTK/Headroom 설치·토글·세션 실행·VS Code 연동
 - [ai-workflow/setup-and-test.md](ai-workflow/setup-and-test.md) — 직접 구성 & A/B 테스트 가이드(측정→압축→ccsw→실측)
@@ -26,7 +27,6 @@
 - [dotnet/dotnet-plugin-external-repos-alc.md](dotnet/dotnet-plugin-external-repos-alc.md) — 외부 레포 플러그인: 계약 NuGet + 공유 AssemblyLoadContext 타입 정체성 함정 + 스키마 설정
 - [ue5/ue5-build-farm.md](ue5/ue5-build-farm.md) — UE5 빌드 구성 키워드 분석 (Horde·HLOD·DCC Nightly·Zen Streaming·Shader Build·stat/telemetry)
 - [ue5/build-env/](ue5/build-env/README.md) — UE5 조직 빌드 환경 구축 가이드 (초보자용 10챕터: 인프라→Perforce→DDC→Horde→CI/CD→Zen Streaming→관측→로드맵)
-- [ue5/build-env/teamcity-perforce-workspace-optimization.md](ue5/build-env/teamcity-perforce-workspace-optimization.md) — TeamCity + Perforce Persistent Workspace 최적화 설계 (TeamCity / TeamCitizen / perforce-syncer 책임 분리)
 
 ## 디자인 자료
 
