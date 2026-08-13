@@ -26,6 +26,7 @@
 - [dotnet/dotnet-plugin-external-repos-alc.md](dotnet/dotnet-plugin-external-repos-alc.md) — 외부 레포 플러그인: 계약 NuGet + 공유 AssemblyLoadContext 타입 정체성 함정 + 스키마 설정
 - [ue5/ue5-build-farm.md](ue5/ue5-build-farm.md) — UE5 빌드 구성 키워드 분석 (Horde·HLOD·DCC Nightly·Zen Streaming·Shader Build·stat/telemetry)
 - [ue5/build-env/](ue5/build-env/README.md) — UE5 조직 빌드 환경 구축 가이드 (초보자용 10챕터: 인프라→Perforce→DDC→Horde→CI/CD→Zen Streaming→관측→로드맵)
+- [ue5/build-env/teamcity-perforce-workspace-optimization.md](ue5/build-env/teamcity-perforce-workspace-optimization.md) — TeamCity + Perforce Persistent Workspace 최적화 설계 (TeamCity / TeamCitizen / perforce-syncer 책임 분리)
 
 ## 디자인 자료
 
