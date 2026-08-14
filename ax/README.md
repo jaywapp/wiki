@@ -6,6 +6,7 @@ AI 코딩 에이전트(Claude Code, Codex 등)의 능력을 확장하는 Skill·
 
 - [agent-skills-tooling-overview.md](agent-skills-tooling-overview.md) — Agent Tooling Skills 비교 (agent-browser / find-skills / GSD Core / mcp-builder)
 - [design-skills-comparison.md](design-skills-comparison.md) — AI UI/UX 디자인 스킬 비교 (Taste / UI UX Pro Max / Impeccable)
+- [codeburn-vs-ccusage.md](codeburn-vs-ccusage.md) — AI 코딩 사용량 분석 도구 CodeBurn과 ccusage 비교
 
 ## 도구
 
