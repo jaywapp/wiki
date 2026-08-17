@@ -13,6 +13,7 @@
 - [tools/npm-postinstall-prisma-vercel-trap.md](tools/npm-postinstall-prisma-vercel-trap.md) — 모노레포 postinstall의 npx prisma가 Vercel에서 v7을 받아와 깨지는 함정 (+ OAuth workflow scope push 거부)
 - [tools/headless-chrome-ui-testing.md](tools/headless-chrome-ui-testing.md) — 헤드리스 Chrome UI 검증: 최소 창 폭 500px 클램프 함정, iframe 하니스 패턴, PS5.1 gh CLI 멀티라인 함정
 - [tools/keyman-local-mcp-install.md](tools/keyman-local-mcp-install.md) — KeyMan 로컬 설치, Codex·Claude 전역 MCP 플러그인 등록, Windows 실행 파일명 충돌 주의사항
+- [nextjs/app-router-private-folder-and-auth-preview.md](nextjs/app-router-private-folder-and-auth-preview.md) — App Router에서 `_` 폴더가 라우팅 제외되는 함정 · 인증 뒤 컴포넌트 임시 프리뷰 검증 · FormData diff로 저장 페이로드 회귀 확인
 - [teamcity/teamcity-perforce-workspace-optimization.md](teamcity/teamcity-perforce-workspace-optimization.md) — TeamCity + Perforce Persistent Workspace 최적화 설계 (TeamCity / TeamCitizen / perforce-syncer 책임 분리)
 - [ai-workflow/token-optimization-claude-codex.md](ai-workflow/token-optimization-claude-codex.md) — Claude+Codex 토큰 최적화 워크플로우(원리·전략·오픈소스 도구·SOP)
 - [ai-workflow/ccsw/](ai-workflow/ccsw/README.md) — ccsw: Claude+Codex 진입 런처(WPF GUI) + 프리셋 스위처 + RTK/Headroom 설치·토글·세션 실행·VS Code 연동
