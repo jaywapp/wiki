@@ -11,6 +11,7 @@ AI 코딩 에이전트(Claude Code, Codex 등)의 능력을 확장하는 Skill·
 ## 도구
 
 - [CodeBurn](codeburn.md) — Claude Code·Codex·Cursor 등의 토큰, 비용, 모델 효율, 생산성을 로컬 세션 로그 기반으로 분석하는 도구
+- [Prime Agent](prime-agent.md) — RLM·Continual Harness·daemon session·subagent·scheduler·RPC를 결합한 장기 실행형 Agent Runtime
 
 ## 스킬별 문서
 
