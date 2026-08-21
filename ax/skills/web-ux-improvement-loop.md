@@ -18,11 +18,70 @@
 
 ## 핵심 플로우
 
+### 0. Auth Bootstrap
+
+점검 대상 페이지가 로그인을 요구하면 Audit 전에 인증 상태를 준비한다.
+
+권장 우선순위:
+
+1. 기존 Playwright MCP persistent profile 재사용
+2. 저장된 `storageState` 재사용
+3. 테스트 계정으로 자동 로그인
+4. SSO/MFA 등 자동화가 어려운 경우 최초 1회 수동 로그인 후 세션 저장
+
+Playwright는 쿠키와 localStorage 기반 인증 상태를 저장하고 이후 세션에서 복원할 수 있다. Playwright MCP의 기본 persistent profile을 사용할 경우 프로젝트별 브라우저 프로필에 로그인 상태와 쿠키가 유지될 수 있다.
+
+예시 운영 구조:
+
+```text
+/web-ux-improve http://localhost:3000
+        │
+        ▼
+Auth required?
+   ├─ No → Inspect
+   └─ Yes
+       ├─ Valid saved session → Restore
+       ├─ Test credentials available → Login automatically
+       └─ SSO/MFA/manual auth → User logs in once → Save session
+        │
+        ▼
+Inspect → Audit → Collect → Improve → Verify
+```
+
+### 인증 정보 보안 원칙
+
+- 비밀번호를 `SKILL.md`, 프롬프트, 소스코드에 직접 기록하지 않는다.
+- 계정 정보가 필요한 경우 환경변수 또는 별도 secret store를 사용한다.
+- `playwright/.auth/`, `auth-state.json` 등 인증 상태 파일은 Git에 커밋하지 않는다.
+- 인증 상태 파일에는 실제 세션 쿠키/헤더가 포함될 수 있으므로 비밀정보로 취급한다.
+- 가능하면 운영 계정 대신 UX/UI 점검용 테스트 계정을 사용한다.
+- 데이터 생성/삭제 권한이 큰 관리자 계정 사용은 피한다.
+
+### SSO / MFA 처리
+
+사내 SSO, Microsoft/Google OAuth, OTP, MFA 등은 매번 완전 자동화하지 않는 편이 안전하다.
+
+권장 방식은 최초 실행 때 사용자가 브라우저에서 직접 인증하고, 인증 완료 후 Playwright가 해당 로그인 상태를 저장하여 이후 점검에서 재사용하는 방식이다. 세션이 만료되면 다시 인증을 수행한다.
+
+### 권한별 UI 점검
+
+역할별 UI가 다르면 인증 상태를 분리해서 관리할 수 있다.
+
+```text
+playwright/.auth/
+├─ user.json
+├─ manager.json
+└─ admin.json
+```
+
+각 역할에 대해 동일한 점검 루프를 수행해 권한별 네비게이션, 버튼 노출, 접근 제어, 빈 상태 등을 검증한다.
+
 ### 1. Inspect
 
 - 프로젝트 구조와 UI 프레임워크 파악
 - 실행 방법, 주요 라우트, 핵심 사용자 플로우 식별
 - 기존 디자인 시스템/토큰/컴포넌트 규칙 확인
+- 인증이 필요한 route와 역할별 접근 범위 확인
 
 ### 2. Audit
 
@@ -40,6 +99,8 @@ Impeccable 및 브라우저 도구를 사용해 다음을 점검한다.
 - loading / empty / error 상태
 - text overflow / i18n edge case
 - navigation 및 사용자 플로우
+- login/logout/session-expired UX
+- 권한 부족/접근 거부 UX
 - console error
 - network failure
 - 주요 performance 문제
@@ -68,10 +129,11 @@ Status: Open
 
 1. 기능 사용을 막는 문제
 2. 접근성/사용성 Critical, High
-3. 모바일/반응형 깨짐
-4. 주요 사용자 플로우 혼란
-5. 시각적 일관성
-6. polish 수준 개선
+3. 인증/권한/세션 관련 UX 문제
+4. 모바일/반응형 깨짐
+5. 주요 사용자 플로우 혼란
+6. 시각적 일관성
+7. polish 수준 개선
 
 ## 5. Improve
 
@@ -80,15 +142,17 @@ Status: Open
 - 관련 이슈를 작은 변경 단위로 묶어서 수정
 - UI UX Pro Max는 개선 패턴 결정에 사용
 - Taste/Impeccable polish는 시각 완성도 개선에 선택적으로 사용
+- 로그인 방식, 인증 정책, 권한 정책 자체는 UX 개선을 이유로 임의 변경하지 않는다.
 
 ## 6. Verify
 
-수정 후 반드시 동일한 경로를 다시 점검한다.
+수정 후 반드시 동일한 경로와 동일한 인증 역할에서 다시 점검한다.
 
 - 원래 재현 단계 실행
 - Playwright 사용자 플로우 재실행
 - desktop/mobile 확인
 - accessibility 재검사
+- login/logout/session-expired 상태 확인
 - console/network error 재확인
 - 해당 Issue를 Resolved / Remaining / Regression으로 분류
 
@@ -99,6 +163,8 @@ Status: Open
 ```text
 UX/UI Review Complete
 
+Roles inspected: user, manager
+Pages inspected: 14
 Found: 27
 Fixed: 21
 Remaining: 6
@@ -113,6 +179,8 @@ Regression: 0
 ## 권장 반복 루프
 
 ```text
+Auth Bootstrap
+  ↓
 Inspect
   ↓
 Audit
@@ -145,9 +213,10 @@ Remaining issues?
 /web-ux-improve http://localhost:3000
 /web-ux-improve --scope settings
 /web-ux-improve --audit-only
+/web-ux-improve --role admin
 ```
 
-기본 실행은 `점검 → 개선점 수집 → 수정 → 재검증 → 결과 보고`까지 수행한다.
+기본 실행은 `인증 준비 → 점검 → 개선점 수집 → 수정 → 재검증 → 결과 보고`까지 수행한다.
 
 ## 운영 원칙
 
@@ -157,6 +226,7 @@ Remaining issues?
 - 큰 구조 변경은 별도 개선 항목으로 분리한다.
 - 자동 수정이 위험한 경우에는 Issue만 기록하고 코드 수정은 보류한다.
 - 최종 보고에는 미해결 이슈와 수정 파일을 명확히 남긴다.
+- 인증 정보와 인증 상태 파일은 비밀정보로 취급한다.
 
 ## 관련 문서
 
