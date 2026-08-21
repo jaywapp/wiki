@@ -9,6 +9,32 @@
 
 ---
 
+## 2026-08-21
+
+> **2 commits · 핵심 문서 변경 2건**
+
+### 1. Claude Graph Engineering 개념과 실전 패턴 정리
+
+[`ax/claude-graph-engineering.md`](./ax/claude-graph-engineering.md)
+
+- Graph Engineering을 공식 제품명이 아니라, **작업을 DAG로 분해해 여러 전문 Agent를 노드 단위로 연결하는 멀티에이전트 설계 관점**으로 정의.
+- Prompt/Context/Loop Engineering과 구분해, 핵심 대상을 프롬프트가 아닌 **작업 토폴로지와 의존성 설계**로 설명.
+- Orchestrator-Workers, Evaluator-Optimizer와의 관계와 함께 Fan-out, Merge, Verifier, Gate 같은 핵심 구조를 정리.
+- `ayaangazali/graph-engineering`의 `/graph`, `/graph-plan`, `/graph-save`, persistent graph 명령과 대표 패턴을 소개.
+- 대규모 Repository Audit·Migration·Security Review·Deep Research처럼 병렬화와 독립 검증이 중요한 작업에 유리하지만, 작은 수정에는 Agent/토큰 오버헤드가 크다는 적용 기준을 제시.
+
+### 2. Superpowers 검증·체계적 디버깅 규율 정리
+
+[`ax/skills/superpowers-verification-and-systematic-debugging.md`](./ax/skills/superpowers-verification-and-systematic-debugging.md)
+
+- `verification-before-completion`의 핵심을 **Evidence before claims**로 정리하고, 완료 선언 전에 현재 시점의 테스트·빌드·재현 결과를 직접 확인하도록 규정.
+- `systematic-debugging`은 수정부터 시도하지 않고 **재현 → 증거 수집 → Root Cause 추적 → 단일 가설 검증 → 최소 수정** 순서로 진행하는 방식으로 정리.
+- 3회 이상 수정이 실패하면 추가 땜질보다 아키텍처 자체를 다시 의심하도록 하는 원칙을 포함.
+- 두 Skill을 `원인 규명 및 수정 → 실제 검증 → 완료 보고`의 연속된 품질 통제 흐름으로 연결해 설명.
+- Agent의 추측성 수정, Subagent 결과의 무검증 수용, 근거 없는 완료 보고를 줄이는 실무적 효과를 강조.
+
+---
+
 ## 2026-08-20
 
 > **7 commits · 핵심 문서 변경 5건 · 인덱스 갱신 2건**
