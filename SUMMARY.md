@@ -9,6 +9,30 @@
 
 ---
 
+## 2026-08-22
+
+> **3 commits · 핵심 문서 변경 2건**
+
+### 1. 웹 UX/UI 자동 점검 스택 정리
+
+[`ax/web-ui-ux-audit-stack.md`](./ax/web-ui-ux-audit-stack.md)
+
+- 단일 디자인 스킬보다 **Impeccable + Playwright MCP** 조합을 기본 스택으로 제안하고, 필요 시 Chrome DevTools MCP와 UI UX Pro Max를 보조 계층으로 추가하는 구조를 정리.
+- Impeccable은 접근성·반응형·성능·시각 품질 판단, Playwright MCP는 실제 브라우저 플로우·상태 전환 검증, DevTools MCP는 콘솔·네트워크·성능 진단 역할로 분리.
+- `앱 실행 → 주요 플로우 순회 → desktop/tablet/mobile 확인 → audit/critique → 런타임 진단 → 이슈 분류 → 수정 → 재검증`의 권장 자동 점검 흐름을 제시.
+
+### 2. Web UX Improvement Loop 스킬 설계 및 인증 처리 보강
+
+[`ax/skills/web-ux-improvement-loop.md`](./ax/skills/web-ux-improvement-loop.md)
+
+- 웹 프로젝트를 **Inspect → Audit → Collect → Prioritize → Improve → Verify → Report**로 반복하는 통합 스킬 구조를 추가하고, 발견 이슈를 Severity·Category·Evidence·Impact·Recommendation까지 포함한 표준 형식으로 관리하도록 설계.
+- 수정 후 동일한 사용자 플로우를 다시 실행하고 Resolved / Remaining / Regression으로 결과를 판정하는 재검증 원칙을 명시.
+- 후속 변경으로 로그인 필요 페이지를 위한 **Auth Bootstrap** 단계를 추가해 persistent profile, `storageState`, 테스트 계정, 최초 1회 수동 인증 순으로 세션 재사용 전략을 정리.
+- 인증 상태 파일과 쿠키를 비밀정보로 취급하고 Git에 커밋하지 않으며, SSO/MFA는 무리한 완전 자동화보다 최초 인증 후 세션 재사용을 권장.
+- 역할별 인증 상태를 분리해 user/manager/admin 등 권한별 UI와 login/logout/session-expired/접근 거부 UX까지 같은 루프로 검증하도록 확장.
+
+---
+
 ## 2026-08-21
 
 > **2 commits · 핵심 문서 변경 2건**
