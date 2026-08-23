@@ -1,267 +1,251 @@
 # Graft
 
-> 태그: `AI Agent`, `Coding Agent`, `Codebase Context`, `Knowledge Graph`, `Claude Code`, `Codex`, `MCP`, `Token Optimization`
+> 태그: `AI Agent`, `Coding Agent`, `Codebase Context`, `Knowledge Graph`, `Claude Code`, `Codex`, `MCP`, `Token Optimization`, `tree-sitter`
 
 ## 한줄 요약
 
-Graft는 코드베이스의 구조와 의미를 **로컬 그래프 형태의 Markdown 컨텍스트**로 미리 구축해 Claude Code, Codex, Cursor, Gemini 등의 코딩 에이전트가 매 작업마다 저장소를 처음부터 탐색하는 비용을 줄이는 도구다.
+Graft는 코드베이스의 구조·호출 관계·의미를 로컬 Context Graph로 만들어 Claude Code, Codex, Cursor, Gemini 같은 코딩 에이전트가 매 세션마다 저장소를 처음부터 재탐색하는 비용을 줄이는 오픈소스 도구다.
 
 ## 프로젝트 개요
 
 - 프로젝트: NanoNets/Graft
 - 패키지: `@nanonets/graft`
+- 현재 확인 버전: 0.8.2
 - 라이선스: MIT
 - 런타임: Node.js 20+
-- 주요 구현: TypeScript, tree-sitter
-- 지원 Agent: Claude Code, Codex/AGENTS 계열, Cursor, Gemini, Copilot, Kiro, Windsurf 등
-- 핵심 철학: 임베딩/Vector DB 기반 RAG 대신 사람이 읽을 수 있는 Markdown 파일 그래프를 에이전트의 코드베이스 메모리처럼 사용한다.
+- 구현: TypeScript + tree-sitter
+- 핵심 산출물: `graft/` 로컬 그래프 캐시와 `graft/.graph/wiring.json`
+- 통합 대상: Claude Code, Codex/AGENTS 계열, Cursor, Gemini, GitHub Copilot, Kiro, Windsurf 등
 
-Graft가 만드는 `graft/` 폴더는 Git에 커밋하는 지식 문서가 아니라 각 개발자가 로컬에서 재생성하는 캐시다. Agent 연결 설정(`.claude/`, `AGENTS.md`, MCP 설정 등)만 공유한다.
+핵심 포지션은 **Coding Agent용 Codebase Memory / Context Layer**다. 임베딩과 Vector DB를 중심으로 한 전통적인 Code RAG와 달리, 구조 그래프와 사람이 읽을 수 있는 Markdown 노드를 사용한다.
 
 ## 해결하려는 문제
 
-일반적인 Coding Agent는 새 작업을 받을 때마다 저장소를 다시 탐색한다.
+Coding Agent는 새 작업을 받을 때마다 `grep → file open → import/call 추적 → 관련 파일 재탐색`을 반복한다. 이전 세션에서 이미 파악한 코드 구조가 다음 세션에 충분히 재사용되지 않기 때문에 Tool Call, 입력 Token, 지연시간과 비용이 누적된다.
 
-1. grep/search로 관련 코드를 찾는다.
-2. 파일을 연다.
-3. import/call 관계를 추적한다.
-4. 다른 파일로 이동한다.
-5. 작업이 끝나면 이 탐색 결과 대부분이 세션과 함께 사라진다.
-
-즉 사람은 코드베이스에 한 번 온보딩하지만 Agent는 사실상 매 세션마다 다시 온보딩한다. 이 과정은 Tool Call, 입력 Token, 응답 시간과 비용을 지속적으로 소비한다.
-
-Graft는 코드베이스 이해 결과를 재사용 가능한 그래프로 만들어 이 반복 탐색 비용을 줄이려 한다.
+Graft는 저장소를 한 번 구조화해 이후 작업에서 재사용 가능한 그래프로 제공함으로써 에이전트의 반복적인 '코드베이스 재온보딩' 비용을 줄인다.
 
 ## 핵심 기능
 
-### 1. 코드베이스 Context Graph
+### 1. 구조 그래프 + 의미 그래프
 
-코드를 분석해 시스템, API, Symbol, Concept 간 관계를 그래프로 만든다. 단순 Symbol index가 아니라 각 영역이 무엇을 담당하고 다른 영역과 어떻게 연결되는지 자연어 설명을 포함한다.
+기본 `graft build`는 tree-sitter로 함수, 클래스, import, call edge 등을 분석해 per-symbol 구조 그래프를 만든다. 이 단계는 결정론적이며 LLM/API Key가 필요 없다.
 
-### 2. Markdown 기반 그래프
+선택적 `graft build --deep`은 LLM을 이용해 파일 요약, 개념 노드, symbol summary와 핵심 코드(crux)를 추가한다.
 
-별도의 Vector DB나 검색 서버 없이 연결된 Markdown 파일 집합을 사용한다. Agent는 일반 파일처럼 열고, grep하고, 링크를 따라 탐색할 수 있다.
+### 2. Markdown Context Graph
 
-### 3. Structural Build
+시스템·API·개념을 연결된 Markdown node로 표현한다. 각 node에는 Summary, Crux, Sources, typed links(`depends_on`, `part_of`, `uses`, `implements`, `produces`)와 사용자가 직접 적는 Notes가 들어갈 수 있다.
 
-`tree-sitter` 기반 구조 분석은 결정론적으로 동작하며 LLM 호출이 필요 없다. 따라서 기본 `build`, `check`, 탐색 기능은 API 비용 없이 수행 가능하다.
+### 3. 증분 갱신
 
-### 4. Deep Build
+분석 결과를 content hash로 캐시한다. 변경된 파일만 다시 처리하며, `ask`, `grep`, `callers`, `skeleton`, `map` 같은 retrieval 명령은 working tree 변경 여부를 먼저 확인해 구조 그래프를 갱신한다. 이 자동 refresh 자체는 LLM을 호출하지 않는다.
 
-개념 노드 및 Symbol 요약을 생성하는 Deep Pass에서는 LLM을 사용할 수 있다. OpenAI-compatible endpoint와 Anthropic wire format을 지원하며 OpenRouter, LiteLLM proxy, 로컬 모델 등으로 연결 가능하다.
+### 4. CLI 탐색
 
-### 5. 자동 Freshness 관리
+주요 명령은 다음과 같다.
 
-질의 전에 Working Tree와 그래프 상태를 갱신한다. 변경이 없을 때는 매우 가벼운 구조 검사만 수행하고, 변경된 코드가 있으면 그래프를 업데이트한다. `GRAFT_REFRESH=hash`를 사용하면 mtime/size 대신 파일 hash로 변경을 확인할 수도 있다.
+- `graft ask`: 질문과 관련된 node/code 탐색
+- `graft skeleton`: 함수 body 없이 파일 API surface 확인
+- `graft callers`: symbol의 caller/callee 및 transitive blast radius 추적
+- `graft grep`: symbol 문맥을 포함한 regex 검색
+- `graft map`: 저장소의 directory cluster, hub, hotspot 파악
+- `graft blast`: diff가 영향을 줄 수 있는 영역 분석
+- `graft check`: 코드와 graph의 drift 검사
+- `graft viz`: 그래프 시각화
 
-### 6. Coding Agent 통합
+### 5. MCP Server
 
-`graft init`이 Agent별 native instruction/configuration을 연결한다.
+`graft init`으로 MCP를 지원하는 Agent에 연결할 수 있다. 대표 도구는 `graft_find_code`, `graft_file_api`, `graft_trace_calls`, `graft_find_all`, `graft_repo_map`, `graft_check_freshness`다.
 
-- Claude Code: `.claude/` hook, skill, statusline 등 깊은 통합
-- Codex 계열: `AGENTS.md`, MCP/config/hook 연계
+### 6. Claude Code Deep Integration
+
+Claude Code에는 skill뿐 아니라 statusline, hook, prompt별 관련 node context, edit 후 blast-radius 경고, background graph sync가 연결된다. 기존 `CLAUDE.md`를 덮어쓰지 않고 Graft 소유 설정을 별도로 관리한다.
+
+### 7. 다양한 Agent 연결
+
+`graft init`은 Agent별 native instruction을 사용한다.
+
+- Codex/OpenCode 계열: `AGENTS.md`
+- Claude Code: `.claude/skills/graft/SKILL.md`
 - Cursor: `.cursor/rules/graft.mdc`
 - Gemini: `GEMINI.md`
-- GitHub Copilot: `.github/copilot-instructions.md`
-- Kiro/Windsurf 등도 전용 rule 파일 지원
+- Copilot: `.github/copilot-instructions.md`
+- Kiro/Windsurf 등: 전용 rule/steering 파일
 
-### 7. MCP / CLI 탐색
-
-Agent가 Graft graph를 직접 질의하거나 관련 코드/호출 관계/구조를 탐색할 수 있는 CLI와 MCP 인터페이스를 제공한다.
+Codex 선택 시 user-level `~/.codex/config.toml`, hook 설정도 구성할 수 있으므로 `graft init --dry-run`으로 변경 파일을 먼저 확인하는 것이 안전하다.
 
 ## 아키텍처
 
 ```text
 Source Repository
-      │
-      ▼
- tree-sitter parser
-      │
-      ├── Symbol / Structure 분석
-      │
-      ▼
- Structural Graph
-      │
-      ├── optional Deep Pass ──► LLM Provider
-      │                         (OpenAI/Anthropic/OpenRouter/
-      │                          LiteLLM/local model ...)
-      ▼
- Local graft/ Graph Cache
- (linked Markdown nodes)
-      │
-      ├── ask / grep / map / callers / skeleton
-      ├── MCP Server
-      └── Agent-specific integration
-              │
-              ├── Claude Code
-              ├── Codex
-              ├── Cursor
-              ├── Gemini
-              └── Copilot / Kiro / Windsurf
+   │
+   ├─ tree-sitter (Tier 1, deterministic, $0)
+   │      └─ symbols / imports / calls
+   │             └─ graft/.graph/wiring.json
+   │
+   └─ optional --deep
+          ├─ Pass 1: LLM file summaries
+          └─ Pass 2: concept grouping + typed links
+                    └─ graft/*.md
+                           │
+             ┌─────────────┼──────────────┐
+             ▼             ▼              ▼
+           CLI            MCP        Agent Hooks
+      ask/map/blast   find/trace...  Claude/Codex/...
 ```
 
-핵심은 **Code → AST/Structure → Semantic Context Graph → Agent Context** 파이프라인이다.
+구조 정보는 tree-sitter가 담당하고 의미 요약은 선택적으로 LLM이 담당하는 **Hybrid Code Graph** 구조다. `graft/`는 Git에 커밋하는 문서가 아니라 개발자별 재생성 가능한 로컬 캐시이며 Agent wiring만 저장소에서 공유한다.
 
-Graft는 소스 자체를 Vector DB에 embedding하는 전형적인 Code RAG와 달리, 코드 구조에서 의미 있는 노드를 추출하고 그 결과를 파일 기반 graph/cache로 제공한다.
+## 지원 언어
+
+Full-fidelity 계층은 TypeScript/JavaScript, Python, Go, Java를 지원한다. Broad tree-sitter 계층에는 Rust, C, C++, C#, Ruby, PHP, Kotlin, Scala, Swift, Elixir, Solidity, OCaml, Zig, Dart, Clojure 등이 포함된다.
+
+일부 언어는 `--lsp`를 통해 rust-analyzer, clangd, gopls, pyright, typescript-language-server 기반의 더 정밀한 call edge를 선택적으로 추가할 수 있다. 따라서 C++/C#도 분석 대상이지만 TS/Python/Go/Java와 동일한 정밀도라고 가정하면 안 된다.
 
 ## 장점
 
-### 반복 탐색 비용 감소
+### 반복 탐색과 Token 낭비 감소
 
-가장 큰 장점이다. Agent가 매 작업마다 동일한 디렉터리와 호출 관계를 다시 조사하지 않아도 된다.
+Graft가 공개한 162-run controlled benchmark에서는 Cold Claude Code 대비 Token 42%, Tool Call 46%, latency 60% 감소하면서 correctness는 93%로 동일했다. SWE-bench Verified 50개 instance 실험에서는 54%에서 66%로 해결률이 올라가고 Token 23%, Tool Call 25%, wall-clock 32% 감소했다고 보고한다.
 
-프로젝트가 공개한 controlled benchmark에서는 Cold Claude Code 대비 Graft 사용 시 평균적으로 Token 약 42%, Tool Call 약 46% 감소를 보고하고 있다. 시간 감소도 크게 측정됐다. 단, 이는 프로젝트 자체 benchmark이므로 모든 저장소에서 동일한 개선을 보장하는 수치는 아니다.
+다만 프로젝트 자체가 수행한 benchmark이므로 실제 사내 monorepo에서는 별도 A/B 검증이 필요하다.
 
-### Vector DB가 필요 없음
+### Vector DB/Embedding 인프라 불필요
 
-Embedding pipeline, Vector DB, indexing service 등을 별도로 운영할 필요가 없다. 파일 기반이라 디버깅과 관찰도 쉽다.
+별도 검색 서버나 Vector DB를 운영하지 않아도 된다. 결과가 파일과 JSON이므로 관찰·디버깅하기 쉽다.
 
-### Agent 독립적
+### 구조 정보와 의미 정보 분리
 
-Claude Code에 특히 깊게 통합되지만 Graft 자체는 특정 Agent에 종속되지 않는다. Codex, Cursor, Gemini 등 여러 Agent가 동일한 코드 이해 계층을 사용할 수 있다.
+LLM이 없어도 symbol/call graph를 만들 수 있고, 필요할 때만 Deep Build로 의미 정보를 추가한다. 비용과 정확성의 경계를 관리하기 좋다.
 
-### LLM Provider 독립적
+### Agent 독립성
 
-Deep summary를 생성할 때도 특정 모델에 고정되지 않는다. 저렴한 모델이나 로컬 LLM을 graph 생성에 사용하고 비싼 Coding Agent 모델은 실제 작업에 집중시키는 구조가 가능하다.
+Claude Code에 가장 깊게 통합되지만 Codex, Cursor, Gemini 등 여러 Agent가 같은 Codebase Context Layer를 사용할 수 있다.
 
-### Working Tree 반영
+### Working Tree 기준 Freshness
 
-Commit된 코드만 보는 정적 문서와 달리 uncommitted change까지 반영하도록 설계되어 실제 Agent 작업 중 Context stale 문제를 줄인다.
+commit 여부와 무관하게 현재 working-tree byte를 기준으로 변경을 감지하므로 Agent가 방금 수정한 코드도 구조 탐색에 반영할 수 있다.
 
-### 사람이 읽을 수 있음
+### Blast Radius 분석
 
-그래프가 Markdown 파일이기 때문에 Agent 전용 opaque index가 아니다. 개발자가 직접 내용을 확인하고 문제를 추적할 수 있다.
+단순 검색뿐 아니라 caller graph와 diff 기반 영향 범위를 Agent에게 제공한다는 점이 실무적으로 강하다. 대규모 수정에서 '한 파일만 고치고 sibling/consumer를 놓치는' 문제를 줄이는 방향이다.
 
-## 단점
+## 단점 및 한계
 
-### 초기 Build 비용
+### Deep Build의 비용과 hallucination 가능성
 
-대형 저장소에서는 최초 graph 생성 비용이 발생한다. Deep Build를 사용하면 LLM API 비용과 시간이 추가된다.
+자연어 Summary/Concept node는 LLM 생성물이므로 실제 코드 의미를 잘못 요약할 가능성이 있다. 구조 edge와 LLM summary의 신뢰도를 구분해야 한다.
 
-### 생성된 설명의 정확성
+### 언어별 분석 품질 차이
 
-Deep Pass에서 만들어지는 자연어 설명은 LLM이 생성하므로 실제 코드 의미를 완벽하게 보장하지 않는다. 구조 정보와 Semantic Summary를 구분해서 신뢰해야 한다.
+21개 언어를 지원하지만 full-fidelity와 broad-tier의 정밀도는 다르다. 특히 대규모 C++/C#/UE 프로젝트에서는 실제 call resolution 품질을 검증해야 한다.
 
-### 캐시가 개발자별 로컬 상태
+### 로컬 캐시 중심
 
-현재 `graft/`는 Git ignored local cache다. 팀 전체가 동일한 완성된 graph artifact를 공유하는 방식이 아니므로 각 개발 환경에서 build가 필요하다.
+`graft/`가 기본적으로 `.gitignore`되는 개발자별 cache이므로 완성된 semantic graph를 팀 전체가 Git artifact로 공유하는 구조는 아니다.
 
-### 언어 지원 범위
+### 기존 Agent 기능과 중복
 
-구조 분석 품질은 tree-sitter parser와 Graft의 언어별 처리 구현에 영향을 받는다. 지원되지 않거나 분석이 약한 언어/DSL에서는 효과가 감소할 수 있다.
+Agent 자체 code search, LSP, repo map, memory/context tool을 이미 사용하는 환경에서는 기능이 일부 겹친다. Graft가 추가한 context가 오히려 prompt를 불필요하게 키우는지도 측정해야 한다.
 
-### Agent 자체 Context 기능과 중복
+### 초기/Deep 분석 비용
 
-Claude Code/Codex 등의 자체 code search와 repo instruction, IDE index, 다른 memory/context tool을 이미 적극적으로 사용한다면 일부 기능이 겹친다.
+대형 repository에서 최초 Deep Build는 파일별 LLM 요약 때문에 시간과 API 비용이 발생한다. 증분 cache가 이를 줄이지만 최초 도입 비용은 존재한다.
 
-### 자체 Benchmark 해석 주의
+### Machine-wide 설정 주의
 
-README의 비용/Token/시간/정확도 개선치는 인상적이지만 Graft 프로젝트가 정의한 benchmark 환경의 결과다. 사내 대규모 monorepo나 C++/UE 환경에서는 별도 검증이 필요하다.
+Codex integration 일부는 `~/.codex/`를 수정할 수 있다. 여러 repository와 Agent 설정을 엄격하게 분리하는 환경에서는 `--dry-run`, `--no-global`, `--no-mcp`, `--no-hooks` 옵션을 검토해야 한다.
 
 ## 기존 도구와 비교
 
-| 방식 | Context 생성 | 저장 | 검색/탐색 | 장점 | 약점 |
-|---|---|---|---|---|---|
-| Graft | AST + 구조 + LLM Summary | Markdown graph/cache | 파일/Graph/CLI/MCP | 투명하고 가벼움, Agent 독립적 | 초기 graph 생성, 언어 지원 영향 |
-| Vector RAG | Chunk + Embedding | Vector DB | Similarity Search | 대규모 Semantic Search | DB/Embedding 운영 필요, 구조 관계 약함 |
-| AGENTS.md / CLAUDE.md | 사람이 작성 | Git 파일 | Agent가 직접 읽음 | 정확한 규칙 전달 | 코드 변화에 자동 대응 어려움 |
-| Agent 기본 Code Search | 필요할 때 탐색 | 대부분 세션 Context | grep/search/open | 별도 설정 없음 | 매 세션 반복 탐색 비용 |
-| 전통적 Code Index/LSP | AST/Symbol | IDE Index | Symbol/Reference | 코드 탐색 정확도 | Agent에게 시스템 의미를 설명하지 못함 |
+| 방식 | 핵심 Context | 저장 | 강점 | 약점 |
+|---|---|---|---|---|
+| Graft | AST/call graph + 선택적 LLM 의미 요약 | 로컬 Markdown/JSON graph | 구조 관계, 투명성, 다중 Agent, 증분 갱신 | 언어별 품질 차이, Deep 비용 |
+| Vector Code RAG | chunk embedding | Vector DB | 대규모 semantic retrieval | 구조 관계/호출 관계가 약할 수 있음, 별도 인프라 |
+| AGENTS.md / CLAUDE.md | 사람이 작성한 규칙/지식 | Git | 정확한 정책 전달 | 코드 변화 자동 추적 어려움 |
+| Agent 기본 Search | 실시간 grep/open | session context | 설정 불필요 | 세션마다 반복 탐색 |
+| LSP/IDE Index | symbol/reference/type | IDE index | 정밀한 코드 탐색 | 시스템의 의미/개념 설명 부족 |
+| Session Memory 도구 | 이전 작업/대화 요약 | 별도 memory | 작업 연속성 | repository 전체 구조 이해와는 다른 문제 |
 
-Graft의 포지션은 **AGENTS.md 같은 정적 지침과 Code RAG 사이의 Codebase Memory Layer**로 보는 것이 가장 이해하기 쉽다.
+Graft는 **LSP/정적 분석과 Semantic Code RAG 사이**, 그리고 **AGENTS.md와 Agent session memory 아래쪽**에 위치하는 repository-memory 계층으로 보는 것이 적절하다.
 
 ## 활용 사례
 
-### 대규모 Legacy Repository
+- 대규모/Legacy repository에서 Coding Agent의 초기 탐색 단축
+- Claude Code와 Codex를 병행하는 Multi-Agent 개발
+- 버그 수정/리팩터링 시 caller와 blast radius 확인
+- 반복 작업에서 codebase onboarding token 절감
+- 신규 개발자와 Agent가 함께 사용하는 repository map
+- PR/CI에서 diff 영향 범위를 Markdown/JSON으로 산출
 
-오래된 프로젝트에서 신규 개발자나 Coding Agent가 구조를 파악하는 시간을 줄이는 용도로 적합하다.
+## 내가 활용할 수 있는 아이디어
 
-### Multi-Agent 개발
+### 1. Claude Code + Codex 공통 Context Layer PoC
 
-Claude Code와 Codex를 병행하는 환경에서 각 Agent가 매번 별도의 코드 탐색을 수행하는 대신 동일한 구조적 Context 계층을 활용할 수 있다.
-
-### 반복적인 유지보수
-
-버그 수정, 리팩터링, 기능 추가처럼 동일 코드 영역을 여러 세션에서 반복해서 다루는 환경일수록 효과가 커질 가능성이 높다.
-
-### Token 최적화
-
-고성능 모델에게 파일 탐색을 반복시키는 대신 저렴한 모델/로컬 모델로 Semantic Graph를 생성하고 실제 Coding Agent에는 필요한 Context만 전달하는 전략이 가능하다.
-
-## 활용 아이디어
-
-### 1. Claude Code + Codex 공통 Context Layer
-
-서로 다른 Coding Agent가 동일 저장소를 작업할 때 Graft를 공통 Codebase Context Layer로 두는 구성이 유용하다.
+동일 repository에서 두 Agent가 각자 전체 코드를 재탐색하지 않도록 Graft를 공통 구조 이해 계층으로 둔다.
 
 ```text
-             Graft Graph
-             /         \
-     Claude Code      Codex
-          │              │
-          └──── Repository
+              Graft
+           Code Graph
+          /          \
+ Claude Code        Codex
+      \              /
+          Repository
 ```
 
-Agent별 memory/context가 분리되는 문제를 완화할 수 있다.
+### 2. 실제 사내 저장소 A/B Test
 
-### 2. 사내 대형 프로젝트 Token 절감 PoC
+공개 benchmark 대신 실제 업무 repository에서 Cold Agent와 Graft Agent를 비교한다.
 
-실제 저장소에서 다음 두 그룹으로 A/B Test하는 것이 좋다.
+측정값은 Task당 input/cache token, tool-call 수, 최초 유효 수정까지 시간, 총 작업시간, 수정 파일 누락률, build/test 성공률, 리뷰 재작업 횟수가 적합하다.
 
-- Cold Agent
-- Agent + Graft
+### 3. C++/UE 프로젝트 적합성 검증
 
-측정 항목:
+C++은 broad-tier이며 clangd를 이용한 LSP edge를 추가할 수 있다. UE처럼 macro/reflection이 많은 코드에서는 작은 module을 골라 `graft build --lsp` 전후의 caller/blast 결과를 실제 IDE reference 결과와 비교하는 PoC가 필요하다.
 
-- Task당 Input Token
-- Tool Call 수
-- 최초 수정까지 걸린 시간
-- 전체 작업 시간
-- 수정 파일 정확도
-- Build/Test 성공률
-- 리뷰 수정 횟수
-
-특히 공개 benchmark 수치를 그대로 신뢰하기보다 실제 사내 저장소에서 효과를 측정하는 것이 중요하다.
-
-### 3. 저가 모델을 Context Builder로 사용
+### 4. Token 최적화 계층화
 
 ```text
-Local/cheap LLM
-      │
-      ▼
-Graft Deep Build
-      │
-      ▼
-Context Graph
-      │
-      ▼
-Expensive Coding Agent
+Cheap/local LLM → Graft Deep Build
+                      ↓
+               Repository Context
+                      ↓
+             Expensive Coding Agent
 ```
 
-코드 이해용 Semantic Summary는 저렴한 모델이 만들고 Claude/Codex 같은 상위 모델은 설계·수정·검증에 Token을 집중시키는 구조다.
+저가/로컬 모델은 장기 재사용되는 summary 생성에 사용하고, 상위 모델은 실제 설계·구현·검증에 집중시키는 방식이다.
 
-### 4. Agent Session 간 Codebase Memory
-
-Graft는 대화 자체의 기억보다는 **Repository에 대한 지속적인 구조 기억** 역할을 한다. Session memory 도구와 결합하면 다음처럼 계층화할 수 있다.
+### 5. Context 책임 분리
 
 ```text
-Repository Memory : Graft
-Task/Session Memory: Session handoff/memory tool
-Project Rules      : AGENTS.md / CLAUDE.md
-Agent Reasoning    : Claude Code / Codex
+Repository 구조/의미 : Graft
+Project 정책/규칙    : AGENTS.md / CLAUDE.md
+Task/Session 인계     : session memory/handoff
+실제 추론/수정        : Claude Code / Codex
 ```
 
-각 계층의 책임이 명확해진다는 장점이 있다.
+모든 기억을 하나의 거대한 instruction 파일에 넣기보다 책임을 분리할 수 있다.
 
-### 5. CI보다 개발자 로컬 Agent 환경에 우선 적용
+### 6. 변경 영향도 Review Gate
 
-현재 Graft graph가 재생성 가능한 local cache라는 설계상, 우선 Coding Agent를 많이 사용하는 개발자 환경에 적용하고 효과를 측정하는 편이 적합하다. 효과가 확인된 뒤 CI Agent나 자동 리뷰 Agent로 확장하는 방식이 안전하다.
+`graft blast --base origin/main --format markdown/json`을 PR pipeline에 붙여 변경 영향 영역을 자동 산출하고, Agent review가 해당 consumer/sibling까지 확인했는지 검사하는 보조 gate로 활용할 수 있다.
+
+## 도입 추천 순서
+
+1. `npx @nanonets/graft init --dry-run`으로 변경 범위 확인
+2. 작은 실제 repository에서 structural build만 적용
+3. `map`, `callers`, `blast`, MCP의 정확성 확인
+4. Claude Code/Codex 각각 Cold vs Graft A/B Test
+5. 효과가 확인되면 `--deep`과 저가 모델 조합 테스트
+6. C++/UE는 `--lsp`까지 포함해 별도 정확성 검증
+7. 검증 후 팀 공통 Agent wiring만 Git에 반영
 
 ## 참고 링크
 
 - https://github.com/NanoNets/Graft
-- npm package: `@nanonets/graft`
+- npm: `@nanonets/graft`
 
 ## 검토 시점
 
-2026-08-24 기준 공개 저장소 README, package metadata, CHANGELOG 및 설정 파일을 기준으로 정리.
+2026-08-24 기준 공개 저장소 README 및 package metadata를 기준으로 정리.
