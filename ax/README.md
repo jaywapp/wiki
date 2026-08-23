@@ -14,6 +14,7 @@ AI 코딩 에이전트(Claude Code, Codex 등)의 능력을 확장하는 Skill·
 - [Prime Agent](prime-agent.md) — RLM·Continual Harness·daemon session·subagent·scheduler·RPC를 결합한 장기 실행형 Agent Runtime
 - [CatchUp](catchup.md) — Claude Code·Codex·Cursor 등 서로 다른 AI 코딩 에이전트 사이에서 로컬 세션 컨텍스트를 복구·검색·인계하는 CLI
 - [Hermes Desktop Bot Mode](hermes-desktop-bot-mode.md) — Hermes Profile을 영구 Bot으로 운영하며 Bot 간 통신·Group Chat·Routine·멀티머신 협업을 제공하는 Desktop 멀티에이전트 UI
+- [codebase-memory-mcp](codebase-memory-mcp.md) — 코드베이스를 영속 Knowledge Graph로 인덱싱해 AI 코딩 에이전트의 구조 탐색·영향도 분석·호출 추적과 토큰 효율을 개선하는 MCP 코드 인텔리전스 엔진
 
 ## 스킬별 문서
 
