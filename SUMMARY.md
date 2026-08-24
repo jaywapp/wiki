@@ -9,6 +9,62 @@
 
 ---
 
+## 2026-08-24
+
+> **8 commits · 핵심 문서 변경 5건 · 인덱스/링크 변경 2건**
+
+### 1. NanoNets Graft 코드베이스 Context Graph 분석 보강
+
+[`ax/graft.md`](./ax/graft.md)
+
+- Graft를 Coding Agent용 **Codebase Memory / Context Layer**로 정리하고, tree-sitter 기반 구조 그래프와 선택적 LLM Deep Build를 결합하는 Hybrid Code Graph 구조를 상세화.
+- `ask`, `skeleton`, `callers`, `grep`, `map`, `blast`, `check`, `viz` 등 CLI와 MCP 인터페이스를 통해 저장소 구조·호출 관계·영향 범위를 반복 재탐색하지 않고 재사용하는 흐름을 설명.
+- Claude Code, Codex, Cursor, Gemini, Copilot 등 Agent별 native integration과 변경된 파일만 다시 처리하는 증분 갱신 방식을 정리.
+- 프로젝트 자체 benchmark의 토큰·Tool Call 절감 수치는 참고하되, 실제 사내 monorepo/C++·C# 환경에서는 별도 A/B 검증이 필요하다는 주의를 명시.
+
+### 2. codebase-memory-mcp 영속 코드 지식 그래프 분석 추가
+
+[`ax/codebase-memory-mcp.md`](./ax/codebase-memory-mcp.md)
+
+- Tree-sitter AST + Hybrid LSP로 함수·클래스·호출·HTTP route·서비스 관계를 **SQLite 기반 영속 Knowledge Graph**에 저장하고 MCP로 제공하는 구조를 정리.
+- 158개 언어 파싱과 주요 언어의 타입/호출 해석 보강, background watcher, impact analysis, dead-code detection, Cypher 질의 등 관계형 코드 탐색 기능을 소개.
+- 대형 저장소에서 `grep → 파일 읽기 → 참조 검색`을 반복하는 대신 공통 코드 구조 메모리를 Claude Code/Codex 등에 공유하는 활용 패턴을 제안.
+- C#/C++도 Hybrid LSP 대상이므로 대형 .NET/Unreal 저장소 PoC에서 인덱싱 시간, graph accuracy, 재색인 속도, 토큰·Tool Call 절감률을 측정할 가치가 있다고 정리.
+
+### 3. Agency Agents 역할별 전문 Agent 카탈로그 분석
+
+[`ax/agency-agents.md`](./ax/agency-agents.md)
+
+- 개발·디자인·PM·보안·마케팅 등 역할별 전문 Agent 정의를 여러 AI Coding Runtime으로 변환·설치하는 **Agent Role Library**로 정리.
+- 각 Agent 정의가 Identity, Mission, Rules, Deliverables, Workflow, Success Metrics까지 포함해 단순 persona prompt보다 구체적인 업무 규약을 제공한다는 점을 설명.
+- 자체 실행 엔진이나 복잡한 orchestration보다는 역할 프롬프트 자산의 표준화와 Claude Code/Codex/Cursor 등으로의 이식성이 핵심이라고 평가.
+- `Planner → Worker → Reviewer`, 작업별 Agent Router, 필요한 역할만 동적 로딩, eval 기반 역할 품질 검증 같은 확장 아이디어를 제시.
+
+### 4. Agent Reach 인터넷 Capability Layer 분석
+
+[`ax/agent-reach.md`](./ax/agent-reach.md)
+
+- Twitter/X, Reddit, YouTube, GitHub, Web, RSS 등 플랫폼별 인터넷 접근 도구를 직접 새로 구현하기보다 **선택·설치·설정·상태 진단·fallback 라우팅**하는 상위 capability layer로 정리.
+- `agent-reach doctor`로 채널별 상태를 진단하고, 실제 요청 시에는 `gh`, `yt-dlp`, Jina Reader 등 업스트림 CLI/MCP를 Agent가 직접 호출하는 낮은 결합도 구조를 설명.
+- Research Agent의 공통 인터넷 계층, 세션 시작 전 capability health check, backend 장애 자동 복구 같은 활용 패턴을 제안.
+- Cookie·비공식 접근·업스트림 공급망 의존성이 있으므로 기업 환경에서는 인증정보와 보안 정책 검토가 필요하다고 명시.
+
+### 5. OpenMausBot Local-first Multi-Agent Desktop 분석
+
+[`ax/openmausbot.md`](./ax/openmausbot.md)
+
+- Claude·Codex·Grok CLI를 메신저의 연락처처럼 여러 Bot으로 운영하는 **local-first 멀티에이전트 데스크톱 UI/harness**로 정리.
+- provider별 Driver를 canonical runtime event로 정규화하고 SSE로 UI에 전달하는 구조, Permission Broker, Computer Use, Connected Apps, 프로젝트별 Channel 모델을 분석.
+- 기존 CLI 로그인·구독을 재사용하면서 역할별 Agent, 컴퓨터, SaaS 앱, 승인 흐름을 하나의 UX로 통합한다는 장점을 설명.
+- 복잡한 DAG orchestration보다는 사람이 여러 Agent를 직접 협업시키는 인터랙티브 UI에 초점이 있으며, 사내 Agent Desktop·공통 Approval Layer·Agent observability UI 설계 참고 사례로 평가.
+
+### 기타
+
+- `codebase-memory-mcp` 문서를 `ax` 인덱스에 연결.
+- `ax/README.md`를 재정리해 새로 추가된 AX 도구/프로젝트 문서 탐색 구조를 보강.
+
+---
+
 ## 2026-08-22
 
 > **3 commits · 핵심 문서 변경 2건**
