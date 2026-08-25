@@ -9,6 +9,30 @@
 
 ---
 
+## 2026-08-25
+
+> **3 commits · 핵심 문서 변경 2건**
+
+### 1. persona-lightsim 합성 페르소나 시장조사·시뮬레이션 분석 추가
+
+[`ax/persona-lightsim.md`](./ax/persona-lightsim.md)
+
+- NVIDIA Nemotron-Personas 기반 10개국 합성 인구를 Claude Code Skill/Agent 워크플로우에 연결해 제품 시장조사, 지불의사, 반응 시뮬레이션, persona card 생성을 수행하는 **synthetic pre-research layer**로 정리.
+- 별도 웹앱이나 상시 서버 없이 Claude Code를 오케스트레이터/UI로 사용하고 Python이 샘플링·가공을 담당하며, 국가별 analyst fan-out과 batch judgment로 개별 persona 대화보다 비용을 낮추는 구조를 설명.
+- 1차 집단 의견을 다시 주입하는 mean-field 2-pass, deterministic aggregation, SQLite persona pack 등 반복 가능한 실험 구조와 한계를 정리.
+- 실제 소비자 행동 데이터 대체재가 아니라 아이디어 스크리닝·국가별 반응 가설·UX 사전 검증용으로 적합하며, 동일 seed population을 활용한 Persona Regression Test 같은 응용을 제안.
+
+### 2. Confluence AI 문서 작성·품질 개선 스택과 공개 Skill 조사
+
+[`ax/confluence-ai-writing-mcp-tools.md`](./ax/confluence-ai-writing-mcp-tools.md)
+
+- Confluence 자동화의 권장 구조를 **Rovo / 공식 Atlassian Rovo MCP Server / 별도 문서 품질 Skill**의 역할 분리로 정리하고, MCP는 검색·읽기·쓰기 I/O, Skill은 정보 구조·가독성·품질 규칙을 담당하도록 제안.
+- 후속 조사에서 `borghei/Claude-Skills`의 `confluence-expert`, `SpillwaveSolutions/confluence-skill`, Anthropic `confluence-api`, `dmarreco/skills` 등 공개 GitHub Skill을 추가 비교.
+- `confluence-expert`는 Information Architecture·template·governance 등 **문서 구조 방법론**, SpillwaveSolutions는 Markdown 변환·페이지 게시·다이어그램 등 **Publishing/Rendering 계층**으로 조합 가치가 높다고 평가.
+- 사내 적용은 `검색 → 초안 → 품질 검사 → Diff → 승인 → 업데이트` 흐름과 Human-in-the-loop를 유지하면서, 공개 Skill의 좋은 규칙을 내부 Confluence Writer/Quality Skill로 흡수하는 방향을 권장.
+
+---
+
 ## 2026-08-24
 
 > **8 commits · 핵심 문서 변경 5건 · 인덱스/링크 변경 2건**
