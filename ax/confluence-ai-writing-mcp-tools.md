@@ -1,22 +1,25 @@
 # Confluence AI 문서 작성·품질 개선 도구
 
-> 태그: `Confluence` `Rovo` `MCP` `AI Agent` `Documentation` `AX`
+> 태그: `Confluence` `Rovo` `MCP` `AI Agent` `Documentation` `AX` `Agent Skills` `Claude Skills`
 
 ## 한줄 요약
 
-2026년 기준 Confluence 문서 작성 자동화는 **Confluence Rovo + Atlassian 공식 Rovo MCP Server + 외부 AI Agent의 문서 품질 규칙(Skill)** 조합이 가장 실용적이다. MCP는 접근/검색/생성/수정 계층이고, 실제로 읽기 좋은 문서를 만드는 품질 규칙은 별도 Skill/Agent 계층에 두는 것이 좋다.
+2026년 기준 Confluence 문서 작성 자동화는 **Confluence Rovo + Atlassian 공식 Rovo MCP Server + 문서 품질 Skill** 조합이 가장 실용적이다. 공개 GitHub Skill 중에서는 `borghei/Claude-Skills`의 `confluence-expert`가 문서 구조·정보 설계 측면에서 가장 가깝고, `SpillwaveSolutions/confluence-skill`은 실제 Confluence 게시·변환 계층을 보완하기 좋다.
 
 ## 프로젝트 개요
 
-Confluence 문서를 AI로 생성·재작성·요약하고, 기존 Jira/Confluence 맥락을 읽어 신규 문서를 만들거나 지속적으로 갱신할 수 있는 공식 기능과 MCP 생태계를 조사했다.
+Confluence 문서를 AI로 생성·재작성·요약하고 기존 Jira/Confluence 맥락을 활용하는 공식 기능, MCP 및 공개 Agent Skill을 조사했다.
 
 핵심 후보:
 
 1. Atlassian Rovo / Create with Rovo
 2. Atlassian Rovo MCP Server (공식)
-3. InfraMCP/atlassian-mcp-server
-4. plexusone/mcp-atlassian
-5. xuanxt/atlassian-mcp 및 기타 커뮤니티 MCP
+3. borghei/Claude-Skills — confluence-expert
+4. SpillwaveSolutions/confluence-skill
+5. Anthropic claude-tag-plugins — confluence-api
+6. dmarreco/skills — confluence-reader / confluence-writer
+7. plexusone/mcp-atlassian
+8. InfraMCP/atlassian-mcp-server
 
 ## 해결하려는 문제
 
@@ -26,51 +29,87 @@ Confluence 문서를 AI로 생성·재작성·요약하고, 기존 Jira/Confluen
 - Jira/기존 Confluence 내용을 다시 복사하는 작업
 - 변경사항을 문서에 수동 반영하는 비용
 - AI가 생성한 Markdown/HTML을 Confluence 포맷에 안전하게 반영하는 문제
+- AI에게 단순히 '문서 작성'을 지시해도 일정 수준 이상의 정보 구조와 가독성을 보장하고 싶은 문제
 
 ## 핵심 기능
 
-### 1. Atlassian Rovo
+### Atlassian Rovo
 
-Confluence 내부에서 가장 즉시 사용할 수 있는 선택지다.
+Confluence 내부에서 바로 사용할 수 있는 AI 작성·편집 계층이다. 프롬프트 기반 콘텐츠 생성, 기존 콘텐츠를 이용한 작성, 선택 영역 재작성·요약 등에 적합하다.
 
-- 프롬프트 기반 페이지/Live Doc/Whiteboard/Database/Slides 초안 생성
-- 기존 링크와 파일을 컨텍스트로 사용
-- 선택 영역 재작성·요약 및 AI 편집
-- 템플릿과 결합 가능
-- Confluence/Jira 지식을 이용한 콘텐츠 생성
-- 2026년에는 콘텐츠 유형별 Rovo Skill 제안과 Create with Rovo 기능이 확대되고 있다.
+### Atlassian Rovo MCP Server
 
-### 2. Atlassian Rovo MCP Server
-
-Atlassian이 직접 제공하는 공식 원격 MCP 서버다. 2026년 GA.
-
-- Confluence read/write/search
-- Jira read/write/search
-- JSM, Bitbucket, Compass 연계
-- OAuth 2.1/API Token
-- 기존 Atlassian 사용자 권한 상속
-- IP allowlist 및 관리 정책 지원
-- ChatGPT, Claude, Cursor, VS Code 등 외부 AI 클라이언트와 연결 가능
+Atlassian 공식 원격 MCP 서버로 Confluence/Jira의 검색·읽기·쓰기를 외부 AI Agent와 연결하는 I/O 계층이다. OAuth와 기존 Atlassian 권한 체계를 활용할 수 있다는 것이 핵심 장점이다.
 
 공식 저장소: https://github.com/atlassian/atlassian-mcp-server
 
-### 3. InfraMCP/atlassian-mcp-server
+## 공개 GitHub Confluence Skill
 
-Confluence/Jira/JSM 모듈을 선택적으로 활성화할 수 있는 커뮤니티 MCP 서버. OAuth 기반이며 AI Agent에서 페이지와 프로젝트 컨텍스트를 다루기 좋다.
+### 1. borghei/Claude-Skills — confluence-expert
 
-https://github.com/InfraMCP/atlassian-mcp-server
+현재 조사한 공개 Skill 가운데 **'Confluence 문서를 잘 구성하는 방법'이라는 목적에 가장 가까운 후보**다.
 
-### 4. plexusone/mcp-atlassian
+- Confluence page architecture
+- documentation architecture
+- macros
+- templates
+- content organization
+- knowledge management
+- content governance
+- 별도 playbook/templates/red-flags 레퍼런스 활용
 
-Confluence Storage Format(XHTML)을 안전하게 다루는 것을 강조한다. Confluence/Jira용 26개 도구, OAuth 2.1 PKCE, Vault 계열 credential 지원과 composable skill 구조가 특징이다.
+즉 API 호출법보다 **문서 구조와 지식 관리 방법론**에 더 가깝다. 자체 `confluence-writer`를 만든다면 가장 먼저 참고할 베이스 Skill이다.
+
+https://github.com/borghei/claude-skills/blob/main/project-management/confluence-expert/SKILL.md
+
+### 2. SpillwaveSolutions/confluence-skill
+
+문서 품질 규칙보다는 **작성된 콘텐츠를 실제 Confluence 문서로 만드는 실행 계층**이 강하다.
+
+- Markdown ↔ Confluence 변환
+- 페이지 생성/업로드
+- 이미지 처리
+- Mermaid/PlantUML
+- Git → Confluence sync
+- 문서 크기와 작업 특성에 따라 MCP/REST 방식 활용
+
+`confluence-expert`가 Information Design 역할을 한다면 이 Skill은 Publishing/Rendering 역할로 조합하기 좋다.
+
+https://github.com/SpillwaveSolutions/confluence-skill
+
+### 3. Anthropic claude-tag-plugins — confluence-api
+
+Confluence Cloud를 Agent가 안정적으로 조작하기 위한 API 중심 Skill이다.
+
+- 검색/읽기
+- 페이지 생성·수정
+- 댓글/첨부/라벨
+- Confluence Storage XHTML
+- ADF 처리
+
+가독성 개선 Skill이라기보다는 **Confluence API Adapter Skill**에 가깝다.
+
+https://github.com/anthropics/claude-tag-plugins/blob/main/confluence/skills/confluence-api/SKILL.md
+
+### 4. dmarreco/skills — confluence-reader / confluence-writer
+
+Confluence 읽기와 쓰기 역할을 Agent Skill로 분리한 구현이다. 역할 분리와 최소 권한 구조를 설계할 때 참고할 가치가 있다.
+
+https://github.com/dmarreco/skills
+
+## MCP 후보
+
+### plexusone/mcp-atlassian
+
+Confluence Storage Format(XHTML)을 안전하게 처리하는 것을 강조하는 MCP 구현이다. 자체 호스팅이나 표현 계층을 세밀하게 제어해야 할 때 후보가 된다.
 
 https://github.com/plexusone/mcp-atlassian
 
-### 5. xuanxt/atlassian-mcp
+### InfraMCP/atlassian-mcp-server
 
-Confluence 13개, Jira 38개 등 총 51개 도구를 제공하는 범용 MCP 구현. NPM/Docker 배포를 지원한다.
+Confluence/Jira/JSM 모듈을 선택적으로 활성화할 수 있는 커뮤니티 MCP 서버다.
 
-https://github.com/xuanxt/atlassian-mcp
+https://github.com/InfraMCP/atlassian-mcp-server
 
 ## 아키텍처
 
@@ -81,12 +120,14 @@ User
   ↓
 Claude / ChatGPT / Coding Agent
   ↓
-Confluence Quality Skill
+Confluence Writer / Quality Skill
   ├─ 문서 유형 판별
-  ├─ 구조/스타일 규칙
+  ├─ Information Architecture
+  ├─ TL;DR / Progressive Disclosure
   ├─ 중복 제거
-  ├─ 표·콜아웃·코드·다이어그램 정책
-  └─ 품질 점수/리뷰
+  ├─ 표·콜아웃·코드·다이어그램 판단
+  ├─ 문체/용어 통일
+  └─ Quality Gate
   ↓
 Atlassian Rovo MCP Server
   ├─ Confluence Search/Read/Write
@@ -95,120 +136,125 @@ Atlassian Rovo MCP Server
 Atlassian Cloud
 ```
 
-핵심은 **MCP와 Skill의 역할을 분리**하는 것이다.
+핵심 역할 분리:
 
-- MCP = Confluence/Jira에 접근하는 I/O 계층
-- Skill = 좋은 문서를 만드는 편집 정책
-- LLM/Agent = 맥락 이해와 변환
+- **MCP** = Confluence/Jira 접근 I/O
+- **Skill** = 읽기 좋은 문서를 만드는 작성·편집 정책
+- **LLM/Agent** = 맥락 이해와 콘텐츠 생성
+- **Confluence** = 최종 지식 저장 및 협업 계층
 
 ## 장점
 
-- 공식 MCP 사용 시 별도 Confluence REST 래퍼 개발이 거의 필요 없다.
-- 기존 사용자 권한을 그대로 활용하기 쉬움.
-- Jira → 설계/장애/릴리스 문서 생성 자동화에 특히 적합.
-- Skill을 별도로 두면 Claude, ChatGPT, Codex 등 모델이 바뀌어도 문서 규칙을 재사용할 수 있다.
-- 페이지 생성뿐 아니라 기존 문서 품질 개선 워크플로로 확장 가능하다.
+- 공개 Skill을 활용하면 처음부터 문서 작성 규칙을 설계할 필요가 없다.
+- `confluence-expert`의 문서 구조 방법론을 기반으로 사내 규칙을 추가할 수 있다.
+- Publishing/API Skill과 Writing Quality Skill을 분리할 수 있다.
+- MCP를 별도 계층으로 두면 Claude, ChatGPT, Codex 등 Agent가 바뀌어도 작성 정책을 재사용할 수 있다.
+- 기존 Confluence 문서를 참고한 신규 문서 생성과 개선 자동화로 확장하기 쉽다.
 
-## 단점
+## 단점 및 한계
 
-- Rovo만 사용하면 팀 고유의 문서 스타일을 강하게 강제하기 어렵다.
-- MCP 자체는 문서 품질을 보장하지 않는다.
-- 자동 수정 권한을 넓게 주면 잘못된 대량 편집 위험이 있다.
-- Confluence Storage Format/ADF/매크로 등 표현 계층에서 AI 출력과 실제 렌더링 차이가 발생할 수 있다.
-- 사내 데이터 사용 시 외부 AI Client, MCP 인증, 감사로그 및 데이터 정책 검토가 필요하다.
+- 공개 Skill 중 '가독성 최대화'를 완성형 Quality Gate로 제공하는 것은 아직 드물다.
+- 프로젝트별 문서 스타일과 사내 규칙은 별도 커스터마이징이 필요하다.
+- API/MCP Skill은 접근 기능은 좋지만 문서 품질을 자동으로 보장하지 않는다.
+- 자동 Write 권한은 Human-in-the-loop와 최소 권한 정책이 필요하다.
+- 공개 Skill은 업데이트 중단 가능성이 있으므로 핵심 규칙은 내부 Skill로 흡수하는 편이 안전하다.
 
 ## 기존 도구와 비교
 
-| 후보 | 문서 생성/편집 | 기존 문서 검색 | 자동 게시 | 품질 규칙 커스텀 | 도입 난이도 | 추천 |
-|---|---|---|---|---|---|---|
-| Rovo | 매우 좋음 | 매우 좋음 | 제한적 | 보통 | 낮음 | ★★★★★ |
-| 공식 Rovo MCP | 좋음 | 매우 좋음 | 매우 좋음 | Agent에 위임 | 낮음~중간 | ★★★★★ |
-| plexusone MCP | 좋음 | 좋음 | 좋음 | 높음 | 중간 | ★★★★☆ |
-| InfraMCP | 좋음 | 좋음 | 좋음 | 높음 | 중간 | ★★★★☆ |
-| xuanxt MCP | 좋음 | 좋음 | 좋음 | 높음 | 중간 | ★★★☆☆ |
+| 후보 | 주 역할 | 문서 구조/가독성 | 게시/수정 | 추천 용도 |
+|---|---|---:|---:|---|
+| borghei confluence-expert | Information Design | ★★★★★ | ★★☆☆☆ | Writer Skill 베이스 |
+| Spillwave confluence-skill | Publishing/Conversion | ★★★☆☆ | ★★★★★ | 게시·이미지·다이어그램 |
+| Anthropic confluence-api | API Adapter | ★★☆☆☆ | ★★★★★ | Confluence 조작 |
+| dmarreco skills | Reader/Writer 역할 분리 | ★★★☆☆ | ★★★★☆ | Agent 구조 참고 |
+| Atlassian Rovo MCP | 공식 I/O 계층 | Agent 의존 | ★★★★★ | 사내 표준 연결 계층 |
+| plexusone MCP | 커스텀 MCP | Agent 의존 | ★★★★☆ | 자체 호스팅/포맷 제어 |
 
 ## 활용 아이디어
 
-### Confluence Quality Skill
+### 공개 Skill을 조합한 confluence-writer
 
-직접 만들 가치가 가장 높은 부분이다.
-
-예시 명령:
+0부터 새로 만드는 대신 다음처럼 구성하는 것이 효율적이다.
 
 ```text
-/confluence-improve <page>
-/confluence-create design-doc
-/confluence-review <page>
-/confluence-sync JIRA-1234
+borghei/confluence-expert
+        │
+        ├─ Page Architecture
+        ├─ Template
+        ├─ Macro
+        ├─ Content Organization
+        └─ Governance
+              +
+SpillwaveSolutions/confluence-skill
+        │
+        ├─ Mermaid
+        ├─ Image
+        ├─ Markdown Conversion
+        └─ Confluence Upload
+              +
+Internal Quality Rules
+        │
+        ├─ TL;DR
+        ├─ Progressive Disclosure
+        ├─ 긴 문단 분리
+        ├─ 표 자동 판단
+        ├─ Callout 자동 판단
+        ├─ Diagram 자동 판단
+        ├─ 중복 제거
+        ├─ 용어/문체 통일
+        └─ 최종 가독성 Review
+              ↓
+       confluence-writer
 ```
 
-Skill이 수행할 작업:
+### 사용 방식
 
-1. 페이지와 하위 페이지 및 관련 Jira 읽기
-2. 문서 유형 자동 분류
-3. TL;DR 생성
-4. H1/H2/H3 구조 재편
-5. 긴 문단 분할
-6. 중복 내용 병합
-7. 핵심 수치/비교는 표로 변환
-8. 주의사항/결정사항을 Callout으로 변환
-9. 코드/명령은 Code Block으로 변환
-10. 흐름 설명은 Mermaid/다이어그램 후보로 변환
-11. 용어와 문체 통일
-12. 관련 Confluence/Jira 링크 자동 연결
-13. 변경 전 Diff 제시
-14. 사용자 승인 후 MCP를 통해 업데이트
-
-### 문서 품질 점수
-
-100점 기반 평가를 붙일 수 있다.
-
-- 구조 20
-- 가독성 20
-- 중복/간결성 15
-- 정보 탐색성 15
-- 시각화 10
-- 링크/근거 10
-- 최신성 10
-
-예:
+사용자는 복잡한 명령을 몰라도 된다.
 
 ```text
-현재 62/100
-→ 개선안 88/100
+이번 장애 원인과 대응 내용을 Confluence 문서로 작성해줘.
 ```
 
-### 사내 PoC 추천
+Skill이 자동으로 문서 유형을 판단하고 정보 구조를 설계한 뒤 Confluence 친화적인 형태로 출력한다.
 
-1단계: 공식 Atlassian Rovo MCP를 읽기 전용으로 연결
-2단계: `/confluence-review` Skill로 품질 평가만 수행
-3단계: Diff 기반 수정 제안
-4단계: 승인된 페이지만 MCP write 허용
-5단계: Jira 상태 변경/릴리스 후 문서 업데이트 Agent 추가
+명시적 모드는 다음 정도로 둘 수 있다.
 
-이 방식이면 처음부터 완전 자동화를 하지 않고 Human-in-the-loop를 유지할 수 있다.
+```text
+/confluence-write
+/confluence-improve
+/confluence-review
+```
 
-## Top 5 추천
+### Quality Gate
 
-1. **Atlassian Rovo MCP Server** — 사내 표준 연결 계층
-2. **Confluence Rovo / Create with Rovo** — Confluence 내부 즉시 활용
-3. **자체 Confluence Quality Skill** — 가독성과 팀 표준화를 담당
-4. **plexusone/mcp-atlassian** — 자체 호스팅/Storage Format 제어가 필요할 때
-5. **InfraMCP/atlassian-mcp-server** — 모듈식 Atlassian Agent PoC
+최종 작성 전에 다음 기준을 검사한다.
 
-## 결론
+- 상단에서 핵심 내용을 빠르게 파악할 수 있는가?
+- Heading 계층이 논리적인가?
+- 긴 문단을 목록/표/섹션으로 변환할 필요가 없는가?
+- 중복 정보가 없는가?
+- 비교 데이터가 표로 표현되어 있는가?
+- 중요한 결정/주의사항이 시각적으로 구분되는가?
+- 3단계 이상의 복잡한 흐름은 Diagram이 더 적절하지 않은가?
+- 코드/명령어가 일반 본문과 분리되어 있는가?
+- 결론과 Action Item이 명확한가?
 
-단순히 'Confluence MCP 하나 설치'로는 읽기 좋은 문서가 자동으로 만들어지지 않는다. 가장 좋은 구조는 **공식 Atlassian MCP를 데이터/실행 계층으로 사용하고, 별도의 Confluence Quality Skill을 문서 편집 정책 계층으로 두는 것**이다.
+## 추천 조합
 
-특히 사내 AX 관점에서는 기존 Jira/Confluence 데이터를 읽고 `검색 → 초안 → 품질 검사 → Diff → 승인 → 업데이트` 흐름을 하나의 Agent workflow로 만드는 것이 효과가 크다.
+가장 현실적인 조합은 다음이다.
+
+**borghei/confluence-expert + 자체 Quality Rules + Atlassian Rovo MCP**
+
+여기에 실제 Markdown 변환, Mermaid, 이미지, Git sync가 필요하면 **SpillwaveSolutions/confluence-skill**의 구현 아이디어를 추가한다.
+
+이 구조에서는 공개 Skill의 약 60~70%를 재사용하고 나머지를 사내 문서 스타일과 가독성 Quality Gate로 채우는 방식이 효율적이다.
 
 ## 참고 링크
 
 - Atlassian Rovo MCP Server: https://github.com/atlassian/atlassian-mcp-server
-- Atlassian Remote MCP 소개: https://www.atlassian.com/blog/announcements/remote-mcp-server
-- Rovo MCP GA: https://www.atlassian.com/blog/announcements/atlassian-rovo-mcp-ga
-- Confluence Create with Rovo: https://support.atlassian.com/confluence-cloud/docs/create-new-content-items-with-rovo/
-- Confluence Rovo writing/editing: https://support.atlassian.com/confluence-cloud/docs/write-or-edit-content-using-atlassian-intelligence/
-- InfraMCP: https://github.com/InfraMCP/atlassian-mcp-server
+- borghei confluence-expert: https://github.com/borghei/claude-skills/blob/main/project-management/confluence-expert/SKILL.md
+- SpillwaveSolutions confluence-skill: https://github.com/SpillwaveSolutions/confluence-skill
+- Anthropic confluence-api: https://github.com/anthropics/claude-tag-plugins/blob/main/confluence/skills/confluence-api/SKILL.md
+- dmarreco skills: https://github.com/dmarreco/skills
 - plexusone MCP: https://github.com/plexusone/mcp-atlassian
-- xuanxt MCP: https://github.com/xuanxt/atlassian-mcp
+- InfraMCP: https://github.com/InfraMCP/atlassian-mcp-server
