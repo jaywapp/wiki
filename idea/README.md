@@ -13,3 +13,4 @@
 | 문서 | Status | Version | Updated | Tags |
 |---|---|---:|---|---|
 | [BeScore Reboot](bescore-reboot.md) | Idea | 0.1 | 2026-08-26 | sports, live-score, web, football, bescore |
+| [Marvelog](marvelog.md) | Idea | 0.1 | 2026-08-26 | marvel, checklist, watch-tracking, sharing, recommendation, entertainment |
