@@ -51,6 +51,7 @@
 
 - [idea/](idea/README.md) — 서비스·기능·업무 개선·개발 프로젝트 아이디어 백로그
 - [idea/bescore-reboot.md](idea/bescore-reboot.md) — BeScore Reboot: 분석·예측을 제외한 웹 기반 스포츠 경기 정보/라이브스코어 서비스
+- [idea/marvelog.md](idea/marvelog.md) — Marvelog: 마블 영상물 정주행 체크·진행률·공유·친구 비교 서비스
 
 ## 기획/설계
 
