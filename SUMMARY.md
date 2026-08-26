@@ -9,6 +9,77 @@
 
 ---
 
+## 2026-08-26
+
+> **18 commits · 핵심 문서 변경 10건 · 구조/인덱스 변경 8건**
+
+### 1. Paperthin — Agent 품질·위생 Skill 패턴 정리
+
+[`ax/paperthin.md`](./ax/paperthin.md)
+
+- Paperthin을 특정 런타임에 종속되지 않는 **Agent Quality / Hygiene Layer**로 정리하고, 약 28개의 작은 Markdown Skill이 AI 산출물의 비대화·문맥 드리프트·SSOT 분산·검증 누락을 교정하는 구조를 설명.
+- `re0`, `readchk`, `ssotize`, `debloat`, `factchk`, `sip`, `re0-memo`, `prism` 등 Skill을 Depth/Breadth/Coil/Mesh 관점으로 분류하고, 거대한 orchestration보다 필요한 반사 동작을 조합하는 접근을 분석.
+- Claude Code/Codex 공통 품질팩, 문서 후처리 파이프라인, 사내 검증 Skill 확장 등 실무 적용 아이디어를 제시.
+
+### 2. Claude Code 토큰 최적화 가이드 최신화
+
+[`ai-workflow/token-optimization-claude-codex.md`](./ai-workflow/token-optimization-claude-codex.md)
+
+- Anthropic의 공식 Context Engineering 가이드를 반영해 핵심을 **짧은 프롬프트보다 작고 관련성 높은 컨텍스트 유지**로 재정리.
+- 작업 경계에서는 `/clear`, 연속 작업은 `/compact`, 시작 시 `/context`, 단순 작업은 낮은 effort를 우선 적용하는 실전 운영 원칙을 강화.
+- 대형 파일·빌드 로그·MCP 응답·장기 대화가 컨텍스트를 오염시키는 주요 원인임을 정리하고, 세션을 작업 단위로 나누는 방향을 권장.
+
+### 3. DeepSeek-V4-Flash AX 활용 조사
+
+[`DeepSeek-V4-Flash.md`](./DeepSeek-V4-Flash.md)
+
+- 1M 토큰 컨텍스트와 MoE 구조를 가진 DeepSeek-V4-Flash를 **비용 민감형 Coding/Agent Worker 모델** 후보로 분석.
+- 모든 작업을 최고가 모델에 맡기기보다 `Planner/Reviewer → V4-Flash Worker → Build/Test → Reviewer` 형태의 계층형 모델 라우팅을 제안.
+- CI 로그 분석, 대규모 코드베이스 탐색, 반복 수정 Worker, 문서/RAG 등 처리량 중심 AX 워크로드와 자체 평가 지표를 정리.
+
+### 4. Toss Open API 자동 트레이딩 사례 조사
+
+[`deep-research/toss-openapi-auto-trading-bot-cases.md`](./deep-research/toss-openapi-auto-trading-bot-cases.md)
+
+- 토스증권 Open API의 국내·미국 주식 시세/계좌/주문/조건주문 지원 범위와 공개 자동매매 구현 사례를 조사.
+- 공개 프로젝트에서 공통적으로 사용하는 **dry-run 기본, 실주문 이중 잠금, 고정 허용 IP, rate limit 대응, 체결 재동기화, AI 판단과 주문 실행 계층 분리**를 핵심 안전 패턴으로 정리.
+- Read-only → Dry-run → 수동 승인 → 제한 자동화 → 완전 자동화의 단계적 도입과 MCP 기반 Agent 연동 사례를 포함.
+
+### 5. 아이디어 백로그·기획 워크플로 구축
+
+[`idea/idea-planning-wiki-workflow.md`](./idea/idea-planning-wiki-workflow.md)
+
+- 정리되지 않은 아이디어를 AI와 대화하며 **확정 / AI 제안 / 확인 필요**로 분리하고, Vision/MVP/Later/Out of Scope를 관리한 뒤 표준 Markdown으로 Wiki에 축적하는 워크플로를 정의.
+- 동일·유사 아이디어는 신규 문서 생성보다 기존 문서 업데이트를 우선하고, Wiki를 후속 PRD·설계·구현의 출발점으로 사용하는 구조를 제안.
+
+### 6. 제품/서비스 아이디어 3건 구체화
+
+- [`idea/mamma-story.md`](./idea/mamma-story.md): 이유식 재료·가공·제작·섭취·도감·퀘스트를 게임의 인벤토리 문법으로 연결하는 **맘마스토리** Alpha→Beta→정식 서비스 구상.
+- [`idea/marvelog.md`](./idea/marvelog.md): 마블 영상물을 공개순/시간순/히어로/세계관별로 체크하고 진행률·공유 스냅샷·친구 비교를 제공하는 **Marvelog** 정주행 서비스 구상.
+- [`idea/bescore-reboot.md`](./idea/bescore-reboot.md): 과거 BeScore의 경기 조회 경험을 분석·예측 없이 날짜별 일정·라이브스코어·경기 이벤트 중심의 반응형 웹으로 재구현하는 **BeScore Reboot** 구상.
+
+### 7. Aina 홈 AI 비서 확장 설계
+
+[`idea/aina-home-ai-assistant.md`](./idea/aina-home-ai-assistant.md)
+
+- 기존 Discord + Claude 기반 Aina를 **Aina Core 중심의 Client/Agent 분리 구조**로 확장하고 Codex Session/Thread와 주방 Voice Client를 추가하는 방향을 정리.
+- Voice 단말은 Wake Word·오디오 입출력만 담당하고, Realtime Voice·Memory·Agent 위임은 서버에 두는 경량 단말 구조를 제안.
+- Discord와 Voice의 전체 대화 로그 동기화보다 Aina Core의 공통 기억과 Agent 세션 지속성을 우선하는 설계를 명시.
+
+### 8. agent-backlog 로컬 AI 작업 큐 설계
+
+[`idea/agent-backlog.md`](./idea/agent-backlog.md)
+
+- Claude Code/Codex에서 나중에 수행할 일을 완전한 `prompt.md`로 등록하고 지정 시각부터 **FIFO 순차 실행·세션 resume·검증·결과 보고**까지 처리하는 로컬 CLI 아이디어를 구체화.
+- `task.json`, `session-id.txt`, `report.md`, `log.txt` 등 작업 단위 artifact와 `waiting-user` 상태, Git stage/Perforce pending changelist까지만 자동화하는 안전 경계를 정의.
+
+### 기타
+
+- 루트 Wiki에 `idea/` 백로그 인덱스를 연결하고 Marvelog·agent-backlog를 아이디어 인덱스에 등록.
+- `agent-backlog` 문서를 초기 위치에서 `idea/` 백로그로 이동해 아이디어 문서 체계에 통합.
+
+---
+
 ## 2026-08-25
 
 > **3 commits · 핵심 문서 변경 2건**
