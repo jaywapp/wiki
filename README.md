@@ -47,6 +47,11 @@
 - [design/gaudi/designs/kraken.md](design/gaudi/designs/kraken.md) — Kraken 웹 디자인 시스템 분석 및 구현 가이드
 - [design/gaudi/designs/stripe.md](design/gaudi/designs/stripe.md) — Stripe 웹 디자인 시스템 분석 및 구현 가이드
 
+## 아이디어 백로그
+
+- [idea/](idea/README.md) — 서비스·기능·업무 개선·개발 프로젝트 아이디어 백로그
+- [idea/bescore-reboot.md](idea/bescore-reboot.md) — BeScore Reboot: 분석·예측을 제외한 웹 기반 스포츠 경기 정보/라이브스코어 서비스
+
 ## 기획/설계
 
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계 (서버리스 + AdSense/AdMob, 월 30~50만원 목표)
