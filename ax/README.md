@@ -25,6 +25,7 @@
 | [Prime Agent](prime-agent.md) | RLM, Continual Harness, daemon session, subagent, scheduler, RPC를 결합한 장기 실행형 Agent Runtime |
 | [Agency Agents](agency-agents.md) | 역할별 전문 AI 에이전트를 구성해 실제 조직과 유사한 멀티에이전트 팀을 만드는 프레임워크 |
 | [OpenMausBot](openmausbot.md) | 메시징 인터페이스와 AI 에이전트를 결합한 개인용 에이전트/Bot 운영 구조 |
+| [Claude Hermes](claude-hermes.md) | Claude Code를 Discord/Telegram 상시 비서로 운영하며 SQLite 메모리·세션 라우팅·Skill 학습·검증 기반 자기개선을 결합 |
 | [Hermes Desktop Bot Mode](hermes-desktop-bot-mode.md) | Hermes Profile을 영구 Bot으로 운영하고 Bot 간 통신·Group Chat·Routine·멀티머신 협업을 제공 |
 | [Graft](graft.md) | 에이전트가 기존 코드베이스와 개발 컨텍스트를 이해하고 작업하도록 돕는 Agent Engineering 접근 |
 
