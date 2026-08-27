@@ -9,6 +9,50 @@
 
 ---
 
+## 2026-08-27
+
+> **12 commits · 핵심 주제 4건**
+
+### 1. Claude Hermes — 상시 실행형 개인 Agent Runtime 분석
+
+[`ai/harness/claude-hermes.md`](./ai/harness/claude-hermes.md)
+
+- Claude Code를 백그라운드 데몬으로 상시 실행하고 Discord/Telegram을 UI로 사용하는 개인용 Agent Runtime을 분석.
+- SQLite + FTS5 장기 메모리, scope/thread 기반 세션 라우팅, Cron/Heartbeat, 모델 라우팅, Skill 후보 자동 승격·rollback, 검증 gate를 둔 self-evolution 구조를 정리.
+- 특히 `메신저 → scope → queue → Claude session` 분리와 Discord Thread를 독립 Agent Workspace로 사용하는 패턴을 실무 적용 포인트로 제시.
+
+### 2. AI 지식 베이스 구조 통합 및 Orchestration 규칙 정립
+
+[`ai/README.md`](./ai/README.md) · [`ai/Orchestration.md`](./ai/Orchestration.md)
+
+- 기존 `ai-workflow/`와 `ax/`에 흩어진 AI/AX 문서를 최종적으로 루트 `ai/` 아래에 통합하고 `news / tips / harness / tools / skills / research / etc` 구조로 재분류.
+- 문서 목적에 따라 시점 중심은 `news`, 즉시 적용 노하우는 `tips`, 여러 모델/도구 연결은 `harness`, 독립 도구는 `tools`, 재사용 Skill은 `skills`, 비교·심층분석은 `research`로 분류하는 우선순위를 정의.
+- 중복 문서 생성을 피하고 기존 문서 통합을 우선하며, 새 카테고리는 동일 성격 문서가 최소 3개 이상 형성될 때 검토하는 운영 규칙을 추가.
+
+### 3. DeepSeek V4 Flash 실사용 평가 + Opus/Fable Harness 구체화
+
+[`ai/research/deepseek-v4-flash.md`](./ai/research/deepseek-v4-flash.md) · [`ai/research/deepseek-v4-flash-real-world-usage.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/harness/claude-opus-fable-deepseek-v4-flash.md`](./ai/harness/claude-opus-fable-deepseek-v4-flash.md)
+
+- V4 Flash 0731을 단독 만능 모델보다 **명확한 계획을 실행하는 저비용 Coding/Tool Worker**로 평가하고, OpenCode·Hermes 등 실사용 후기를 통해 짧고 명확한 Task에서 강하고 장기 Planning·목표 유지에는 약점이 있음을 정리.
+- 권장 구조를 `Opus/Fable Analyze·Plan → Flash Execute → deterministic Build/Test/Diff Gate → Opus/Fable Review`로 구체화.
+- Task Contract, 파일 scope 제한, 2~3회 retry 후 Opus escalation, 증거 기반 완료 판정, Human approval이 필요한 고위험 작업 등 Harness guardrail을 명시.
+
+### 4. AI UI 구현에서 shadcn/ui를 공통 어휘로 사용하는 가이드
+
+[`ai/tips/ai-ui-shadcn.md`](./ai/tips/ai-ui-shadcn.md)
+
+- shadcn/ui를 단순 컴포넌트 모음이 아니라 **사람과 AI Agent가 공유하는 UI 구현 vocabulary**로 설명하고, Tailwind와 결합해 생성 결과의 일관성과 수정 가능성을 높이는 방식을 정리.
+- `Dialog`, `Sheet`, `Tabs`, `Form` 같은 상위 컴포넌트 명칭으로 프롬프트의 추상화 수준을 높이고, 프로젝트 내부 코드 소유 방식 덕분에 AI 생성 결과를 장기 제품 코드로 발전시키기 쉽다는 점을 강조.
+- 사내 공통 `components/ui`/registry와 디자인 Skill을 결합해 조직 전용 AI UI vocabulary로 확장하는 아이디어를 제안.
+
+### 기타
+
+- Claude Hermes 문서를 기존 AX 인덱스에 연결한 뒤 AI 지식 베이스 구조 개편에 맞춰 `ai/harness/`로 이동.
+- `ax/ai/` 통합을 거쳐 최종적으로 루트 `ai/`로 이동하면서 README 링크와 문서 경로를 정리.
+- 구조 이동 과정에서 DeepSeek V4 Flash 연구 문서를 새 `ai/research/`, Harness 문서를 `ai/harness/` 위치에 복원·분리.
+
+---
+
 ## 2026-08-26
 
 > **18 commits · 핵심 문서 변경 10건 · 구조/인덱스 변경 8건**
