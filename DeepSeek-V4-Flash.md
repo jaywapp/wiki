@@ -1,267 +1,370 @@
 # DeepSeek-V4-Flash
 
-> Tags: #AI #AX #LLM #DeepSeek #Agent #Coding #LongContext #RAG #OpenModel #OpenCode #Hermes
+> Tags: #AI #AX #LLM #DeepSeek #Agent #Coding #Claude #Opus #Fable #Harness
 
 ## 한줄 요약
 
-DeepSeek-V4-Flash는 284B 총 파라미터 중 약 13B를 활성화하는 MoE 기반 고효율 모델로, 특히 0731 업데이트 이후 **명확한 계획을 실행하는 Coding Worker, Multi-Agent Executor, Tool-using Agent** 용도에서 높은 비용 대비 성능이 실사용자들에게 보고되고 있다.
+DeepSeek-V4-Flash-0731은 단독 만능 모델보다 **Claude Opus/Fable을 상위 판단 계층으로 두고, 반복 구현·도구 호출·빌드/테스트를 담당하는 저비용 Worker**로 사용할 때 강점이 극대화된다.
 
-## 프로젝트 개요
+## 추천 하네스: Claude Opus / Fable + DeepSeek V4 Flash
 
-DeepSeek V4 계열은 초장문 컨텍스트의 계산·메모리 비용을 줄이면서 강한 추론 및 에이전트 성능을 확보하는 데 초점을 둔다. V4-Flash는 V4-Pro보다 작은 활성 파라미터 규모를 사용해 속도와 처리량, 비용 효율을 우선한 포지션이다.
+### 핵심 원칙
 
-주요 공개 사양:
-- MoE(Mixture-of-Experts)
-- 총 파라미터 약 284B / 활성 파라미터 약 13B
-- 최대 1M 토큰 컨텍스트
-- FP4 + FP8 혼합 정밀도 체크포인트
-- 장문 처리 효율을 위한 압축/희소 Attention 계열 구조
-- 코딩, Tool Use, Agent 워크로드에 초점
+- **Fable**: 행동 규율, 문제 정의, 작업 종료 조건, 검증 철학
+- **Opus**: 복잡한 분석, 설계, 계획, arbitration, 최종 판단
+- **DeepSeek V4 Flash**: 코드 탐색, 구현, 수정, Tool Call, Build/Test 반복
+- **Harness**: 모델이 역할을 넘지 못하도록 단계와 증거 기반 검증을 강제
 
-## 해결하려는 문제
+Fable Harness 계열의 핵심은 특정 모델의 지능을 복제하는 것이 아니라 OODA, assumption 명시, adversarial review, 실제 테스트 증거 같은 절차를 시스템 수준에서 강제하는 것이다.
 
-- 대량 LLM 호출의 추론 비용 절감
-- 코딩/에이전트 작업의 응답 속도 개선
-- 장시간 실행되는 Agent의 긴 작업 컨텍스트 유지
-- 대규모 코드베이스와 문서 묶음 처리
-- 고성능 모델을 모든 단계에서 사용할 필요가 없는 AX 파이프라인의 비용 최적화
-
-## 핵심 기능
-
-### 1M 토큰 Long Context
-대규모 저장소, 여러 문서, 긴 Agent 실행 기록을 긴 작업 문맥에서 다룰 수 있다. 실사용 후기에서는 컨텍스트가 계속 커질 때 자동 압축에만 의존하면 목표 이탈이나 환각이 증가한다는 지적도 있으므로 검색/RAG, 명시적 작업 문서, 수동 context reset/compaction과 함께 사용하는 편이 좋다.
-
-### 효율적인 MoE
-전체 284B 파라미터 중 약 13B를 활성화하여 대형 모델의 지식 용량과 상대적으로 낮은 추론 비용을 동시에 노린다.
-
-### 코딩·Agent 지향
-0731 업데이트 이후 특히 Tool Use, 장시간 Agent 실행, 계획 기반 코드 구현에 대한 실사용 평가가 크게 개선됐다.
-
-## 아키텍처
-
-`Input → Tokenization → Hybrid/Compressed Attention → MoE Expert Routing → Hyper-Connection Blocks → Reasoning/Tool Calling → Output`
-
-V4 계열은 압축/희소 Attention과 Hyper-Connection 계열 구조를 통해 장문 추론 효율을 개선하는 방향으로 설계됐다.
-
-## 장점
-
-- 매우 높은 비용 대비 Coding/Agent 성능
-- 1M 컨텍스트
-- Tool Calling 및 Multi-Agent Worker에 적합
-- 오픈 체크포인트
-- 저렴한 비용 덕분에 여러 Sub-Agent 병렬 실행 가능
-- Planner/Executor 구조에서 Executor로 특히 유리
-- 대량 Batch 및 반복 자동화에 적합
-
-## 단점 및 한계
-
-- 복잡한 요구사항의 자율적인 분해와 장기 계획은 Frontier 모델보다 약하다는 후기가 많다.
-- 긴 작업 흐름에서 원래 목표에서 조금씩 벗어나는 사례가 보고된다.
-- 프로젝트 문서와 Plan 품질에 결과가 크게 좌우된다.
-- 큰 코드베이스의 Agentic Edit에서 환각 및 잘못된 파일 수정/삭제 사례도 존재한다.
-- 일반 업무 문서의 미묘한 의미 파악이나 자연어 품질은 Coding 성능만큼 안정적이지 않다는 평가가 있다.
-- Harness/Provider에 따라 속도, Tool Calling 신뢰도, cache hit 및 실제 비용 편차가 크다.
-- 자체 호스팅은 284B 전체 weight 때문에 일반적인 13B 모델처럼 가볍지 않다.
-
-## 실사용 사례 및 후기
-
-### 1. OpenCode 기반 Coding Executor
-
-2026년 7~8월 OpenCode 사용자 후기에서 가장 반복적으로 나타나는 패턴이다.
-
-- 3~4개 Sub-Agent를 동시에 실행하면서도 비용 부담이 매우 낮다는 평가
-- 매우 어려운 설계 문제가 아니라면 장시간 자율 실행이 가능하다는 후기
-- 비싼 Frontier 모델이 작성한 Build Plan을 V4-Flash가 구현하도록 한 비교에서 계획 준수도가 높았다는 사례
-- 일부 사용자는 `Frontier Model → Plan → V4 Flash → Implementation → Frontier Review` 구조를 가장 경제적인 방식으로 평가
-
-즉 **Planner보다 Executor로 사용할 때 장점이 극대화된다.**
-
-### 2. 실제 중규모 연구 프로젝트 유지보수
-
-LINUX DO의 한 개발자는 기존에 GPT Sol/Opus로 개발하던 중간 난이도 연구 프로젝트 2개를 V4-Flash-0731 + OpenCode에 넘겨 이틀간 집중 사용했다.
-
-평가:
-- 짧은 context + 명확한 task boundary에서는 상위 모델에 근접하는 체감 성능
-- 이전 Flash/Pro보다 크게 향상
-- 요구사항 분해와 계획 수립은 약함
-- 긴 workflow에서 목표 이탈 가능
-- 프로젝트 문서가 명확할수록 성능 향상
-- context가 지나치게 커지기 전에 사람이 압축/초기화해 주는 것이 유리
-
-실무적으로는 **잘 작성된 작업지시서가 존재하는 개발 조직**에서 특히 적합한 특성이다.
-
-### 3. 미완성 Web App 디버깅 및 기능 완성
-
-Reddit 사용자가 여러 unknown bug가 존재하는 미완성 웹 애플리케이션을 V4-Flash-0731에 맡긴 사례에서는 이전 V4-Pro가 잘못된 방향을 반복했던 문제를 Flash가 지속적으로 디버깅하여 해결하고 누락 기능까지 구현했다고 보고했다.
-
-30분가량의 작업에서 사용량 증가가 매우 작았다는 점도 장점으로 언급됐다.
-
-### 4. Hermes Agent 자체 버그 디버깅
-
-Hermes 사용자가 reasoning call 처리 버그를 해결하기 위해 Claude 계열, GLM, MiniMax 등을 며칠간 시도했으나 해결하지 못한 뒤 V4-Flash-0731에 동일 문제를 제공했다.
-
-V4-Flash는 약 2시간 분석 후 수정안을 제시하고 실제 수정까지 완료했으며 사용자가 보고한 비용은 약 $0.48이었다.
-
-이 사례는 단순 코드 생성보다 **로그/코드 탐색 → 원인 추론 → 수정 → 재시작/검증** 형태의 Agentic Debugging 가능성을 보여준다.
-
-### 5. Hermes + 업무용 Multi-Agent Orchestrator
-
-상업용 부동산 사업을 운영하는 사용자는 Hermes를 Chief-of-Staff 형태의 Multi-Agent 시스템으로 사용하면서 V4-Flash-0731을 Orchestrator로 선택했다.
-
-GPT 계열 모델은 역할을 다른 Agent에 위임해야 하는 상황에서도 직접 처리하려는 경향이 있었던 반면, 해당 사용자의 설정에서는 V4-Flash가 사전에 정의한 역할/규칙을 더 잘 지키며 Finance/Dev Agent로 업무를 위임했다고 평가했다.
-
-이 사례의 핵심은 최고 추론 성능보다 **role discipline과 delegation 성향이 Orchestrator 품질에 중요할 수 있다는 점**이다.
-
-### 6. Hermes 기반 개인 업무 자동화
-
-실사용 사례:
-- Kanban task 관리
-- Web research / scraping
-- CLI/MCP tool discovery
-- 반복 Cron Job
-- 웹사이트 유지보수
-- Linux/Docker/Kubernetes 학습 및 운영
-- Telegram + VPS 기반 Web App debugging
-
-한 사용자는 무료/저비용 환경에서 약 80%의 작업이 첫 번째 또는 두 번째 시도에서 완료됐다고 평가했지만, Tool Call 약 5회 중 1회 수준에서 재시도가 필요했다고 보고했다.
-
-다른 사용자는 다수 Cron Job을 V4-Flash 기반 Hermes로 실행하며 일주일 비용이 약 $1.65였다고 보고했다.
-
-### 7. 부정적 후기
-
-모든 평가가 긍정적인 것은 아니다.
-
-일부 Hermes 사용자는:
-- 반복적인 실수
-- 기존 context를 놓치는 현상
-- 잘못된 파일 삭제/수정
-- 긴 작업에서 요구사항 오해
-- 재작업 증가
-을 경험했다.
-
-또 다른 사용자는 일반 사무 업무의 요약/편지 작성에서 미묘한 의미를 놓치는 문제 때문에 Coding 외 업무에서는 신뢰하기 어렵다고 평가했다.
-
-따라서 **비용이 싸다는 이유만으로 Human Review 없이 중요한 업무를 완전 자동화하는 것은 위험하다.**
-
-## 실사용에서 드러난 가장 중요한 패턴
-
-### 잘하는 것
-
-`명확한 Task → Tool 사용 → 코드 수정 → 테스트 → 반복`
-
-- 정해진 계획 실행
-- 코드 수정
-- 디버깅
-- CLI/MCP Tool 사용
-- 반복 자동화
-- Sub-Agent Worker
-- 대량 작업
-
-### 상대적으로 약한 것
-
-`모호한 요구사항 → 요구사항 분석 → 장기 계획 → 장시간 자율 실행 → 최종 판단`
-
-- 복잡한 요구사항 스스로 분해
-- 매우 긴 작업에서 목표 유지
-- 중요한 최종 판단
-- 미묘한 자연어/업무 문서 해석
-
-## 기존 도구와 비교
-
-| 역할 | V4-Flash | V4-Pro / Frontier Model |
-|---|---|---|
-| Task Planning | 보통 | 강함 |
-| Plan Execution | 매우 강함 | 강함 |
-| 반복 Coding | 매우 높은 가성비 | 품질 우위지만 비쌈 |
-| Tool Calling | 강함 | 강함 |
-| Multi-Agent Worker | 매우 적합 | 비용상 과할 수 있음 |
-| 장기 자율 실행 | Context 관리 필요 | 상대적으로 안정적 |
-| 최종 Review | 보조용 | 추천 |
-| 대량 자동화 | 매우 적합 | 비용 부담 |
-
-## 활용 아이디어
-
-### 추천: Planner → Flash Worker → Reviewer
-
-실사용 후기를 종합하면 가장 추천할 만한 구조다.
+## 전체 구조
 
 ```text
 User Request
-     ↓
-Planner
-GPT / Claude / 상위 Reasoning Model
-     ↓
-SPEC.md / PLAN.md / TASK.md
-     ↓
-DeepSeek V4 Flash
-     ↓
-Code / Tool Call / Build / Test
-     ↓
-Reviewer
-GPT / Claude / Codex
-     ↓
-PASS ──────────────→ 완료
-FAIL → Flash 재작업
+    │
+    ▼
+┌──────────────────────────────┐
+│ Intake / Harness             │
+│ 목표·제약·완료조건 정의      │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Claude Opus / Fable          │
+│ ANALYZE + PLAN               │
+│                              │
+│ - 요구사항 해석              │
+│ - 코드/증거 조사             │
+│ - 위험요소 식별              │
+│ - Architecture 판단          │
+│ - PLAN/TASK 생성             │
+└──────────────┬───────────────┘
+               ▼
+        TASK CONTRACT
+               │
+     ┌─────────┼─────────┐
+     ▼         ▼         ▼
+┌─────────┐ ┌─────────┐ ┌─────────┐
+│ Flash A │ │ Flash B │ │ Flash C │
+│ 구현    │ │ Test    │ │ 조사    │
+└────┬────┘ └────┬────┘ └────┬────┘
+     └───────────┼────────────┘
+                 ▼
+┌──────────────────────────────┐
+│ Verification Gate            │
+│ Build / Test / Lint / Diff   │
+└──────────────┬───────────────┘
+        PASS   │   FAIL
+          ┌────┘     └──────┐
+          ▼                 ▼
+┌──────────────────┐   Flash Retry
+│ Opus / Fable     │       │
+│ Final Review     │   retry limit
+└────────┬─────────┘       │
+         │                 ▼
+         │          Opus Escalation
+         ▼
+       DONE
 ```
 
-비싼 모델의 토큰을 실제 구현 반복에 소비하지 않고 **사고가 필요한 부분에만 사용하는 구조**다.
+## 역할 분담
 
-### 개발 환경 적용 후보
+| 단계 | 담당 | 이유 |
+|---|---|---|
+| 요구사항 해석 | Opus/Fable | 모호성 처리와 판단 필요 |
+| Repository 탐색 | Opus + Flash | 초기 구조 판단은 Opus, 상세 탐색은 Flash |
+| Architecture | Opus | 잘못된 설계는 이후 비용을 크게 증가시킴 |
+| Task 분해 | Opus/Fable | Flash에 작은 검증 가능 단위 제공 |
+| 코드 구현 | V4 Flash | 비용 대비 Agentic Coding 성능 우수 |
+| 반복 수정 | V4 Flash | 가장 비용을 많이 소모하는 구간 |
+| Build/Test | Flash + deterministic tools | 모델 판단보다 실제 실행 결과 우선 |
+| 실패 원인 1차 분석 | V4 Flash | 반복 작업에 적합 |
+| 복잡 실패 분석 | Opus | Flash 반복 실패 시 escalation |
+| 최종 Diff Review | Opus/Fable | 구조·누락·회귀 검토 |
+| 승인/배포 | Human | 고위험 작업은 자동화하지 않음 |
 
-1. 명확한 작업지시서 기반 코드 구현 Worker
-2. Build/Test 실패 반복 수정
-3. CI/CD 로그 1차 분석
-4. 대규모 코드 검색 및 영향도 분석
-5. 반복적인 리팩터링
-6. 테스트 코드 생성
-7. 문서/주석 생성
-8. Multi-Agent Sub-Agent
-9. 야간/백그라운드 개발 Agent
-10. MCP/CLI 기반 사내 업무 자동화
+## Task Contract
 
-### AX Model Router
+Opus가 Flash에게 자연어 요청만 전달하지 않고 명시적인 계약을 만든다.
+
+```yaml
+objective: 구현해야 할 결과
+scope:
+  allowed_files: []
+  forbidden_files: []
+constraints: []
+acceptance:
+  - build succeeds
+  - tests pass
+  - no unrelated changes
+commands:
+  build: ...
+  test: ...
+risk_level: medium
+retry_limit: 3
+escalate_when:
+  - architecture change required
+  - destructive operation required
+  - same failure repeated twice
+```
+
+Flash는 이 계약 안에서만 작업한다.
+
+## 실행 루프
+
+### 1. OBSERVE — Opus/Fable
+
+바로 코드를 수정하지 않는다.
+
+- 실제 파일 읽기
+- 관련 코드 검색
+- 기존 패턴 확인
+- 테스트/빌드 상태 확인
+- 추측과 확인된 사실 분리
+
+### 2. ORIENT — Opus/Fable
+
+작업을 검증 가능한 단위로 분해한다.
 
 ```text
-Simple / Repetitive
-        ↓
-DeepSeek V4 Flash
-        ↓
-성공 → 완료
-        ↓ 실패/불확실
-Frontier Model
-        ↓
-복잡한 추론 / Plan / Review
+TASK-01 interface 수정
+TASK-02 implementation
+TASK-03 unit tests
+TASK-04 integration verification
 ```
 
-## 도입 시 권장 Guardrail
+각 Task는 가능하면 Flash가 한 세션에서 완료 가능한 크기로 제한한다.
 
-- 작업 시작 전에 PLAN/TASK 문서를 명확하게 작성
-- 한 Agent에 지나치게 큰 목표를 주지 말고 Task 단위로 분리
-- Build/Test를 완료 조건으로 사용
-- 파일 삭제, Git push, 배포 등 위험 작업은 승인 단계 추가
-- 일정 context 크기마다 compact/reset
-- 실패 횟수 임계치를 넘으면 상위 모델로 escalation
-- 최종 PR/변경사항은 상위 모델 또는 사람이 review
+### 3. ACT — DeepSeek V4 Flash
+
+Flash의 책임은 생각의 범위를 확장하는 것이 아니라 **정의된 Task를 끝내는 것**이다.
+
+```text
+Read → Edit → Build → Test → Inspect → Fix
+```
+
+작업 중 새로운 Architecture 결정이 필요하면 임의로 결정하지 않고 `ESCALATE`한다.
+
+### 4. VERIFY — Deterministic Gate
+
+모델의 “완료했습니다”를 신뢰하지 않는다.
+
+최소 검증:
+
+```text
+Build exit code == 0
+Tests == PASS
+Lint/static analysis == PASS
+Git diff 범위 == Task scope
+```
+
+### 5. REVIEW — Opus/Fable
+
+Opus는 전체 코드를 다시 만드는 것이 아니라 결과를 감사한다.
+
+- 요구사항 누락
+- Architecture 위반
+- 불필요한 변경
+- 오류 처리
+- 테스트 충분성
+- 보안/성능 문제
+
+문제가 작으면 Flash에게 재작업시키고, 구조 문제면 Opus가 Plan을 수정한다.
+
+## Retry / Escalation 정책
+
+```text
+Flash Attempt #1
+   ↓ FAIL
+Flash 자체 원인 분석 + Retry
+   ↓ FAIL
+Flash Attempt #2
+   ↓ FAIL (동일 원인)
+Opus Escalation
+   ↓
+Plan 수정 또는 직접 해결
+```
+
+권장 기본값은 Flash 최대 2~3회다. 싼 모델이라고 무한 반복시키면 Context 오염과 잘못된 수정이 누적될 수 있다.
+
+즉 **비용 제한보다 실패 패턴 제한이 중요하다.**
+
+## Context 전략
+
+모델끼리 전체 대화 Context를 공유하지 않는다.
+
+공유 상태는 파일 기반으로 유지한다.
+
+```text
+.agent/
+ ├─ SPEC.md
+ ├─ PLAN.md
+ ├─ TASKS/
+ │   ├─ 001.md
+ │   └─ 002.md
+ ├─ STATE.md
+ ├─ EVIDENCE/
+ │   ├─ build.log
+ │   └─ test.log
+ └─ REVIEW.md
+```
+
+Flash에게는 현재 TASK + 필요한 파일 + 관련 증거만 전달한다. 1M context를 사용할 수 있어도 모든 히스토리를 계속 넣는 방식은 피한다.
+
+## Multi-Agent 확장
+
+서로 독립적인 작업만 병렬화한다.
+
+```text
+              Opus Planner
+                   │
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+ Flash-Code   Flash-Test   Flash-Research
+       │           │           │
+       └───────────┼───────────┘
+                   ▼
+             Verification
+                   ▼
+              Opus Review
+```
+
+같은 파일을 여러 Flash가 동시에 수정하는 구조는 기본적으로 금지한다.
+
+## Fable식 Adversarial Review
+
+중요 변경은 하나의 Reviewer 판단에만 의존하지 않는다.
+
+- **Skeptic**: 근거가 충분한가?
+- **Red Team**: 어떤 방식으로 깨질 수 있는가?
+- **Simplifier**: 더 단순한 구현이 가능한가?
+
+저위험 변경은 Flash reviewer를 사용할 수 있고, Architecture/보안/대규모 변경은 Opus가 arbitration한다.
+
+## Model Router
+
+```text
+LOW
+문서 생성 / 단순 수정 / 반복 작업
+→ Flash
+
+MEDIUM
+일반 기능 구현 / 버그 수정
+→ Opus Plan → Flash Execute
+
+HIGH
+Architecture / 복잡 장애 / 보안
+→ Opus 직접 분석
+→ Flash 보조
+→ Opus Review
+
+CRITICAL
+배포 / 데이터 삭제 / 인프라 변경
+→ Opus + Human Approval
+```
+
+## Guardrail
+
+Flash Worker에는 다음을 기본 적용한다.
+
+- Task scope 밖 파일 수정 금지
+- 삭제/대량 rename 승인 필요
+- git push 금지
+- production deploy 금지
+- secret 접근 금지
+- Build/Test 결과 원문 저장
+- 실패를 성공으로 표현하지 못하도록 exit code 확인
+- 작업 전후 `git diff` 검사
+- 동일 오류 반복 시 escalation
+
+## 비용 최적화 포인트
+
+가장 비싼 토큰은 구현 과정의 반복에서 발생한다.
+
+기존:
+
+```text
+Opus
+Analyze → Code → Build → Error → Fix → Build → Error → Fix → Review
+```
+
+추천:
+
+```text
+Opus
+Analyze → Plan
+          │
+          ▼
+Flash
+Code → Build → Fix → Build → Test → Fix
+          │
+          ▼
+Opus
+Review
+```
+
+즉 Opus 토큰을 **판단력이 필요한 구간**에 집중시키고 Flash 토큰을 **시행착오가 많은 구간**에 사용한다.
+
+## 추천 기본 구성
+
+```yaml
+planner: claude-opus
+executor: deepseek-v4-flash-0731
+reviewer: claude-opus
+cheap_reviewer: deepseek-v4-flash-0731
+
+execution:
+  max_retries: 3
+  parallel_workers: 3
+  require_build: true
+  require_tests: true
+
+approval:
+  delete: human
+  deploy: human
+  push: human
+  architecture_change: opus
+```
+
+## 도입 순서
+
+1. 단일 `Opus → Flash → Opus` 루프부터 시작
+2. TASK Contract 도입
+3. Build/Test Verification Gate 추가
+4. Retry/Escalation 자동화
+5. Context를 TASK 단위로 격리
+6. 독립 작업에 한해 Flash Worker 병렬화
+7. Fable식 adversarial review 추가
+8. 작업 유형별 Model Router 적용
+
+처음부터 복잡한 Multi-Agent 시스템을 만드는 것보다 **단일 Planner/Executor/Reviewer 루프의 성공률과 비용을 먼저 측정**하는 편이 좋다.
+
+## 평가 지표
+
+- Task Success Rate
+- First-pass Build Rate
+- Test Pass Rate
+- Flash Retry Count
+- Opus Escalation Rate
+- Human Intervention Rate
+- 작업당 Opus token
+- 작업당 Flash token
+- 작업 완료 시간
+- 잘못 수정한 파일 수
+- Regression 발생률
+
+핵심 KPI는 **Opus 사용량을 얼마나 줄였는가가 아니라 동일 품질을 유지하면서 Opus가 판단에만 집중하게 되었는가**이다.
 
 ## 결론
 
-실사용 사례를 기준으로 V4-Flash의 가장 매력적인 포지션은 **'Claude/GPT를 완전히 대체하는 초저가 Frontier 모델'이 아니라 'Frontier 모델이 만든 계획을 대량으로 실행하는 고성능 Worker'**다.
+가장 추천하는 형태는 다음 한 줄로 정리된다.
 
-특히 0731 버전 이후 OpenCode/Hermes 사용자들의 Coding Agent 평가는 상당히 긍정적이다. 반면 복잡한 계획 수립, 긴 workflow의 목표 유지, 미묘한 일반 업무 문서 이해에서는 부정적 사례도 분명히 존재한다.
+> **Fable의 작업 규율 + Opus의 판단력 + DeepSeek V4 Flash의 실행 가성비 + 실제 Build/Test 기반 검증**
 
-따라서 개발·AX 환경에서는 `Frontier Planner + V4 Flash Executor + Frontier/Human Reviewer` 구조가 현재 가장 현실적인 활용 방식으로 보인다.
+DeepSeek V4 Flash 0731은 공식 모델 카드에서도 이전 Flash보다 agentic capability가 크게 향상됐으며 TerminalBench 2.1 82.7, Toolathlon-Verified 70.3 등 Tool/Agent 작업에서 강한 결과를 보인다. 따라서 Opus/Fable을 완전히 대체하기보다 반복 실행 계층을 분리하는 것이 합리적이다.
 
 ## 참고 링크
 
-- DeepSeek V4 Flash: https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash
-- DeepSeek API Docs: https://api-docs.deepseek.com/
-- DeepSeek + Kilo Code: https://api-docs.deepseek.com/quick_start/agent_integrations/kilo_code/
-- Kilo Code V4: https://kilo.ai/landing/deepseek-v4
-- OpenCode 실사용 후기: https://www.reddit.com/r/DeepSeek/comments/1vdzmbp/deepseekv4flash0731_opencode/
-- V4 Flash 0731 실사용 디버깅: https://www.reddit.com/r/DeepSeek/comments/1vc4ocr/deepseek_v4_flash_0731_real_experience_it_is/
-- Hermes 버그 수정 사례: https://www.reddit.com/r/hermesagent/comments/1vc76pb/the_new_deepseekv4flash_is_incredible/
-- Hermes Multi-Agent Orchestrator 사례: https://www.reddit.com/r/hermesagent/comments/1vyd3wk/i_tried_hard_to_avoid_deepseek_v4_flash_for_my/
-- Hermes Agent 장기 사용 사례: https://www.reddit.com/r/hermesagent/comments/1uh94sy/deepseekv4flash_free_on_hermes_paid_upgraders/
-- LINUX DO 개발 실사용 후기: https://linux.do/t/topic/2693113
-
-> 실사용 후기 조사 기준일: 2026-08-27. 커뮤니티 사례는 개별 환경, Harness, Provider, Prompt 및 프로젝트 특성에 따라 결과가 크게 달라질 수 있으므로 내부 PoC를 통해 검증하는 것이 필요하다.
+- DeepSeek V4 Flash 0731: https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731
+- Fable Harness: https://github.com/Miguok/fable-harness
+- Opus Fable Playbook: https://github.com/rennf93/opus-fable-playbook
+- Anthropic Claude Code Model Configuration: https://support.claude.com/en/articles/11940350-claude-code-model-configuration
