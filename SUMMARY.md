@@ -9,6 +9,21 @@
 
 ---
 
+## 2026-08-28
+
+> **1 commit · 핵심 문서 변경 1건**
+
+### 1. Archify — Agent 기반 아키텍처 시각화·검증 파이프라인 분석
+
+[`ai/skills/archify.md`](./ai/skills/archify.md)
+
+- Claude Code·Codex·Cursor·OpenCode 같은 Coding Agent가 코드베이스나 시스템 설명을 분석해 **typed JSON IR → deterministic validation → self-contained HTML/SVG**로 아키텍처 다이어그램을 만드는 Agent Skill을 정리.
+- Architecture·Workflow·Sequence·Data Flow·Lifecycle 5개 유형과 schema/layout/route/label 충돌 검증, machine-readable diagnostic 기반 repair loop를 통해 단순 Mermaid 생성보다 반복 가능한 품질 보증에 초점을 둔 구조를 분석.
+- repository evidence를 node에 연결해 실제 코드 근거를 붙이거나, 두 architecture snapshot의 added/removed/changed/moved/rerouted를 계산하는 **Architecture Delta**를 PR·설계 리뷰 artifact로 활용할 수 있음을 정리.
+- 코드베이스 온보딩, CI/CD·Agent Workflow 문서화, API/인증 흐름 설명에 특히 적합하며, 사내 환경에서는 Node/Chromium 실행 제약과 LLM의 구조 해석 오류 가능성을 별도 검증해야 한다고 평가.
+
+---
+
 ## 2026-08-27
 
 > **12 commits · 핵심 주제 4건**
