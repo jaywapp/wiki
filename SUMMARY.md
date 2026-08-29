@@ -9,6 +9,48 @@
 
 ---
 
+## 2026-08-29
+
+> **11 commits · 핵심 문서 변경 10건 · 핵심 주제 4건**
+
+### 1. DeepSeek Harness — 플러그인 중심 Agent Runtime과 생태계 분석
+
+[`ai/harness/deepseek-harness.md`](./ai/harness/deepseek-harness.md) · [`ai/research/dsh-plugin-ecosystem.md`](./ai/research/dsh-plugin-ecosystem.md)
+
+- DeepSeek Harness를 단순 DeepSeek Coding CLI가 아니라 **모델·도구·세션·Agent Loop·Sandbox·UI를 교체 가능한 플러그인으로 조립하는 Agent Runtime/Harness Platform**으로 정리.
+- Cordis 기반 `Everything is a Plugin`, Profile/Bundle/Patch 계층, append-only SessionEvent log, tool 실행 전후 interception, Claude Code·Codex subagent 연결 등 Harness Engineering 관점의 핵심 설계를 분석.
+- `dsh-plugin` 생태계에서는 memory/knowledge, session health·token/cost observability, model routing, diagram/skill, orchestration 확장이 빠르게 등장하고 있음을 확인.
+- 다만 DSH 자체가 Developer Preview이고 Topic 기반 discovery에는 노이즈가 많아, 현재는 production 표준보다 **DeepSeek Worker + Claude/Codex Reviewer 같은 PoC와 plugin contract 설계 참고용**이 적합하다고 평가.
+
+### 2. Capafy — Agent Skill을 유료 상품으로 만드는 Marketplace 구조 분석
+
+[`ai/skills/capafy-skills.md`](./ai/skills/capafy-skills.md)
+
+- Capafy를 Skill 파일 공유가 아니라 **검색·결제·클라우드 실행·IP 보호·버전 관리·정산이 가능한 Agent Marketplace**로 정리하고 후속 조사로 수익화 구조를 보강.
+- `Run on Capafy`는 핵심 Skill을 서버에 유지하고 로컬에는 Thin Skill만 설치해 원격 Agent로 라우팅하며, `Download`는 전체 Skill Package를 구매자에게 전달하는 두 실행 모델을 비교.
+- Publisher Skill은 deterministic Python tooling으로 secret scan·package·validation·upload를 처리하고 host LLM이 이를 orchestration하는 구조이며, User Skill은 검색·구매·구독·Thin Skill 설치·cloud instance resume를 담당.
+- Agent Skill이 프롬프트 자산을 넘어 **배포·실행·과금 가능한 소프트웨어 상품 단위**로 발전하는 실제 사례로서, 사내 Skill Catalog/Marketplace 설계에도 참고 가치가 있다고 정리.
+
+### 3. AI·Quant Trading Stack — 예측·리서치·최적화·실행 계층 조사
+
+[`ai/tools/kronos.md`](./ai/tools/kronos.md) · [`ai/tools/nautilus-trader.md`](./ai/tools/nautilus-trader.md) · [`ai/tools/vibe-trading.md`](./ai/tools/vibe-trading.md) · [`ai/tools/skfolio.md`](./ai/tools/skfolio.md) · [`ai/tools/gs-quant.md`](./ai/tools/gs-quant.md)
+
+- **Kronos**는 OHLCV/K-line을 금융 전용 token으로 변환해 미래 캔들 시퀀스를 생성하는 Foundation Model로, 단독 매매 oracle보다 forecast/scenario signal provider로 활용하는 방향을 제안.
+- **Vibe-Trading**은 자연어 질문을 시장 데이터·전략 생성·백테스트·멀티에이전트 분석·MCP·선택적 broker 실행까지 연결하는 금융 Research Agent Platform으로, 한국 KRX 백테스트도 지원하지만 실거래 기능은 아직 보수적 검증이 필요하다고 평가.
+- **skfolio**는 portfolio optimization을 scikit-learn estimator처럼 학습·walk-forward/purged CV·튜닝하는 결정론적 자산배분/리스크 계층, **GS Quant**는 Goldman Sachs의 시계열·상품·pricing/risk 도메인 툴킷으로 정리.
+- **NautilusTrader**는 Rust 기반 이벤트 엔진으로 Backtest/Sandbox/Live를 같은 domain model에서 연결하는 execution/risk 계층이며, AI가 직접 broker API를 호출하기보다 `Agent Signal → deterministic optimizer/risk → execution engine`으로 역할을 분리하는 구조가 공통 권장 패턴으로 도출됨.
+
+### 4. 축구 분석 자동화 — 오픈소스 분석 스택과 Betman 공식 배당 수집 전략
+
+[`soccer/open-source-football-analytics.md`](./soccer/open-source-football-analytics.md) · [`soccer/korea-sportstoto-official-odds-collection.md`](./soccer/korea-sportstoto-official-odds-collection.md)
+
+- 축구 분석은 **Kloppy → SoccerAction(xT/VAEP) → mplsoccer 시각화 → PenaltyBlog 확률/Poisson/Elo** 조합을 기본으로 하고, Tracking 데이터가 확보되면 DataBallPy/Floodlight까지 확장하는 오픈소스 스택을 정리.
+- K리그는 라이브러리보다 원천 Event/Tracking 데이터 확보가 병목이며, 경기결과 → 통계 → Event → Tracking의 4단계 데이터 성숙도에 맞춰 Momentum/xT/VAEP/공간 분석을 확장하는 전략을 제안.
+- 스포츠토토 공식 배당은 **Betman 공개 XHR/Fetch 확인 → 직접 수집 → 필요 시 Playwright → WiseToto fallback → 실제 구매 캡처를 정산 최종값**으로 사용하는 우선순위를 정의.
+- 현재 배당 overwrite 대신 snapshot history와 `source / collected_at / market / line`을 저장하고, 분석 직전 refresh 및 line movement를 함께 관리해 EV 계산과 실제 구매가격 정산을 분리하는 데이터 모델을 제시.
+
+---
+
 ## 2026-08-28
 
 > **1 commit · 핵심 문서 변경 1건**
