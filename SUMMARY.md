@@ -9,6 +9,63 @@
 
 ---
 
+## 2026-08-31
+
+> **12 commits · 핵심 문서 변경 12건 · 핵심 주제 6건**
+
+### 1. Aegis — Workspace 전역 Agent Team 실행·관제 계층 아이디어 구체화
+
+[`idea/aegis.md`](./idea/aegis.md)
+
+- Claude와 Codex를 작업 특성에 따라 동적으로 조합하고 **Task Graph → Dynamic Team Formation → Adaptive Parallelism → Independent Review → Failure Recovery**로 실행하는 Workspace 공통 Agent Runtime 아이디어를 정리.
+- Home은 `Codex + Claude + Git`, Work는 `Claude + Codex + Perforce`를 기본 Environment Profile로 두되 Harness/SCM을 추상화하고, 작은 작업은 Lead가 직접 처리해 Multi-Agent 오버헤드를 피하도록 설계.
+- Agent별 전체 컨텍스트를 복제하지 않고 Objective·Relevant Decisions·Target Files·Dependencies·Validation Criteria만 담은 Task Context Package를 전달하고, File Ownership과 SCM Adapter로 병렬 코드 수정 충돌을 제어하는 구조를 제안.
+- **Live Runtime Viewer / Control Center**를 핵심 UX로 두어 Team 상태, Task Graph, 병렬 실행 수, Block/Retry/Fallback, File Ownership, Review/Test 진행 상황을 실시간으로 시각화하고 Agent 수 증가가 실제 성과로 이어지는지 Task Report로 측정하도록 정의.
+
+### 2. Ruflo + OmniRoute — Coding Agent 위의 Meta-Harness와 Model Gateway 계층
+
+[`ai/harness/ruflo.md`](./ai/harness/ruflo.md) · [`ai/tools/omniroute.md`](./ai/tools/omniroute.md)
+
+- **Ruflo**를 Claude Code/Codex 위에 Router, Swarm, Memory/RAG, Knowledge Graph, Hooks/Daemon, Learning Loop, MCP를 얹는 대규모 **Agent Meta-Harness**로 정리하고, 전체 도입보다 orchestration·memory·routing 패턴을 선별적으로 참고하는 방향을 권장.
+- Ruflo의 실제 multi-agent publish race 사례를 통해 공유 checkout 동시 수정 위험과 Agent별 worktree/workspace 격리 필요성을 중요한 운영 교훈으로 정리.
+- **OmniRoute**는 Claude Code·Codex·Cursor 등을 하나의 OpenAI 호환 endpoint에 연결하고 Provider/Model 선택, quota, health, fallback, token compression, usage 관측을 중앙화하는 local-first **LLM Gateway**로 분석.
+- Harness가 물리 모델명을 직접 고정하기보다 `analysis-high`, `coding-fast`, `review-independent` 같은 논리 profile만 요청하고 실제 모델·Provider·fallback은 Gateway가 담당하는 구조를 PoC 가치가 높은 패턴으로 제안.
+
+### 3. Claude-Mem — 세션 간 영속 메모리와 Progressive Retrieval 패턴
+
+[`ai/tools/claude-mem.md`](./ai/tools/claude-mem.md)
+
+- Claude Code lifecycle hook으로 prompt/tool event를 자동 포착하고 AI observer가 observation/summary로 압축해 SQLite에 저장한 뒤 다음 세션에서 필요한 기억만 검색·주입하는 **persistent memory compression layer**를 분석.
+- 핵심 설계는 transcript 전체를 다시 넣는 것이 아니라 `search → timeline → selected observation detail` 순서로 상세 context를 늦게 로딩하는 Progressive Disclosure 방식이며, 장기 Agent Harness의 Shared Memory 설계에 재사용 가치가 높다고 평가.
+- 자동 context injection의 크기 제한, CJK/한국어 FTS5 검색 품질, observer 비용·worker lifecycle·보안/retention 등 실제 운영 리스크도 함께 정리해 즉시 표준화보다 PoC 후 검증을 권장.
+
+### 4. Claude Code Setup + Task Observer — Agent 환경의 진단·지속 개선 Loop
+
+[`ai/skills/claude-code-setup.md`](./ai/skills/claude-code-setup.md) · [`ai/skills/task-observer.md`](./ai/skills/task-observer.md)
+
+- Anthropic 공식 **Claude Code Setup**은 코드베이스의 언어·프레임워크·테스트·CI/CD·기존 `.claude` 설정을 읽고 MCP, Skill, Hook, Subagent, Plugin 중 가치가 높은 항목만 추천하는 read-only Repository AI Readiness 진단기로 정리.
+- 조직 환경에서는 `공식 Recommender → 사내 allowlist/보안/OS/비용 Policy Filter → Human Approval → Implementation Agent`로 진단과 실제 변경 권한을 분리하는 구조를 제안.
+- **Task Observer**는 실제 작업 중 사용자 수정·반복 작업·Skill 실패·workflow friction을 observation으로 축적해 기존 Skill 개선점과 신규 Skill 후보를 발견하는 self-improving meta-skill로 분석.
+- 자동 관찰은 하되 Skill 자체를 즉시 수정하지 않고 staging/review를 거치며, observation별 Markdown + frontmatter scan + on-demand reference loading으로 장기 backlog의 context 비용과 병렬 session collision을 줄이는 설계가 핵심.
+
+### 5. Prompt/Claude 실무 최적화 — Prompt Compiler, Slash Label, 한글 Tool Call 대응
+
+[`ai/skills/prompt-master.md`](./ai/skills/prompt-master.md) · [`ai/tips/chatgpt-slash-style-prompt-labels.md`](./ai/tips/chatgpt-slash-style-prompt-labels.md) · [`ai/tips/claude-code-korean-tool-call-corruption.md`](./ai/tips/claude-code-korean-tool-call-corruption.md)
+
+- **Prompt Master**를 단순 prompt template 모음보다 `rough request → intent extraction → target-tool routing → scope/approval/done/verification을 갖춘 Task Contract`로 변환하는 **Prompt Compiler Skill**로 평가하고, Coding Agent 앞단의 경량 Prompt Gateway/Quality Gate로 활용하는 아이디어를 제안.
+- `/cheatsheet`, `/blueprint`, `/flashcards`, `/mindmap`은 숨겨진 ChatGPT 공식 명령어가 아니라 원하는 출력 형태를 축약해서 지정하는 **prompt label**로 정리하고, 팀 차원의 `/research`, `/review`, `/rootcause` 같은 intent vocabulary를 실제 Skill Router로 확장하는 방향을 제안.
+- Claude Code에서 Tool Call 파라미터의 한국어가 다른 정상 한글 음절로 치환되는 특정 증상은 `\\uXXXX` escape 생성 오류 가능성이 있으며, `CLAUDE.md`에서 비 ASCII tool parameter를 **literal UTF-8로 작성하도록 강제**하는 prompt-level workaround와 회귀 검증 방법을 정리.
+
+### 6. Agent가 읽고 만드는 외부 지식·UI — Design System, Archify, Instagram Reels
+
+[`ai/research/ai-friendly-design-systems.md`](./ai/research/ai-friendly-design-systems.md) · [`ai/skills/archify.md`](./ai/skills/archify.md) · [`ai/research/instagram-reels-programmatic-access.md`](./ai/research/instagram-reels-programmatic-access.md)
+
+- AI 친화적 디자인 시스템을 **문서 참조형 → AI용 Context/Skill 제공형 → MCP/CLI/JSON API를 가진 Agent-native형**으로 구분하고, Meta Astryx·SEED AI Skill·Adobe Spectrum 등을 통해 사내 Design System도 token/component/rule/anti-pattern을 Skill/MCP로 노출하는 방향을 제안.
+- Archify 문서를 v2.16.0 기준으로 갱신해 typed JSON IR, deterministic validator/renderer, source evidence, Architecture Delta에 더해 constraint-driven Workflow Compiler, last-good preview, atomic delivery 등 Agent-native diagram pipeline의 안정성 패턴을 보강.
+- Instagram Reels는 소유/권한 계정에는 공식 Graph API, 임의 공개 Reel URL에는 관리형 수집 API 또는 제한적 Browser Adapter를 분리하고, `Fetch Adapter → normalized media → transcript/OCR/vision → 공식 자료 재검증 → Wiki` 형태로 접근과 분석을 격리하는 구조를 정리.
+
+---
+
 ## 2026-08-29
 
 > **11 commits · 핵심 문서 변경 10건 · 핵심 주제 4건**
