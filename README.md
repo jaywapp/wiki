@@ -17,6 +17,7 @@
 - [teamcity/teamcity-perforce-workspace-optimization.md](teamcity/teamcity-perforce-workspace-optimization.md) — TeamCity + Perforce Persistent Workspace 최적화 설계 (TeamCity / TeamCitizen / perforce-syncer 책임 분리)
 - [ai-workflow/token-optimization-claude-codex.md](ai-workflow/token-optimization-claude-codex.md) — Claude+Codex 토큰 최적화 워크플로우(원리·전략·오픈소스 도구·SOP)
 - [ai-workflow/ccsw/](ai-workflow/ccsw/README.md) — ccsw: Claude+Codex 진입 런처(WPF GUI) + 프리셋 스위처 + RTK/Headroom 설치·토글·세션 실행·VS Code 연동
+- [ai-workflow/aegis-first-vertical-slice.md](ai-workflow/aegis-first-vertical-slice.md) — Aegis 첫 수직 슬라이스의 아키텍처·실행 명령·트러블슈팅
 - [ai-workflow/setup-and-test.md](ai-workflow/setup-and-test.md) — 직접 구성 & A/B 테스트 가이드(측정→압축→ccsw→실측)
 - [ai-workflow/perforce-p4.md](ai-workflow/perforce-p4.md) — Perforce(P4) 환경 토큰 최적화 적응안(git 미사용 환경)
 - [ai-workflow/claude-agent-sdk-mcpservers-override.md](ai-workflow/claude-agent-sdk-mcpservers-override.md) — Agent SDK options.mcpServers가 파일 기반 MCP 설정을 대체하는 함정 (timetree 미노출 원인)
