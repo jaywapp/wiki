@@ -9,6 +9,21 @@
 
 ---
 
+## 2026-09-02
+
+> **1 commit · 핵심 문서 변경 1건**
+
+### 1. Claude Fable 5.1 — 장기 Agent Harness 프롬프팅·운영 패턴 정리
+
+[`ai/tips/claude-fable-5-1-prompting.md`](./ai/tips/claude-fable-5-1-prompting.md)
+
+- Fable 5.1을 기존 Claude 하네스에 단순 교체하기보다 **effort routing, 독립 Tool Call 병렬화, append-only conversation history, autonomous completion, surgical edit**를 Runtime Policy로 명시해야 비용·지연·불필요한 diff를 줄일 수 있다고 정리.
+- `low → medium → high → xhigh/max`를 작업 난이도에 따라 선택하는 effort 라우팅과, 최신 정보가 중요한 low-effort 작업에는 별도 Search Policy를 두는 방식을 제안.
+- thinking block·prompt cache를 보존하기 위해 이전 turn을 수정하지 않는 append-only 기록과 compaction boundary를 강조하고, 장기 작업에서는 추가 허락을 반복 요구하지 않도록 완료 조건과 scope control을 명시하도록 권장.
+- Subagent를 실행한 뒤 Lead Agent가 idle하지 않고 자신의 분석·구현을 계속하는 **비동기 Subagent + 별도 wait/join** 구조를 통해 Agent Team의 wall-clock time을 줄이는 Harness 패턴을 정리.
+
+---
+
 ## 2026-08-31
 
 > **12 commits · 핵심 문서 변경 12건 · 핵심 주제 6건**
@@ -54,7 +69,7 @@
 
 - **Prompt Master**를 단순 prompt template 모음보다 `rough request → intent extraction → target-tool routing → scope/approval/done/verification을 갖춘 Task Contract`로 변환하는 **Prompt Compiler Skill**로 평가하고, Coding Agent 앞단의 경량 Prompt Gateway/Quality Gate로 활용하는 아이디어를 제안.
 - `/cheatsheet`, `/blueprint`, `/flashcards`, `/mindmap`은 숨겨진 ChatGPT 공식 명령어가 아니라 원하는 출력 형태를 축약해서 지정하는 **prompt label**로 정리하고, 팀 차원의 `/research`, `/review`, `/rootcause` 같은 intent vocabulary를 실제 Skill Router로 확장하는 방향을 제안.
-- Claude Code에서 Tool Call 파라미터의 한국어가 다른 정상 한글 음절로 치환되는 특정 증상은 `\\uXXXX` escape 생성 오류 가능성이 있으며, `CLAUDE.md`에서 비 ASCII tool parameter를 **literal UTF-8로 작성하도록 강제**하는 prompt-level workaround와 회귀 검증 방법을 정리.
+- Claude Code에서 Tool Call 파라미터의 한국어가 다른 정상 한글 음절로 치환되는 특정 증상은 `\uXXXX` escape 생성 오류 가능성이 있으며, `CLAUDE.md`에서 비 ASCII tool parameter를 **literal UTF-8로 작성하도록 강제**하는 prompt-level workaround와 회귀 검증 방법을 정리.
 
 ### 6. Agent가 읽고 만드는 외부 지식·UI — Design System, Archify, Instagram Reels
 
