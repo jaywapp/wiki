@@ -9,6 +9,28 @@
 
 ---
 
+## 2026-09-03
+
+> **2 commits · 핵심 문서 변경 2건 · 핵심 주제 2건**
+
+### 1. Human-readable Markdown — AI 문서를 독자 중심으로 만드는 Skill 파이프라인
+
+[`ai/skills/human-readable-markdown-skills.md`](./ai/skills/human-readable-markdown-skills.md)
+
+- AI 문서의 문제를 단순한 말투가 아니라 **과도한 heading/list, 반복 구조, 추상적 평가어, 정보 중요도 평탄화** 같은 정보 구조 문제로 정의하고, Humanizer만으로 해결하기 어렵다고 정리.
+- 기본 작성에는 Continue `docs-style`과 `technical-writing`의 reader goal·progressive disclosure·concrete/factual safety 원칙을 사용하고, 이후 `human-voice`/Humanizer와 Markdown validation을 거치는 **Docs Writer → Human Voice Review → Validation** 파이프라인을 권장.
+- Wiki 전용 `human-readable-docs` Skill을 만들어 heading/list 최소화, 중복 제거, 실제 명령·값·예제 우선, 기술 용어 보존을 공통 규칙으로 적용하고 기존 문서 A/B 테스트로 품질을 검증하는 방향을 제안.
+
+### 2. gpt-image — Coding Agent에 이미지 생성·편집 능력을 붙이는 경량 Adapter
+
+[`ai/skills/gpt-image.md`](./ai/skills/gpt-image.md)
+
+- `egoist/gpt-image`를 OpenAI `gpt-image-2`를 `bunx gpt-image` CLI와 Agent Skill로 감싼 **경량 이미지 생성/편집 Adapter**로 분석하고, Claude Code/Codex가 자연어 요청에서 직접 asset 파일을 생성하는 흐름을 정리.
+- text-to-image, image edit, 다중 reference, 품질/크기 제어를 하나의 CLI로 제공하며, API Key 외에 Codex CLI 인증을 재사용하는 ChatGPT OAuth 경로도 지원하지만 비공식 방식이라 장기 자동화·Enterprise 환경에는 API Key 기반 구성을 권장.
+- UI placeholder·아이콘·배너·Wiki illustration·게임 concept asset 생성에 바로 활용할 수 있고, Agent Team에서는 별도 **Image Worker** 역할로 분리할 수 있으나 quota/비용, Bun 의존성, 생성물 검수 정책이 필요하다고 정리.
+
+---
+
 ## 2026-09-02
 
 > **1 commit · 핵심 문서 변경 1건**
