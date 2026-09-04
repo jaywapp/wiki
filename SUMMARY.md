@@ -9,6 +9,70 @@
 
 ---
 
+## 2026-09-04
+
+> **12 commits · 핵심 주제 7건**
+
+### 1. GPT-6 Astra — Agentic Workflow 중심 차세대 모델 분석
+
+[`ai/news/gpt-6-astra.md`](./ai/news/gpt-6-astra.md)
+
+- GPT-6 Astra를 단순 대화 모델보다 **computer use·브라우징·코딩·다단계 tool workflow를 끝까지 수행하는 agentic work 모델**로 정리하고, 1.05M context·128K output·`low~max` reasoning effort를 포함한 실행 특성을 분석.
+- Async Tool Calling과 Mid-turn Steering을 장시간 Agent Harness의 핵심 변화로 보고, 모든 작업에 Astra를 쓰기보다 **고난도 Orchestrator/Analysis/Review → 저비용 Worker**로 난이도 기반 라우팅하는 방향을 권장.
+- 높은 단가와 강한 사이버 역량 때문에 sandbox, permission boundary, audit log를 포함한 제한된 실행 환경이 필요하다고 정리.
+
+### 2. Agent Team 실행환경 — Herdr + Claude Workspace Orchestrator + 공통 작업 계약
+
+[`ai/tools/herdr.md`](./ai/tools/herdr.md) · [`idea/claude-workspace-orchestrator.md`](./idea/claude-workspace-orchestrator.md) · [`AGENTS.md`](./AGENTS.md) · [`CLAUDE.md`](./CLAUDE.md) · [`docs/README.md`](./docs/README.md) · [`docs/workspace-environment-setup-analysis.md`](./docs/workspace-environment-setup-analysis.md) · [`docs/workspace-environment-setup-design.md`](./docs/workspace-environment-setup-design.md) · [`docs/workspace-environment-setup-tasks.md`](./docs/workspace-environment-setup-tasks.md)
+
+- **Herdr**를 Claude Code·Codex 등 기존 CLI를 유지하면서 persistent terminal, agent 상태(`working/blocked/idle/done`), attach/resume, socket/CLI 제어를 제공하는 **Agent Runtime substrate**로 분석하고, orchestration brain보다 실행·상태 계층으로 쓰는 방향을 제안.
+- **Claude Workspace Orchestrator**는 root의 Main Claude가 프로젝트별 장기 Claude 세션에 작업을 분배하고 결과를 취합하며 별도 Deploy Agent가 `release/`를 담당하는 `Main Orchestrator + Persistent Project Agents + Deploy Agent` 구조로 구체화.
+- 저장소 공통 계약에는 분석/설계/작업계획 artifact, model/effort·병렬 그룹, file ownership, UX 3안 gate, 검증·Git·보안 규칙을 명시해 Claude/Codex가 같은 운영 경계를 따르도록 표준화.
+
+### 3. oh-my-fable — Claude Fable 5.1 실행 규칙의 Hook 기반 자동 주입
+
+[`ai/tools/oh-my-fable.md`](./ai/tools/oh-my-fable.md)
+
+- Fable 5.1 프롬프팅 권장사항을 `SessionStart`/`SubagentStart` hook으로 자동 주입해 프로젝트별 `CLAUDE.md`에 반복 복사하지 않고 **자율 완료, surgical edit, 병렬 tool call, 진행 보고** 같은 행동 정책을 공통 적용하는 플러그인으로 정리.
+- `/fable-prompt`가 짧은 요청을 Goal/Context/Scope/Done criteria로 구조화하고, 메인 세션과 서브에이전트의 공통 행동 규칙을 맞추는 패턴을 Agent Team 운영에 참고할 수 있다고 평가.
+
+### 4. Magnitude — 기존 Coding Agent를 유지하는 로컬 추론 Control Layer
+
+[`ai/tools/magnitude.md`](./ai/tools/magnitude.md)
+
+- 하드웨어를 프로파일링해 적합한 로컬 모델·quantization·예상 token/s를 추천하고 다운로드·튜닝·서빙·Agent provider 연결까지 자동화하는 **agent-first local inference runtime**으로 분석.
+- OpenAI-compatible API와 모델 lifecycle/scheduling을 통해 Claude Code·Codex·OpenCode 등의 기존 Harness를 유지하면서 반복 탐색·로그 분석·문서화 Worker만 로컬 모델로 이동하는 **Frontier Orchestrator + Local Workers** 구조를 PoC 대상으로 제안.
+- Windows는 WSL 의존이며 초기 runtime 안정성·권한·로컬 endpoint 보안 이슈가 있어 Enterprise 표준화 전 격리된 PoC가 필요하다고 정리.
+
+### 5. Humanizer + polish-doc — AI 문서의 문체·정보구조 후처리 계층
+
+[`ai/skills/humanizer.md`](./ai/skills/humanizer.md) · [`ai/skills/polish-doc.md`](./ai/skills/polish-doc.md)
+
+- **Humanizer**는 35개 AI writing pattern을 검사해 사실·숫자·링크를 보존하면서 과장, rule-of-three, 챗봇 잔여 표현, 과도한 구조화 등을 다시 쓰는 범용 Skill로 분석하고, Wiki에서는 fact/citation 검증 뒤 최종 prose polishing 단계에 두는 흐름을 제안.
+- **polish-doc**은 초안·분석 결과를 결론 우선, 짧은 문장, 반복 제거, 표/inline SVG 등으로 재구성해 standalone HTML로 만드는 편집 Skill로, `LLM = 편집 엔진 / Skill = 편집 정책 / Template = 표현 규격` 구조를 정리.
+- 두 도구 모두 생성 단계와 분리된 **최종 Human-readable Quality Pass**로 활용하되, 기술 명세의 정보 손실과 LLM 기반 비결정성을 별도 검증해야 한다고 평가.
+
+### 6. Agent Development Loop + Commerce Agents — 자율 실행과 안전 Gate 설계
+
+[`ai/tips/ai-agent-development-operating-model.md`](./ai/tips/ai-agent-development-operating-model.md) · [`ai/tools/claude-commerce-agents.md`](./ai/tools/claude-commerce-agents.md)
+
+- 개발 방식을 `Human → Prompt → Result` 중심 Assistant에서 **Goal → Context → Plan → Execute → Observe → Verify → Iterate**의 Agent Development Loop로 전환하고, 사람은 세부 Driver보다 Goal/Policy/Decision Owner로 이동해야 한다고 정리.
+- Claude Commerce Agents에서는 실제 쓰기 작업을 prompt 신뢰에 맡기지 않고 **fencing, provenance gate, grounding, cap/guardrail, stage → approval → apply → re-check**를 코드 계층에서 강제하는 reference architecture를 분석.
+- 두 문서에서 공통적으로 Agent 자율성의 핵심은 더 긴 prompt가 아니라 **도구 권한 경계, 외부 evidence 기반 완료 판정, Human Gate**라는 원칙을 도출.
+
+### 7. public-apis-4Kr — 국내 Public API Discovery 레퍼런스
+
+[`development/public-apis-4kr.md`](./development/public-apis-4kr.md)
+
+- 한국 서비스 개발에서 활용 가능한 공공·민간 Public API를 분야별로 탐색하는 카탈로그를 정리하고, 날씨·부동산·금융·관광·사업자 정보 등 국내 데이터 연동의 시작점으로 활용할 수 있다고 평가.
+- Agent/MCP 환경에서는 `요구사항 → API 카탈로그 검색 → 후보 선택 → 인증 확인 → Tool/호출 코드 생성`의 discovery layer나 사내 API Registry 원천으로 확장하는 아이디어를 제안.
+
+### 기타
+
+- [`idea/README.md`](./idea/README.md)에 Claude Workspace Orchestrator 링크를 추가해 아이디어 인덱스에 연결.
+
+---
+
 ## 2026-09-03
 
 > **2 commits · 핵심 문서 변경 2건 · 핵심 주제 2건**
