@@ -9,6 +9,44 @@
 
 ---
 
+## 2026-09-05
+
+> **6 commits · 핵심 주제 4건**
+
+### 1. Claude Code Agent Teams + Dynamic Workflows — 협업형 Team과 대규모 Batch Orchestration 구분
+
+[`ai/harness/claude-code-agent-teams.md`](./ai/harness/claude-code-agent-teams.md) · [`ai/harness/claude-code-dynamic-workflows.md`](./ai/harness/claude-code-dynamic-workflows.md)
+
+- **Agent Teams**는 독립 context의 teammate들이 공유 Task List와 직접 Agent-to-Agent 메시징으로 협업하는 구조로, 장기 기능 개발·경쟁 가설 디버깅·Research Team처럼 소수의 Peer가 서로 결과를 참고해야 하는 작업에 적합하다고 정리.
+- **Dynamic Workflows**는 오케스트레이션을 JavaScript 코드와 별도 runtime으로 옮겨 loop/branch/retry, 최대 수백~1,000 Agent 규모의 fan-out, 저장·재실행, 실행 관찰을 지원하는 **programmable Agent Batch/Graph Runtime**으로 분석.
+- 둘을 `소수 장기 협업 = Agent Teams`, `대규모 반복·배치 = Dynamic Workflows`로 구분하고, durable state·이기종 모델 라우팅·외부 Dashboard가 필요하면 별도 Harness가 여전히 유리하다고 평가.
+
+### 2. Agent Team 운영 UI — Claude Agent Team Manager + Pixel Agents
+
+[`ai/tools/claude-agent-team-manager.md`](./ai/tools/claude-agent-team-manager.md) · [`ai/tools/pixel-agents.md`](./ai/tools/pixel-agents.md)
+
+- **Claude Agent Team Manager**는 Agent/Skill/Team을 조직도와 Pipeline으로 설계하고 One-click Deploy, OS 스케줄링, 변수/Context 관리까지 제공하는 **Claude Code Control Plane/UI**로 정리.
+- **Pixel Agents**는 Claude Code Hooks와 JSONL transcript를 읽어 세션·Subagent·Agent Team의 `working / waiting / permission` 상태와 context gauge를 픽셀 오피스 형태로 보여주는 **Runtime Visualization/Monitoring 계층**으로 분석.
+- 두 도구를 함께 보면 `조직·구성 설계 = ATM`, `실행 상태 관제 = Pixel Agents`로 역할이 보완되며, 실제 사내 Agent Team Dashboard에는 Task Queue·Token/Cost·Tool Call·SCM 변경·Approval Gate를 추가하는 방향을 제안.
+
+### 3. Lieflat Charts — 템플릿 중심 Agent 데이터 시각화 Skill
+
+[`ai/skills/lieflat-charts.md`](./ai/skills/lieflat-charts.md)
+
+- 데이터 형태를 판별해 catalog에서 차트/보고서 템플릿을 선택하고, 정해진 디자인 토큰과 구현 골격을 유지한 채 **single HTML chart/report**를 생성하는 Agent Skill로 분석.
+- `LLM = 자유 디자인 생성기`가 아니라 **template selection/adaptation orchestrator**로 제한해 반복 보고서의 스타일 드리프트와 잘못된 차트 선택을 줄이는 접근이 핵심.
+- TeamCity·Perforce·Agent 운영 지표 같은 개발 생산성 리포트에 활용 가치가 높지만 PolyForm Noncommercial 라이선스와 외부 Chart.js/ECharts/폰트 의존성은 사내 도입 전에 별도 검토가 필요하다고 정리.
+
+### 4. GPT-6 Pro / GPT-5.6 Sol Pro — ChatGPT 사용량 제한 정리
+
+[`ai/news/gpt-6-pro-gpt-5-6-sol-pro-usage-limits.md`](./ai/news/gpt-6-pro-gpt-5-6-sol-pro-usage-limits.md)
+
+- OpenAI 공식 Help Center 기준 Pro $200의 **GPT-6 Pro 주 200회**, **GPT-5.6 Sol Pro 일 170회**, 두 Pro 모델 **합산 일 200회** 제한을 구분해 정리.
+- Pro $100·Business 일부 플랜은 두 모델이 allowance를 공유하며, Chat과 Work/Codex는 별도 allowance라는 점을 명확히 해 모델 전환만으로 사용량이 늘어나는 경우와 그렇지 않은 경우를 구분.
+- 고난도 분석·설계·최종 리뷰에 Pro 모델을 집중하고 일반 실행은 다른 모델/환경으로 라우팅하는 사용량 최적화 방향을 제안.
+
+---
+
 ## 2026-09-04
 
 > **12 commits · 핵심 주제 7건**
