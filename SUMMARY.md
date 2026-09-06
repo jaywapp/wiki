@@ -9,6 +9,28 @@
 
 ---
 
+## 2026-09-06
+
+> **2 commits · 핵심 주제 2건**
+
+### 1. Matt Pocock Skills — 작은 조합형 Agent Skill과 프로젝트 컨텍스트 규율
+
+[`ai/skills/matt-pocock-skills.md`](./ai/skills/matt-pocock-skills.md)
+
+- AI Coding Agent가 개발 프로세스 전체를 장악하는 거대한 프레임워크보다 **요구사항 정렬, 도메인 모델링, TDD, 디버깅, 코드 리뷰** 같은 기존 엔지니어링 규율을 작고 조합 가능한 Skill로 제공하는 접근을 정리.
+- `CONTEXT.md`에 프로젝트의 공통 용어와 도메인 어휘를 축적해 Agent의 장황한 설명과 명명 불일치를 줄이고, 세션을 넘어 재사용 가능한 **공유 Context 인터페이스**로 활용하는 패턴을 분석.
+- user-invoked orchestration skill과 model-invoked reusable discipline을 분리하고, Standards/Spec을 서로 다른 Subagent가 병렬 검토하는 방식처럼 **작은 Skill 조합 + 독립 검증**으로 품질을 높이는 구조를 제시.
+
+### 2. Linear UI/UX — 고밀도 생산성 도구의 일관된 작업 모델
+
+[`ai/research/linear-ui-ux.md`](./ai/research/linear-ui-ux.md)
+
+- Linear의 핵심 UI 원칙을 **high density, low visual noise**, attention hierarchy, predictable chrome으로 정리하고, 정보량을 줄이지 않으면서도 실제 작업 대상이 화면의 시각적 중심이 되도록 복잡도를 관리하는 방식을 분석.
+- Keyboard shortcut, Command Menu, Context Menu, Visible Control이 서로 다른 기능이 아니라 **동일한 domain action을 호출하는 여러 interaction surface**가 되어야 동작 일관성과 학습 가능성을 함께 유지할 수 있다고 정리.
+- Progressive Disclosure, Favorites/개인화, List/Board 같은 multiple views를 같은 data model의 projection으로 취급하는 패턴을 Agent Task Viewer·운영 Dashboard·개발 생산성 도구 UX에 재사용할 수 있다고 평가.
+
+---
+
 ## 2026-09-05
 
 > **6 commits · 핵심 주제 4건**
