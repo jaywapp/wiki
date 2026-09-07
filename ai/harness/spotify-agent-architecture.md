@@ -4,338 +4,310 @@ category: harness
 tags:
   - ai
   - agent
-  - agentic-development
-  - harness
-  - context-engineering
+  - claude-code
+  - token-optimization
+  - model-routing
+  - shunt
   - backstage
-  - xirp
-  - honk
-source: https://portal.spotify.com/blog/introducing-xirp
+  - portal
+source: https://engineering.atspotify.com/2026/9/spotifys-backstage-portal-cut-my-claude-code-token-usage-by-90
 updated: 2026-09-07
 ---
 
 # Spotify Agent Architecture
 
-> Spotify의 에이전트 전략은 특정 코딩 에이전트 하나를 표준화하는 것이 아니라, **Backstage/Portal을 조직 컨텍스트 계층으로 두고 Xirp를 대화형 멀티에이전트 실행 환경, Fleet Management + Honk를 대규모 비동기 코드 변경 계층으로 구성하는 구조**에 가깝다.
+> Spotify의 Shunt 패턴은 고성능 메인 에이전트의 컨텍스트를 추론에 집중시키고, 대용량 I/O와 예측 가능한 코드 생성을 저비용 워커로 라우팅하며, 이 정책을 프롬프트가 아니라 PreToolUse Hook으로 강제하는 토큰 최적화 아키텍처다.
 
 ## 프로젝트 개요
 
-Spotify는 AI 코딩 도구 사용이 개인 단위에서 수십 개 병렬 세션으로 확대되면서 `CLAUDE.md`, 개인 MCP 설정, 프롬프트, 세션별 지식이 분산되는 문제를 겪었다. 이를 모델 자체의 문제가 아니라 **조직 컨텍스트와 에이전트 실행 인프라 문제**로 보고 기존 Backstage/Fleet Management 기반 플랫폼을 확장했다.
+Spotify Engineering이 2026-09-03 공개한 사례는 Claude Code의 토큰 사용량을 줄이기 위해 Portal by Spotify의 AiKA Modes와 Claude Code plugin `shunt`를 결합한 구조다. 핵심은 더 작은 모델을 단순히 추천하는 것이 아니라, 메인 에이전트가 불필요한 대용량 원문과 생성물을 컨텍스트에 넣지 못하도록 실행 경로 자체를 분리하는 것이다.
 
-현재 공개 자료에서 확인되는 주요 축은 다음과 같다.
-
-- **Backstage / Spotify Portal**: 서비스 카탈로그, ownership, dependency graph, architecture decision 등 조직 지식의 구조화된 source of truth
-- **Xirp**: Claude Code, Gemini CLI, Codex 등 여러 harness/session을 병렬 관리하는 vendor-neutral agentic development environment
-- **Fleet Management / Fleetshift**: 수백~수천 repository를 대상으로 변경 대상을 선정하고 실행/PR 상태를 관리하는 orchestration 계층
-- **Honk**: 실제 코드 수정, build/test, 평가, PR 생성을 수행하는 background coding agent
-- **MCP / trusted tools**: lint, formatting, build, CI 등 deterministic tool을 agent에 제공
-- **Evaluation / Observability**: LLM-as-a-judge, MLflow trace, GCP log 등을 이용해 autonomous 작업을 검증
+예시 worker는 Gemini 2.5 Flash지만 특정 모델에 종속된 설계는 아니다.
 
 ## 해결하려는 문제
 
-### 1. Agent마다 반복되는 orientation 비용
+AI coding agent의 비용은 추론뿐 아니라 대량 파일 읽기, 반복적인 코드 생성, 생성 결과의 재입력 등 I/O성 컨텍스트 소비에서 크게 발생한다. CLAUDE.md에 '큰 파일은 작은 모델에 위임하라'고 적는 방식은 권고일 뿐이므로 에이전트가 무시할 수 있고 프로젝트마다 규칙을 복제해야 한다.
 
-코딩 에이전트는 작업을 시작할 때마다 repository 구조, 서비스 관계, ownership, 과거 결정 등을 다시 탐색한다. 조직은 이미 이 정보를 알고 있지만 agent가 접근 가능한 구조로 제공되지 않으면 매 세션마다 토큰과 시간이 소비된다.
+Shunt는 라우팅 정책을 모델 밖의 Hook으로 옮겨 이를 강제한다.
 
-Spotify가 공개한 동일 task/model/codebase 비교에서는 Portal Workspace context를 선주입했을 때 비용이 $18.08 → $12.21, 시간은 38분 → 13분으로 감소했고 correctness 평가가 4/10 → 8/10으로 개선됐다. 이는 Spotify 자체 실험 결과이며 일반 환경에서 동일하게 재현된다는 의미는 아니다.
+## 핵심 원칙
 
-### 2. 개인별 Agent 환경 파편화
+- 메인 고성능 모델: reasoning, architecture decision, 정확한 editing 담당
+- 저비용 worker: bulk read, 요약, boilerplate/test/config/type stub 생성 담당
+- 원문 대용량 파일은 가능한 메인 context에 넣지 않는다.
+- worker가 생성한 예측 가능한 코드는 메인 context를 통과하지 않고 disk에 직접 기록할 수 있다.
+- routing policy는 prompt가 아니라 Hook에서 enforce한다.
 
-Agent 사용이 늘면서 CLAUDE.md, MCP, prompt library, rules, plugin 등이 개인 또는 팀별로 분산된다. 한 세션이 학습한 내용을 다른 세션/agent가 재사용하지 못하고, 모델이나 harness를 바꾸면 context를 다시 구축해야 한다.
-
-### 3. Fleet-wide 변경의 복잡성
-
-기존 deterministic source transformation은 dependency bump 같은 단순 변경에는 강하지만 API migration/refactoring처럼 corner case가 많은 작업에서는 변환 스크립트 자체가 복잡해진다. Spotify는 기존 Fleet Management의 target selection/PR workflow는 유지하고, **코드 변환 부분만 agent로 대체**했다.
-
-## 핵심 아키텍처
+## 아키텍처
 
 ```text
-                     ┌──────────────────────────────┐
-                     │ Backstage / Spotify Portal  │
-                     │ Catalog / Ownership / ADR   │
-                     │ Dependency / Wiki / History │
-                     └──────────────┬───────────────┘
-                                    │ context
-                    ┌───────────────┴────────────────┐
-                    │                                │
-             Interactive Path                Background/Fleet Path
-                    │                                │
-              ┌─────▼─────┐                   ┌──────▼─────────┐
-              │   Xirp    │                   │ Fleetshift /   │
-              │ Command   │                   │ Fleet Mgmt     │
-              │ Center    │                   └──────┬─────────┘
-              └─────┬─────┘                          │ targets/jobs
-                    │                                ▼
-       ┌────────────┼────────────┐              ┌───────────┐
-       ▼            ▼            ▼              │   Honk    │
- Claude Code    Gemini CLI      Codex            │ Agent SDK │
-       │            │            │              └─────┬─────┘
-       └──── per-session Git worktree ────┐            │
-                                          │      ┌─────▼────────────┐
-                                          │      │ Trusted Tools    │
-                                          │      │ Build/Test/Lint  │
-                                          │      │ CI / MCP         │
-                                          │      └─────┬────────────┘
-                                          │            │
-                                          │      ┌─────▼────────────┐
-                                          │      │ Eval/Observability│
-                                          │      │ LLM Judge/MLflow │
-                                          │      └─────┬────────────┘
-                                          │            │
-                                          └──────► PR / Results
-
-                 session transcript / metadata / learned context
-                                    │
-                                    └────────────► Portal
+User Request
+    |
+    v
+Main Agent (Claude Code)
+    |
+    | Tool Call
+    v
+PreToolUse Hooks  <--- Enforcement Layer
+    |
+    +-- targeted/small read ----------> normal tool execution
+    |
+    +-- large read (> threshold) -----> BLOCK
+                                        |
+                                        v
+                                      Skill
+                                        |
+                                        v
+                                      Script
+                                        |
+                                        v
+                                 Portal / AiKA Mode
+                                        |
+                                  Cheap Worker Model
+                                   /            \
+                          bulk-reader         code-writer
+                              |                    |
+                       structured bullets     straight to disk
+                              |
+                              v
+                         Main Context
 ```
 
-## Xirp: Agent Command Center
+## 3단계 라우팅 구조
 
-Xirp는 단일 coding agent가 아니라 **여러 agent harness를 관리하는 상위 실행 환경**이다.
+### 1. Hooks — 강제 정책
 
-공개된 특징:
+`shunt`는 Claude Code의 PreToolUse Hook을 사용한다.
 
-- Claude Code, Gemini CLI, Codex 등 여러 harness 지원
-- 50개 이상의 병렬 session 운영을 염두에 둔 구조
-- 각 session을 별도 Git worktree에서 실행해 동일 repository 병렬 작업 충돌을 줄임
-- agent/model과 context를 분리하여 중간에 도구를 바꿔도 working state 유지
-- 모델별 price/performance에 따라 작업을 라우팅할 수 있는 vendor-neutral 구조
-- Portal 연결 시 catalog/ownership/dependency/architecture context를 session 시작 전에 제공
-- session 종료 후 transcript와 metadata를 Portal에 다시 저장하여 후속 agent/session이 이어받을 수 있게 함
+- `check-file-size`: Read 호출 전에 파일 크기를 검사한다. 기본 임계값은 350줄이다.
+- 임계값을 넘는 전체 읽기는 block하고 `/bulk-reader` 경로를 안내한다.
+- offset/limit이 지정된 targeted read는 허용한다.
+- `check-bash-read`: `cat`, `head`, `tail`, `less`, `more` 등을 통한 우회를 감지한다.
+- `cat file | grep ...` 같은 targeted pipeline은 허용한다.
+- 임계값은 `SHUNT_MIN_LINES`로 조정 가능하다.
 
-핵심은 **Agent = state**로 만들지 않는 것이다. Claude/Codex/Gemini는 교체 가능한 executor이고, project/session context는 별도 계층에 유지한다.
+핵심은 **prompt는 suggestion이고 hook은 architecture**라는 점이다.
 
-## Portal / Backstage: Context Layer
+### 2. Scripts — 전송 배관
 
-Spotify 구조에서 가장 중요한 부분은 모델보다 context layer다.
+스크립트가 모델 호출 세부사항을 처리한다.
 
-Portal은 다음과 같은 정보를 agent가 조회 가능한 구조로 제공한다.
+- request 조합
+- Portal CLI invocation
+- error unwrap
+- token usage reporting
+- XML tag를 이용한 파일 경계 표시
+- worker output 정규화
 
-- component/service metadata
-- owner/team
-- upstream/downstream dependency
-- architectural decision
-- wiki/documentation
-- project resources
-- agent session transcript/metadata
-- skills/rules/plugins/MCP configuration
+`bulk-read`는 질문과 파일 목록을 worker에 전달한다.
 
-이를 통해 agent가 repository를 처음부터 탐색하면서 이미 조직이 알고 있는 사실을 재발견하는 비용을 줄인다.
+`code-write`는 specification + reference file + optional target path를 전달한다.
 
-Portal MCP를 통해 Xirp를 사용하지 않는 coding agent에서도 동일한 조직 context를 노출할 수 있다는 점도 중요하다.
+### 3. Skills — 사용 안내
 
-## Honk: Background Coding Agent
+Markdown skill은 메인 agent에게 언제/어떻게 delegation해야 하는지를 설명한다. Skill이 누락되거나 agent가 이를 따르지 않아도 Hook이 고비용 read를 차단하므로 정책 자체는 유지된다.
 
-Honk는 interactive coding assistant보다 **대규모 background automation worker**에 가깝다.
-
-초기 Fleet Management는 transformation script를 container job으로 실행하고 PR을 생성하는 deterministic 구조였다. Spotify는 이 파이프라인 전체를 agent로 교체하지 않았다.
-
-대신 다음처럼 역할을 나눴다.
+## 라우팅 규칙
 
 ```text
-Target discovery / Scheduling / Tracking / PR workflow
-                  Fleet Management
-                         │
-                         ▼
-                 Code Transformation
-                       Honk
-                         │
-                         ▼
-              Build / Test / Lint / Eval
-                         │
-                         ▼
-                        PR
+READ 요청
+ |
+ +-- Offset/Limit 지정? ------ YES --> Main Agent targeted read
+ |
+ +-- 파일 <= 350 lines? ------ YES --> Main Agent direct read
+ |
+ +-- 파일 > 350 lines? ------- YES --> BLOCK --> bulk-reader
+
+CODE GENERATION
+ |
+ +-- 반복적/패턴 기반 boilerplate? --> code-writer worker
+ |
+ +-- architecture/reasoning/edit? ---> Main Agent
 ```
 
-즉 **deterministic orchestration + probabilistic code transformation** 패턴이다.
+350줄은 Spotify 사례의 기본값이며 보편적인 최적값은 아니다. `SHUNT_MIN_LINES`로 환경별 튜닝해야 한다.
 
-Honk 내부 실행에 대해서 Spotify는 다음을 공개했다.
+## Bulk Reader
 
-- Claude + Agent SDK 사용
-- Spotify 자체 harness로 감쌈
-- Kubernetes pod에서 session을 병렬 실행
-- trusted tools만 제공
-- CI에서 여러 OS build를 실행하여 변경 검증
-- local MCP로 formatting/linting 등의 tool 제공
-- LLM-as-a-judge로 diff 평가
-- MLflow tracing
-- GCP logging
-- agent/LLM을 교체할 수 있도록 내부 CLI abstraction 사용
+대형 파일 또는 여러 파일을 질문과 함께 worker context에서 처리한다. 원문 전체 대신 질문에 필요한 구조화된 결과만 main context로 반환한다.
 
-## Context Feedback Loop
+권장 worker output 규칙:
 
-Spotify의 최근 구조에서 특히 참고할 부분은 context가 단방향 RAG가 아니라는 점이다.
+- prose 금지
+- 인사/서론/결론 금지
+- 구조화된 bullet만 출력
+- 함수명/변수명/대상 또는 위치 정보 중심
+- 질문과 관련 없는 내용 제거
+
+이 방식의 진짜 절감 효과는 첫 read뿐 아니라 이후 모든 turn에서 대형 원문이 main conversation context에 남지 않는 데서 발생한다.
+
+## Code Writer
+
+테스트, config scaffolding, type stub 등 기존 패턴으로 결과를 예측할 수 있는 작업을 worker에 맡긴다.
+
+필수 입력:
+
+- specification
+- reference file
+
+reference file이 중요한 이유는 worker가 프로젝트 convention을 추측하지 않고 기존 패턴을 복제하도록 하기 위해서다.
+
+출력 규칙:
+
+- code only
+- 설명 금지
+- markdown fence 금지
+- reference convention 준수
+
+생성물은 필요하면 main context를 거치지 않고 target file에 직접 쓸 수 있다.
+
+## 메인 모델이 직접 처리해야 할 영역
+
+### 정확한 파일 편집
+
+worker summary의 위치 정보만 믿고 edit하지 않는다. 수정할 위치를 좁힌 후 offset/limit targeted read로 실제 코드를 메인 모델이 확인한다.
+
+### 복잡한 추론
+
+architecture decision, concurrency/thread-safety, subtle bug, security-sensitive 판단 등은 고성능 모델이 담당한다.
+
+### 작은 작업
+
+위임에는 worker invocation latency가 있으므로 작은 파일/단순 작업은 직접 처리하는 편이 효율적일 수 있다. Spotify 사례에서 350줄 threshold는 이 trade-off를 위한 기본값이다.
+
+## Worker Mode 예시 설정
+
+Spotify 사례의 두 Mode는 Gemini 2.5 Flash를 worker로 사용하며 temperature 0.2를 사용한다. 모델은 Portal에 설정된 다른 모델로 교체 가능하다.
+
+### bulk-reader system rules
 
 ```text
-Organizational Context
-        ↓
-Agent Session
-        ↓
-Code / Decision / Transcript / Metadata
-        ↓
-Context Layer
-        ↓
-Next Agent Session
+You are a bulk code reader.
+Analyze only what is required to answer the supplied question.
+Do not write prose, introductions, conclusions, or greetings.
+Return only structured bullet points.
+Start each bullet with the relevant symbol, function, class, variable, file, or location when available.
+Do not reproduce large source blocks.
+Preserve exact identifiers needed by the primary agent.
 ```
 
-즉 세션이 context를 소비하면서 동시에 다음 세션을 위한 context를 생산한다. 이를 통해 팀 단위의 agent memory를 만드는 방향이다.
+### code-writer system rules
 
-## Feedback / Verification Loop
+```text
+You are a code generation worker.
+Follow the supplied specification and reference file exactly.
+Match naming, structure, formatting, and conventions from the reference.
+Return code only.
+Do not explain the code.
+Do not add markdown fences.
+Do not add commentary outside the requested implementation.
+```
 
-Autonomous coding에서는 생성 능력보다 **agent가 스스로 결과를 검증할 수 있는 환경**이 중요하다.
+## 실무 적용용 메인 Agent Rules
 
-Spotify의 Honk 사례에서는 build/test/lint 같은 deterministic feedback과 LLM judge를 함께 사용한다. 특히 repository 표준화와 테스트 가능성이 높을수록 agent가 자신의 변경을 자동 검증하기 쉬워진다.
+다음은 Claude Code/Codex 계열 harness에 적용할 수 있는 정책 형태다.
 
-이 때문에 Spotify는 agent 도입을 단순 AI tooling이 아니라 Developer Platform/standardization 문제로 본다.
+```text
+# Context Routing Policy
+
+Your primary responsibility is reasoning, planning, architecture decisions, precise editing, and verification.
+Do not spend primary-model context on bulk I/O or predictable boilerplate when a worker route is available.
+
+## Reading
+- Read small files directly.
+- Use targeted reads with offset/limit when the relevant region is known.
+- Never bypass a large-file routing hook.
+- When a large read is blocked, delegate through bulk-reader.
+- Treat worker summaries as navigation/context, not as authoritative source text for precise edits.
+
+## Writing
+- Delegate predictable boilerplate, tests, configuration scaffolding, and type stubs when a suitable reference file exists.
+- Require a reference file for delegated code generation.
+- Allow worker output to go directly to disk only for low-risk pattern-based generation.
+- Review or validate generated files through build/test/lint before considering the task complete.
+
+## Never Delegate
+- architecture decisions
+- subtle debugging/reasoning
+- concurrency or thread-safety analysis
+- security-sensitive reasoning
+- precise edits based only on summarized source
+- small operations where delegation overhead exceeds expected savings
+
+## Verification
+- After delegation, use targeted reads for sections requiring exact reasoning.
+- Run deterministic build/test/lint checks whenever available.
+- Escalate to the primary model when worker output is ambiguous or validation fails.
+```
 
 ## 장점
 
-### Vendor lock-in 완화
+- 대형 원문이 main context에 누적되는 것을 방지
+- 이후 turn의 context 비용까지 감소
+- 고성능 모델을 reasoning에 집중
+- worker model 교체 가능
+- policy와 transport/model을 분리
+- CLAUDE.md보다 강한 enforcement
+- 프로젝트별 prompt 복제 감소
 
-Context/state를 Claude Code나 Codex 내부에 묶지 않고 상위 계층에 두기 때문에 모델과 harness를 교체하기 쉽다.
-
-### 병렬성
-
-Worktree isolation을 사용해 동일 codebase에서 여러 session을 동시에 실행하기 쉽다.
-
-### 조직 지식 재사용
-
-Ownership/dependency/ADR 등을 매 session에서 다시 찾지 않고 초기 context로 제공한다.
-
-### 기존 DevOps 자산 활용
-
-Fleet Management, CI, Backstage를 버리지 않고 agent를 그 위의 transformation engine으로 삽입했다.
-
-### 검증 가능성
-
-Agent에게 build/test/lint/eval loop를 제공해 단순 코드 생성보다 merge 가능한 결과를 목표로 한다.
+Spotify 글 제목의 '90%'는 작성자의 실제 workflow 사례 결과이며 모든 프로젝트에서 동일하게 재현된다는 의미의 benchmark는 아니다.
 
 ## 단점 및 한계
 
-### Context Layer 구축 비용
-
-Spotify 방식의 효과는 Backstage catalog와 조직 metadata 품질에 크게 의존한다. 기존 service catalog/ownership/dependency 정보가 부실한 조직은 Portal/Xirp만 도입한다고 같은 효과를 기대하기 어렵다.
-
-### 플랫폼 복잡도
-
-Agent runner, worktree lifecycle, Kubernetes execution, CI, MCP, tracing, evaluation, context storage까지 운영해야 하므로 소규모 팀에는 과할 수 있다.
-
-### Agent-generated PR 증가
-
-Spotify는 AI 도입 후 PR 빈도가 크게 증가했다고 공개했으며, coding bottleneck이 review/decision bottleneck으로 이동하고 있다고 설명한다. 생성량 증가 자체가 생산성 증가를 보장하지 않는다.
-
-### Context freshness / security
-
-조직 context를 agent가 광범위하게 접근하면 권한 관리, 민감 정보 노출, stale documentation 문제가 중요해진다. 공개 자료만으로 Spotify 내부의 세부 authorization 구현은 확인되지 않는다.
-
-### Xirp 세부 구현 비공개 영역
-
-Xirp의 내부 scheduler, persistence schema, routing algorithm, exact isolation/security model 등은 공개 자료만으로 확인되지 않는다. 공개된 제품 설명 이상으로 추측해서는 안 된다.
-
-## 기존 방식과 비교
-
-| 방식 | Context | 병렬 실행 | 모델 교체 | 조직 단위 자동화 |
-|---|---|---:|---:|---:|
-| 개별 Claude Code/Codex 세션 | 로컬/세션 중심 | 제한적 | context 재구성 필요 | 낮음 |
-| CLAUDE.md + MCP | repository 중심 | 가능 | 비교적 가능 | 중간 |
-| Xirp + Portal | 조직 context와 session state 분리 | 높음, worktree 기반 | 높음 | 높음 |
-| Fleet Management + Honk | 조직/target context | 대규모 background 실행 | harness abstraction | 매우 높음 |
+- worker summary에서 중요한 세부사항이 누락될 수 있음
+- 350줄이라는 정적 기준은 언어/파일 구조에 따라 부적절할 수 있음
+- worker invocation latency 발생
+- 여러 worker 호출 시 전체 wall-clock time이 오히려 증가할 수 있음
+- direct-to-disk generation에는 반드시 deterministic validation이 필요
+- Portal/AiKA를 그대로 사용할 경우 Spotify ecosystem 의존성이 생김
+- Claude Code 이외 agent에서는 동일 Hook API가 없을 수 있어 별도 interceptor 구현 필요
 
 ## 활용 아이디어
 
-### 바로 적용 가능: One Worktree per Agent
+### 바로 적용 가능
 
-프로젝트별 agent session을 독립 worktree에 배치하는 구조는 Spotify 전체 플랫폼 없이도 적용할 수 있다.
+- Claude Code PreToolUse Hook으로 large-file read 차단
+- `SHUNT_MIN_LINES`와 유사한 configurable threshold 도입
+- bulk-reader용 저비용 모델 분리
+- targeted read 예외 허용
+- code generation worker에 reference file 필수화
 
-```text
-project/
-├─ main workspace
-└─ .agents/
-   ├─ task-001-worktree
-   ├─ task-002-worktree
-   └─ task-003-worktree
-```
+### PoC 가치 있음
 
-### 바로 적용 가능: Context를 Agent와 분리
-
-`CLAUDE.md` 하나에 모든 지식을 넣기보다 다음처럼 분리하는 것이 Spotify 방향과 유사하다.
+사내 개발 Harness에서는 다음 구조로 확장할 수 있다.
 
 ```text
-Context Service
-├─ repository metadata
-├─ ownership
-├─ dependency graph
-├─ ADR
-├─ task/session history
-└─ reusable skills
-        │
-        └─ MCP/API
-             ├─ Claude Code
-             ├─ Codex
-             └─ Other Agent
+Main Orchestrator / Claude
+          |
+       Router Hook
+       /         \
+ targeted       bulk
+   |              |
+Main Model    Cheap Worker
+   |              |
+Reason/Edit    Read/Generate
+       \          /
+        Build/Test
+            |
+       Codex Review
+            |
+       Perforce CL
 ```
 
-### PoC 가치 있음: 메인 비서 + 프로젝트 Agent 구조
+Perforce 환경에서는 worker의 direct-to-disk 변경을 pending changelist에 격리하고 TeamCity 또는 로컬 build/test를 통과한 뒤 reviewer가 검수하도록 구성하는 것이 안전하다.
 
-여러 프로젝트별 Claude/Codex session을 메인 orchestrator에서 관리하려는 구조에는 Xirp 패턴이 직접적으로 참고된다.
+### 아이디어 참고
 
-- 메인 세션: Xirp 역할
-- 프로젝트별 session: execution agent
-- 프로젝트별 worktree/workspace: isolation
-- 중앙 DB/문서: Portal 역할
-- MCP: context/tool access
-- CI/Reviewer: Honk의 verification loop 역할
-
-핵심은 메인 orchestrator가 모든 코드를 직접 이해하는 것이 아니라 **session lifecycle과 context routing을 관리**하도록 만드는 것이다.
-
-### PoC 가치 있음: Fleet-wide maintenance Agent
-
-TeamCity/Perforce/내부 도구 환경에서도 dependency update, API migration, config 변경 같은 반복 작업을 대상으로 다음 구조를 시험할 가치가 있다.
-
-```text
-Target Selector
-   ↓
-Task Queue
-   ↓
-Agent Worker
-   ↓
-Build/Test
-   ↓
-Codex/LLM Review
-   ↓
-Human Approval
-   ↓
-Submit/Integrate
-```
-
-GitHub PR 대신 Perforce changelist를 artifact로 사용하면 Spotify Fleet Management + Honk 패턴과 유사한 내부 구조를 만들 수 있다.
-
-## 실무 평가
-
-**평가: PoC 가치 매우 높음**
-
-Spotify 사례의 핵심은 새로운 agent framework 자체보다 **Agent Harness + Developer Platform + Context Engineering**의 결합이다.
-
-특히 다음 세 원칙은 그대로 참고할 가치가 높다.
-
-1. **Context는 모델 밖에 둔다.**
-2. **Agent마다 독립된 execution workspace를 준다.**
-3. **AI에는 코드 변경을 맡기고 scheduling/build/test/review 같은 제어 구조는 deterministic하게 유지한다.**
-
-단순히 Claude Code를 여러 개 실행하는 구조보다 한 단계 위에서 session/context/workspace/verification을 관리하는 Harness를 두는 것이 장기적으로 안정적이다.
+라인 수뿐 아니라 예상 token 수, 파일 유형, task type, cache hit, worker latency, 모델 가격 등을 이용해 동적 routing score로 발전시킬 수 있다.
 
 ## 결론
 
-Spotify의 공개된 agent architecture를 하나의 그림으로 요약하면 **Portal = Memory/Context Plane, Xirp = Interactive Control Plane, Fleet Management = Orchestration Plane, Honk = Autonomous Execution Plane**으로 볼 수 있다.
+Spotify Shunt 사례의 핵심은 'Gemini Flash를 사용한다'가 아니다. **비싼 모델의 context를 하나의 희소 자원으로 취급하고, 무엇이 그 context에 들어올 수 있는지를 모델 외부의 deterministic policy로 통제한다**는 점이다.
 
-가장 중요한 설계 포인트는 특정 LLM의 성능이 아니다. 조직이 이미 가지고 있는 지식을 agent가 재사용할 수 있게 구조화하고, agent 실행 상태를 모델에서 분리하며, deterministic feedback loop를 제공하는 것이다.
+Agent에게 토큰 절약을 부탁하는 prompt optimization에서 한 단계 더 나아가, Hook → Script → Worker Mode라는 실행 아키텍처로 token policy를 강제한다는 점이 실무적으로 가장 참고할 가치가 높다.
 
 ## 참고 자료
 
-- Spotify Portal, "What we've learned scaling AI coding agents at Spotify" (2026-08-10): https://portal.spotify.com/blog/introducing-xirp
-- Spotify Portal, "The Hidden Tax on Your AI Agents" (2026-08-28): https://portal.spotify.com/blog/the-hidden-tax-on-your-ai-agents
-- Spotify Engineering, "1,500+ PRs Later: Spotify’s Journey with Our Background Coding Agent (Honk, Part 1)" (2025-11)
-- Spotify Engineering, "Background Coding Agents: Context Engineering (Honk, Part 2)" (2025-11)
-- Spotify Engineering, "Background Coding Agents: Predictable Results Through Strong Feedback Loops (Honk, Part 3)" (2025-12)
-- Spotify Engineering, "Background Coding Agents: Supercharging Downstream Consumer Dataset Migrations (Honk, Part 4)" (2026-04)
-- Spotify Engineering, "Coding Is No Longer the Constraint: Scaling Developer Experience to Teams and Agents at Spotify" (2026-06)
+- Spotify Engineering, "Portal by Spotify cut my Claude Code token usage by 90%", 2026-09-03
+- Portal by Spotify / AiKA Modes
+- Spotify `portal-ai-plugins` marketplace (`portal`, `shunt` plugins)
