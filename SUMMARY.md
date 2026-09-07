@@ -9,6 +9,44 @@
 
 ---
 
+## 2026-09-07
+
+> **5 commits · 핵심 주제 4건**
+
+### 1. Claude Code Function Hooks — Plugin을 Agent Runtime Middleware로 확장하는 제안
+
+[`ai/news/claude-code-function-hooks.md`](./ai/news/claude-code-function-hooks.md)
+
+- 기존 lifecycle hook보다 깊게 Claude Code의 Tool·Agent·UI·Model 흐름을 TypeScript 함수와 `next()` 기반 middleware로 감싸 **입력/결과 변환, 호출 차단·대체, UI 확장**까지 가능하게 하는 Function Hooks 제안을 분석.
+- `$` capability interface와 중첩 Hook 구조를 통해 조직 보안 정책·secret redaction·audit/telemetry 같은 cross-cutting concern을 상위 계층에서 강제하는 **programmable Agent Runtime extension layer**로 발전할 가능성을 정리.
+- 아직 proposal/preview 단계이므로 운영 의존은 이르지만, Perforce checkout guard, TeamCity/빌드 상태 UI, Tool cache·observability 같은 사내 AX Plugin PoC 후보로 평가.
+
+### 2. UI Design Agent Skills — UI 작업을 작은 판단·검증 Skill Pipeline으로 분해
+
+[`ai/skills/ui-design-agent-skills.md`](./ai/skills/ui-design-agent-skills.md)
+
+- Emil Kowalski·Matt Pocock·kill-ai-slop 사례를 묶어 UI Agent가 곧바로 production code를 생성하기보다 **prototype → library 선택 → animation opportunity 판단 → 구현 → anti-slop 검수**로 작업을 분해하는 흐름을 정리.
+- 작은 Skill이 모델의 생성 능력을 키우기보다 선택·판단·검증 규칙을 주입해 자유도를 제한하고, 필요한 단계만 로딩함으로써 context/token 낭비를 줄이는 **composable AX pattern**을 분석.
+- 웹 전용 규칙을 그대로 도입하기보다 WPF/DevExpress 환경에서는 `pick-company-control`, 사내 theme 규칙, AI UI smell checklist 같은 내부 Skill로 포팅하는 방향을 제안.
+
+### 3. Spotify Shunt — Hook으로 강제하는 Context I/O·모델 라우팅 최적화
+
+[`ai/harness/spotify-agent-architecture.md`](./ai/harness/spotify-agent-architecture.md)
+
+- Spotify 사례를 바탕으로 고성능 Main Agent는 reasoning·architecture·정확한 edit에 집중시키고, **대용량 파일 읽기와 정형 코드 생성은 저비용 Worker로 라우팅**해 메인 컨텍스트를 보호하는 Shunt 패턴을 정리.
+- `PreToolUse Hook → Script → Skill/Worker`의 3계층으로 큰 Read와 Bash 우회를 정책적으로 차단하고, targeted read·grep 같은 축소 작업은 허용해 `prompt는 suggestion, hook은 architecture`라는 enforcement 원칙을 강조.
+- 단순 모델 교체가 아니라 bulk read 요약, disk 직접 code-write, 임계값 기반 routing을 결합한 토큰 최적화 구조로서 사내 Claude/Codex Harness의 Large File Guardrail에 적용 가치가 높다고 평가.
+
+### 4. Evidence-First Agent Harness — Context 비용과 추론 재작업 비용을 함께 줄이는 Guardrail
+
+[`ai/harness/evidence-first-agent-harness.md`](./ai/harness/evidence-first-agent-harness.md)
+
+- Shunt의 Context Routing을 확장해 Agent 비용을 **Context I/O Cost**와 잘못된 전제·가설로 Build/Render를 반복하는 **Reasoning Rework Cost**로 나누고, 두 비용을 각각 Context Guardrail과 Reasoning Guardrail로 제어하는 설계를 제시.
+- `결정론적 Tool → Cheap Worker → Main Reasoning Model` 순으로 가장 싼 계층을 우선하고, enum/API/default/config 같은 사실은 기억 대신 원본으로 확인하며, 비싼 실행 전에는 가장 싼 관측으로 가설을 검증하는 Evidence-First 정책을 정의.
+- Large Read Hook, targeted edit, Mechanical Edit Worker + pending CL, Build/Test/Render 횟수·hypothesis reversal 같은 지표까지 포함해 토큰 절감보다 **전체 작업 재실행 비용과 완료 지연을 줄이는 Harness 운영 모델**로 구체화.
+
+---
+
 ## 2026-09-06
 
 > **2 commits · 핵심 주제 2건**
