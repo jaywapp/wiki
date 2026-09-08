@@ -9,6 +9,28 @@
 
 ---
 
+## 2026-09-08
+
+> **2 commits · 핵심 주제 2건**
+
+### 1. vs-token-safer — LSP·tree-sitter 기반 구조화 검색으로 Agent Context 비용 절감
+
+[`ai/tools/vs-token-safer.md`](./ai/tools/vs-token-safer.md)
+
+- Claude Code의 저장소 탐색을 `grep`·전체 파일 Read 중심에서 **LSP / tree-sitter 기반 심볼 질의**로 전환하고, 모델에는 필요한 `file:line` 중심의 제한된 결과만 전달하는 로컬 코드 인덱싱/MCP 플러그인을 분석.
+- PreToolUse Hook이 안전한 grep을 구조화 질의로 재작성하며 C++/Unreal은 clangd, C#/.NET은 Roslyn 계층을 활용하고, semantic backend가 준비되지 않으면 tree-sitter로 내려가는 graceful degradation 구조를 제공.
+- 검색 결과 토큰 절감뿐 아니라 Hook 안내 자체의 토큰 overhead까지 telemetry로 관찰하고 `hookNoise`를 조정하는 점, compile DB/index를 source tree 밖에 둬 Perforce reconcile 오염을 줄이는 운영 설계가 실무적으로 중요하다고 평가.
+
+### 2. Uber Efficient Software Factory — AI 개발을 완료 가치 단위의 Unit Economics로 운영
+
+[`ai/research/uber-efficient-software-factory.md`](./ai/research/uber-efficient-software-factory.md)
+
+- Uber는 AI 코딩 비용을 단순 `token price × tokens`가 아니라 **완료된 PR·리뷰·정리 작업 같은 업무 결과당 비용**으로 보고, 모델·컨텍스트·도구·캐시·관측성을 하나의 Software Factory 운영 문제로 최적화.
+- 실제 workload benchmark를 기반으로 Main Model과 저비용 Subagent를 분리하고, 400K automatic compaction·세션 특성별 cache TTL·MCP tool schema 동적 로딩·code-mode batching으로 불필요한 turn과 context 전송을 줄이는 전략을 정리.
+- 1,000+ MCP 환경의 Tool Search/CLI projection, 조직 지식을 연결한 Context Graph, session cost anti-pattern 분석까지 결합해 **Agent Execution Platform 전체를 측정·라우팅·최적화하는 운영 모델**로 평가.
+
+---
+
 ## 2026-09-07
 
 > **5 commits · 핵심 주제 4건**
