@@ -8,35 +8,34 @@ tags:
   - token-optimization
   - model-routing
   - shunt
-  - backstage
   - portal
-source: https://engineering.atspotify.com/2026/9/spotifys-backstage-portal-cut-my-claude-code-token-usage-by-90
-updated: 2026-09-07
+source: https://github.com/spotify/portal-ai-plugins
+updated: 2026-09-09
 ---
 
 # Spotify Agent Architecture
 
-> Spotify의 Shunt 패턴은 고성능 메인 에이전트의 컨텍스트를 추론에 집중시키고, 대용량 I/O와 예측 가능한 코드 생성을 저비용 워커로 라우팅하며, 이 정책을 프롬프트가 아니라 PreToolUse Hook으로 강제하는 토큰 최적화 아키텍처다.
+> Spotify의 Shunt는 고성능 메인 에이전트의 컨텍스트를 추론에 집중시키고, 대용량 I/O와 예측 가능한 코드 생성을 저비용 AiKA worker로 라우팅하며, 이 정책을 PreToolUse Hook으로 강제하는 토큰 최적화 harness다.
 
 ## 프로젝트 개요
 
-Spotify Engineering이 2026-09-03 공개한 사례는 Claude Code의 토큰 사용량을 줄이기 위해 Portal by Spotify의 AiKA Modes와 Claude Code plugin `shunt`를 결합한 구조다. 핵심은 더 작은 모델을 단순히 추천하는 것이 아니라, 메인 에이전트가 불필요한 대용량 원문과 생성물을 컨텍스트에 넣지 못하도록 실행 경로 자체를 분리하는 것이다.
+Spotify가 `spotify/portal-ai-plugins`를 Apache-2.0으로 공개했다. 저장소는 Spotify Portal을 Claude Code, Codex, Cursor에 연결하는 플러그인 marketplace이며, Portal CLI 인증·카탈로그/문서 검색·서비스 브리핑·진단·Portal action 호출 workflow를 제공한다.
 
-예시 worker는 Gemini 2.5 Flash지만 특정 모델에 종속된 설계는 아니다.
+이 중 **shunt**는 현재 Claude Code 전용 플러그인으로, 대용량 파일 읽기와 boilerplate 생성 같은 I/O-heavy 작업을 Portal CLI actions registry를 통해 AiKA mode에 위임한다.
 
 ## 해결하려는 문제
 
-AI coding agent의 비용은 추론뿐 아니라 대량 파일 읽기, 반복적인 코드 생성, 생성 결과의 재입력 등 I/O성 컨텍스트 소비에서 크게 발생한다. CLAUDE.md에 '큰 파일은 작은 모델에 위임하라'고 적는 방식은 권고일 뿐이므로 에이전트가 무시할 수 있고 프로젝트마다 규칙을 복제해야 한다.
+AI coding agent의 비용은 복잡한 추론뿐 아니라 대량 파일 읽기, 반복적인 코드 생성, 원문이 대화 context에 계속 남는 데서 발생한다. 단순히 CLAUDE.md에 '큰 파일은 작은 모델에 맡겨라'고 적으면 agent가 지침을 놓칠 수 있다.
 
-Shunt는 라우팅 정책을 모델 밖의 Hook으로 옮겨 이를 강제한다.
+Shunt는 라우팅 정책을 모델 밖의 Hook으로 옮겨 large read를 실제로 차단하고 worker 경로를 사용하게 만든다.
 
-## 핵심 원칙
+## 핵심 기능
 
-- 메인 고성능 모델: reasoning, architecture decision, 정확한 editing 담당
-- 저비용 worker: bulk read, 요약, boilerplate/test/config/type stub 생성 담당
-- 원문 대용량 파일은 가능한 메인 context에 넣지 않는다.
-- worker가 생성한 예측 가능한 코드는 메인 context를 통과하지 않고 disk에 직접 기록할 수 있다.
-- routing policy는 prompt가 아니라 Hook에서 enforce한다.
+- `portal`: Portal CLI setup/auth, doctor, catalog/docs search, service briefing, actions, feedback workflow
+- `shunt`: bulk read와 boilerplate generation을 worker로 위임
+- Claude Code / Codex / Cursor용 plugin metadata 제공 (`shunt`는 현재 Claude Code only)
+- Portal actions 호출 전 help/dry-run/confirmation safeguard
+- worker mode 이름을 server-side에서 resolve하고 필요하면 mode id로 pin 가능
 
 ## 아키텍처
 
@@ -61,56 +60,57 @@ PreToolUse Hooks  <--- Enforcement Layer
                                       Script
                                         |
                                         v
-                                 Portal / AiKA Mode
+                              Portal CLI Actions Registry
                                         |
-                                  Cheap Worker Model
-                                   /            \
-                          bulk-reader         code-writer
-                              |                    |
-                       structured bullets     straight to disk
+                                  aika:invoke-chat
+                                        |
+                                   AiKA Mode
+                                   /       \
+                          bulk-reader   code-writer
+                              |             |
+                     structured result   direct-to-disk
                               |
                               v
                          Main Context
 ```
 
-## 3단계 라우팅 구조
-
 ### 1. Hooks — 강제 정책
 
-`shunt`는 Claude Code의 PreToolUse Hook을 사용한다.
+`shunt`는 Claude Code PreToolUse Hook을 사용한다.
 
-- `check-file-size`: Read 호출 전에 파일 크기를 검사한다. 기본 임계값은 350줄이다.
-- 임계값을 넘는 전체 읽기는 block하고 `/bulk-reader` 경로를 안내한다.
-- offset/limit이 지정된 targeted read는 허용한다.
-- `check-bash-read`: `cat`, `head`, `tail`, `less`, `more` 등을 통한 우회를 감지한다.
-- `cat file | grep ...` 같은 targeted pipeline은 허용한다.
-- 임계값은 `SHUNT_MIN_LINES`로 조정 가능하다.
+- `check-file-size`: 기본 350줄을 넘는 full `Read`를 차단
+- offset/limit targeted read는 허용
+- `check-bash-read`: `cat`, `head`, `tail`, `less`, `more`를 통한 우회도 검사
+- pipe/redirection/targeted flag처럼 context로 전체 파일을 넣지 않는 경우는 허용
+- threshold는 `SHUNT_MIN_LINES`로 조정
 
 핵심은 **prompt는 suggestion이고 hook은 architecture**라는 점이다.
 
 ### 2. Scripts — 전송 배관
 
-스크립트가 모델 호출 세부사항을 처리한다.
+- `scripts/lib/aika.sh`: 공통 `aika:invoke-chat` transport
+- `bulk-read`: 파일을 XML `<file path="...">` 경계로 감싸 worker에 전달
+- `code-write`: spec + reference를 worker에 전달하고 markdown fence를 제거하며 `--target`으로 disk 직접 기록 가능
 
-- request 조합
-- Portal CLI invocation
-- error unwrap
-- token usage reporting
-- XML tag를 이용한 파일 경계 표시
-- worker output 정규화
+Claude가 자연어로 bash pipeline을 즉석 조립하지 않고 named arguments를 가진 script를 호출하게 만든 것도 안정성 측면에서 중요하다.
 
-`bulk-read`는 질문과 파일 목록을 worker에 전달한다.
+### 3. Skills — soft routing
 
-`code-write`는 specification + reference file + optional target path를 전달한다.
+- `bulk-reader/SKILL.md`
+- `code-writer/SKILL.md`
 
-### 3. Skills — 사용 안내
+Skill은 언제 위임할지 설명한다. bulk read는 Hook이 강제하지만 code writer는 강제 Hook이 없고 Skill 판단에 의존한다.
 
-Markdown skill은 메인 agent에게 언제/어떻게 delegation해야 하는지를 설명한다. Skill이 누락되거나 agent가 이를 따르지 않아도 Hook이 고비용 read를 차단하므로 정책 자체는 유지된다.
+## 실행 특성
+
+`aika:invoke-chat` 호출은 one-shot/ephemeral이다. 서버에 대화를 유지하지 않으며 Shunt도 이전 worker turn을 replay하지 않는다. 같은 corpus를 다시 보낼 수 있지만 그 corpus는 worker context에만 들어가므로 main Claude context를 오염시키지 않는 것이 설계의 핵심이다.
+
+Mode 이름은 server-side에서 case-insensitive로 resolve하며 본인 mode → group mode → public mode 순으로 선호한다. 이름이 모호하면 실패하고 candidate id를 반환하며, 환경변수로 특정 mode id를 pin할 수 있다.
 
 ## 라우팅 규칙
 
 ```text
-READ 요청
+READ
  |
  +-- Offset/Limit 지정? ------ YES --> Main Agent targeted read
  |
@@ -118,163 +118,121 @@ READ 요청
  |
  +-- 파일 > 350 lines? ------- YES --> BLOCK --> bulk-reader
 
-CODE GENERATION
+GENERATION
  |
- +-- 반복적/패턴 기반 boilerplate? --> code-writer worker
+ +-- 반복적/패턴 기반 boilerplate? --> code-writer
  |
  +-- architecture/reasoning/edit? ---> Main Agent
 ```
 
-350줄은 Spotify 사례의 기본값이며 보편적인 최적값은 아니다. `SHUNT_MIN_LINES`로 환경별 튜닝해야 한다.
+350줄은 기본값일 뿐이며 환경별 튜닝이 필요하다.
 
-## Bulk Reader
+## Worker 구성
 
-대형 파일 또는 여러 파일을 질문과 함께 worker context에서 처리한다. 원문 전체 대신 질문에 필요한 구조화된 결과만 main context로 반환한다.
+### bulk-reader
 
-권장 worker output 규칙:
+대형 파일 또는 여러 파일을 질문과 함께 worker context에서 처리하고 필요한 구조화 결과만 main context로 반환한다. 권장 출력은 짧은 bullet, 정확한 identifier/위치 중심이며 불필요한 prose와 원문 복제를 피한다.
 
-- prose 금지
-- 인사/서론/결론 금지
-- 구조화된 bullet만 출력
-- 함수명/변수명/대상 또는 위치 정보 중심
-- 질문과 관련 없는 내용 제거
+### code-writer
 
-이 방식의 진짜 절감 효과는 첫 read뿐 아니라 이후 모든 turn에서 대형 원문이 main conversation context에 남지 않는 데서 발생한다.
-
-## Code Writer
-
-테스트, config scaffolding, type stub 등 기존 패턴으로 결과를 예측할 수 있는 작업을 worker에 맡긴다.
-
-필수 입력:
-
-- specification
-- reference file
-
-reference file이 중요한 이유는 worker가 프로젝트 convention을 추측하지 않고 기존 패턴을 복제하도록 하기 위해서다.
-
-출력 규칙:
-
-- code only
-- 설명 금지
-- markdown fence 금지
-- reference convention 준수
-
-생성물은 필요하면 main context를 거치지 않고 target file에 직접 쓸 수 있다.
+테스트, config scaffolding, type stub 등 패턴 기반 생성을 위임한다. `--reference`가 필수라서 기존 프로젝트 convention을 기준으로 생성하도록 강제한다. 결과는 stdout 또는 target file로 직접 기록할 수 있다.
 
 ## 메인 모델이 직접 처리해야 할 영역
 
-### 정확한 파일 편집
+- debugging 및 복잡한 reasoning
+- architecture decision
+- precise editing
+- 작은 파일/작업
+- worker summary만으로 수행하는 정확한 코드 수정
 
-worker summary의 위치 정보만 믿고 edit하지 않는다. 수정할 위치를 좁힌 후 offset/limit targeted read로 실제 코드를 메인 모델이 확인한다.
+수정이 필요하면 worker summary로 위치를 좁힌 뒤 main agent가 offset/limit targeted read로 실제 코드를 확인하는 방식이 적합하다.
 
-### 복잡한 추론
+## 설정
 
-architecture decision, concurrency/thread-safety, subtle bug, security-sensitive 판단 등은 고성능 모델이 담당한다.
+주요 환경변수:
 
-### 작은 작업
+| 변수 | 기본값 | 목적 |
+|---|---:|---|
+| `SHUNT_MIN_LINES` | `350` | large-read 기준 |
+| `SHUNT_PORTAL_INSTANCE` | CLI default | Portal instance |
+| `PORTAL_CLI_BIN` | `portal-cli` 또는 `npx` | CLI 실행 방식 |
+| `SHUNT_MAX_PAYLOAD_BYTES` | macOS 400000 / Linux 120000 | argv payload ceiling |
+| `SHUNT_TIMEOUT_SECONDS` | `180` | worker 호출 timeout |
+| `SHUNT_BULK_READER_MODE_ID` | - | bulk mode pin |
+| `SHUNT_CODE_WRITER_MODE_ID` | - | writer mode pin |
 
-위임에는 worker invocation latency가 있으므로 작은 파일/단순 작업은 직접 처리하는 편이 효율적일 수 있다. Spotify 사례에서 350줄 threshold는 이 trade-off를 위한 기본값이다.
+## Benchmark
 
-## Worker Mode 예시 설정
+공개 README의 162K-line Java monorepo 측정:
 
-Spotify 사례의 두 Mode는 Gemini 2.5 Flash를 worker로 사용하며 temperature 0.2를 사용한다. 모델은 Portal에 설정된 다른 모델로 교체 가능하다.
+| Scenario | Lines | Without | With Shunt | Savings |
+|---|---:|---:|---:|---:|
+| Single large file | 4,014 | 33,684 tokens | 5,737 | 82% |
+| Source + test pair | 7,408 | 75,990 | 4,148 | 94% |
+| Multi-file cross-service | 1,281 | 16,221 | 821 | 94% |
+| Code-write | 3,667 | 40,614 tokens + generation | 833 lines to disk | - |
 
-### bulk-reader system rules
+README가 보고하는 bulk-read 평균 절감은 **90%**다. 이는 특정 benchmark/workload 결과이지 모든 코드베이스에서 보장되는 수치는 아니다.
 
-```text
-You are a bulk code reader.
-Analyze only what is required to answer the supplied question.
-Do not write prose, introductions, conclusions, or greetings.
-Return only structured bullet points.
-Start each bullet with the relevant symbol, function, class, variable, file, or location when available.
-Do not reproduce large source blocks.
-Preserve exact identifiers needed by the primary agent.
-```
+## 검증 구조
 
-### code-writer system rules
-
-```text
-You are a code generation worker.
-Follow the supplied specification and reference file exactly.
-Match naming, structure, formatting, and conventions from the reference.
-Return code only.
-Do not explain the code.
-Do not add markdown fences.
-Do not add commentary outside the requested implementation.
-```
-
-## 실무 적용용 메인 Agent Rules
-
-다음은 Claude Code/Codex 계열 harness에 적용할 수 있는 정책 형태다.
+저장소에는 hook/transport/end-to-end 평가가 포함된다.
 
 ```text
-# Context Routing Policy
-
-Your primary responsibility is reasoning, planning, architecture decisions, precise editing, and verification.
-Do not spend primary-model context on bulk I/O or predictable boilerplate when a worker route is available.
-
-## Reading
-- Read small files directly.
-- Use targeted reads with offset/limit when the relevant region is known.
-- Never bypass a large-file routing hook.
-- When a large read is blocked, delegate through bulk-reader.
-- Treat worker summaries as navigation/context, not as authoritative source text for precise edits.
-
-## Writing
-- Delegate predictable boilerplate, tests, configuration scaffolding, and type stubs when a suitable reference file exists.
-- Require a reference file for delegated code generation.
-- Allow worker output to go directly to disk only for low-risk pattern-based generation.
-- Review or validate generated files through build/test/lint before considering the task complete.
-
-## Never Delegate
-- architecture decisions
-- subtle debugging/reasoning
-- concurrency or thread-safety analysis
-- security-sensitive reasoning
-- precise edits based only on summarized source
-- small operations where delegation overhead exceeds expected savings
-
-## Verification
-- After delegation, use targeted reads for sections requiring exact reasoning.
-- Run deterministic build/test/lint checks whenever available.
-- Escalate to the primary model when worker output is ambiguous or validation fails.
+evals/
+├── hook-evals.json          # Read hook 17
+├── bash-hook-evals.json     # Bash hook 17
+├── transport-evals.sh       # transport 17
+├── evals.json               # end-to-end skill 3
+└── benchmarks.json          # token scenarios 4
 ```
+
+Hook + transport 기준 51개 테스트를 제공한다는 점은 단순 prompt recipe보다 재현 가능한 harness 구현에 가깝다는 근거다.
 
 ## 장점
 
 - 대형 원문이 main context에 누적되는 것을 방지
 - 이후 turn의 context 비용까지 감소
 - 고성능 모델을 reasoning에 집중
-- worker model 교체 가능
-- policy와 transport/model을 분리
-- CLAUDE.md보다 강한 enforcement
-- 프로젝트별 prompt 복제 감소
-
-Spotify 글 제목의 '90%'는 작성자의 실제 workflow 사례 결과이며 모든 프로젝트에서 동일하게 재현된다는 의미의 benchmark는 아니다.
+- routing policy를 prompt가 아닌 deterministic hook으로 enforce
+- worker mode/model을 교체·커스터마이즈 가능
+- reference 기반 generation으로 context-free boilerplate 위험 감소
+- hook/transport eval을 함께 공개해 구조를 직접 검증 가능
 
 ## 단점 및 한계
 
+- `code-writer`에는 enforcement가 없어 agent의 Skill 준수에 의존
 - worker summary에서 중요한 세부사항이 누락될 수 있음
-- 350줄이라는 정적 기준은 언어/파일 구조에 따라 부적절할 수 있음
-- worker invocation latency 발생
-- 여러 worker 호출 시 전체 wall-clock time이 오히려 증가할 수 있음
-- direct-to-disk generation에는 반드시 deterministic validation이 필요
-- Portal/AiKA를 그대로 사용할 경우 Spotify ecosystem 의존성이 생김
-- Claude Code 이외 agent에서는 동일 Hook API가 없을 수 있어 별도 interceptor 구현 필요
+- 350줄 정적 기준은 언어/파일 구조별 최적값이 아님
+- worker invocation latency와 별도 inference 비용 발생
+- Portal/AiKA를 그대로 사용하면 Spotify ecosystem 의존
+- payload가 command-line argv를 통과해 OS `ARG_MAX` 제약을 받음. Linux는 single argument 128KiB 제한 때문에 기본 ceiling도 더 낮음
+- 기본 worker timeout 180초라 큰 generation은 split 또는 설정 변경 필요
+- 현재 Shunt는 Claude Code only
+
+## 기존 방식과 비교
+
+| 방식 | 강제성 | Main context 절약 | 구현 복잡도 |
+|---|---|---|---|
+| CLAUDE.md 지침 | 낮음 | 중간 | 낮음 |
+| Skill 기반 위임 | 중간 | 높음 | 중간 |
+| Shunt Hook + Skill + Worker | 높음 (bulk read) | 높음 | 높음 |
+
+Shunt의 차별점은 더 싼 모델 자체가 아니라 **context ingress를 외부 정책 계층에서 통제**한다는 것이다.
 
 ## 활용 아이디어
 
 ### 바로 적용 가능
 
 - Claude Code PreToolUse Hook으로 large-file read 차단
-- `SHUNT_MIN_LINES`와 유사한 configurable threshold 도입
+- configurable threshold 도입
 - bulk-reader용 저비용 모델 분리
 - targeted read 예외 허용
 - code generation worker에 reference file 필수화
 
 ### PoC 가치 있음
 
-사내 개발 Harness에서는 다음 구조로 확장할 수 있다.
+사내 harness에는 다음처럼 적용할 가치가 높다.
 
 ```text
 Main Orchestrator / Claude
@@ -294,20 +252,20 @@ Reason/Edit    Read/Generate
        Perforce CL
 ```
 
-Perforce 환경에서는 worker의 direct-to-disk 변경을 pending changelist에 격리하고 TeamCity 또는 로컬 build/test를 통과한 뒤 reviewer가 검수하도록 구성하는 것이 안전하다.
+Perforce 환경에서는 worker direct-to-disk 변경을 별도 pending changelist/worktree에 격리하고 deterministic build/test를 통과한 뒤 reviewer가 검수하도록 하는 편이 안전하다.
 
 ### 아이디어 참고
 
-라인 수뿐 아니라 예상 token 수, 파일 유형, task type, cache hit, worker latency, 모델 가격 등을 이용해 동적 routing score로 발전시킬 수 있다.
+라인 수만 보지 않고 예상 token 수, 파일 유형, task type, cache hit, worker latency, 모델 가격을 합친 dynamic routing score로 발전시킬 수 있다.
 
 ## 결론
 
-Spotify Shunt 사례의 핵심은 'Gemini Flash를 사용한다'가 아니다. **비싼 모델의 context를 하나의 희소 자원으로 취급하고, 무엇이 그 context에 들어올 수 있는지를 모델 외부의 deterministic policy로 통제한다**는 점이다.
+이번 오픈소스 공개로 Spotify 사례는 단순한 엔지니어링 블로그 아이디어가 아니라 **Hooks → Scripts → Skills → Portal Actions → AiKA Worker**로 구성된 실제 구현체로 확인할 수 있게 됐다.
 
-Agent에게 토큰 절약을 부탁하는 prompt optimization에서 한 단계 더 나아가, Hook → Script → Worker Mode라는 실행 아키텍처로 token policy를 강제한다는 점이 실무적으로 가장 참고할 가치가 높다.
+가장 참고할 부분은 '싼 모델을 쓰자'가 아니라 **비싼 메인 모델의 context를 희소 자원으로 보고, 무엇이 그 context에 진입할 수 있는지를 deterministic policy로 제어한다**는 설계다. 특히 자체 Claude Code/Codex harness를 운영한다면 Portal 자체를 도입하기보다 Shunt의 routing/enforcement 구조를 이식하는 PoC 가치가 높다.
 
 ## 참고 자료
 
+- https://github.com/spotify/portal-ai-plugins
+- https://github.com/spotify/portal-ai-plugins/tree/main/plugins/shunt
 - Spotify Engineering, "Portal by Spotify cut my Claude Code token usage by 90%", 2026-09-03
-- Portal by Spotify / AiKA Modes
-- Spotify `portal-ai-plugins` marketplace (`portal`, `shunt` plugins)
