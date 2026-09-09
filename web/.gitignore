@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.content-cache/
+.vercel/
+public/content.json
+public/link-report.json
+
+.vercel
