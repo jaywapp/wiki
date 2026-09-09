@@ -42,7 +42,7 @@ I/J는 계약을 공유하되 파일 소유권을 나눠 병렬 처리한다. �
 - 모바일 분류 배치와 예시 코드의 불필요한 문자를 한 차례 수정 후 확인.
 - 시안에는 실제 저장소 동기화·완전한 Markdown 렌더러가 없으며 운영 빌드·배포는 아직 실행하지 않음.
 - 로컬 미리보기: http://127.0.0.1:4317/ (포트 4317, Python 정적 서버). 다른 컴퓨터에서 접속하는 공개 URL이 아님.
-- 기존 README와 기존 작업 문서는 보존. docs/README.md에는 이번 문서 링크만 추가. commit/push 없음.
+- 기존 README와 기존 작업 문서는 보존. docs/README.md에는 이번 문서 링크만 추가했다. 이 시점의 샘플 검증에는 commit/push가 없었다.
 
 ### 카탈로그 추가 검증 결과
 
@@ -60,5 +60,6 @@ I/J는 계약을 공유하되 파일 소유권을 나눠 병렬 처리한다. �
 - Vercel production 배포 READY, https://jaywapp-wiki.vercel.app 루트 HTTP 200 및 공개 content.json 145개 확인.
 - 공개 사이트 모바일 390×844에서 System.IO 검색, 문서 선택, 직접 주소 새로고침, 목록 복귀 검증. 본문 너비 375px로 가로 넘침 없음.
 - 로컬 통합 검증에서 필터 교집합/무결과/초기화/트리 11개 결과/표/Mermaid SVG 2개 및 오류 없음 확인.
-- 최종 산출물: web/**, docs/wiki-reader-guide.md, production-mobile-*.png. 사용자 기존 변경 보존, commit/push 없음.
-- 자동 Git 배포는 미연결. 원격 문서 변경은 안내의 동기화·빌드·재배포 절차로 반영.
+- 최종 산출물: web/**, docs/wiki-reader-guide.md, production-mobile-*.png. 사용자 기존 변경 보존.
+- 커밋 `88dc2a6`을 `origin/codex/workspace-environment-20260904`에 푸시하고 최신 목록 기능을 production에 반영했다.
+- 자동 Git 배포는 Vercel GitHub 권한 승인 전까지 미연결이다. 승인 후 `develop` push와 PR preview를 자동화한다.

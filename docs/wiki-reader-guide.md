@@ -1,6 +1,6 @@
 # 위키 웹 리더 운영 안내
 
-공개 주소: **https://jaywapp-wiki.vercel.app** (2026-09-08 배포, 최신 동기화 기준 공개 문서 145개).
+공개 주소: **https://jaywapp-wiki.vercel.app** (2026-09-09 최신 기능 배포, 공개 문서 145개).
 
 ## 구성
 
@@ -38,7 +38,9 @@ vercel.cmd deploy --prebuilt --prod --yes --scope jaywapp16-2281s-projects
 
 ## 배포
 
-프로젝트 이름은 `jaywapp-wiki`. `web/.vercel/project.json`은 로컬 연결 정보이며 커밋하지 않는다. 현재는 Git 자동 배포를 연결하지 않았다. 사이트 소스를 commit/push하지 않았기 때문이다.
+프로젝트 이름은 `jaywapp-wiki`. `web/.vercel/project.json`은 로컬 연결 정보이며 커밋하지 않는다. 작업 브랜치 `codex/workspace-environment-20260904`의 커밋 `88dc2a6`은 GitHub에 푸시했다. 현재 production은 수동 prebuilt 배포로 최신 상태다.
+
+Git 자동 배포 연결은 Vercel 계정의 GitHub 연동 승인이 필요하다. [Vercel Git 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/git)에서 GitHub를 연결하고 `jaywapp/wiki` 저장소 접근을 승인한 뒤 `vercel git connect --yes`를 실행하면 된다. 연결되면 `develop` push는 production, 다른 브랜치와 PR은 preview로 배포된다.
 
 Windows에서 `vercel build --prod`가 `spawn cmd.exe ENOENT`로 실패하여, 검증된 Vite 산출물을 Vercel Build Output API v3로 포장하는 `package-vercel.mjs`를 제공한다. 이 스크립트는 정확한 `web/.vercel/output` 경로를 검증하고 이전 빌드 출력만 교체한다. `.vercel`의 환경 파일은 업로드 산출물에 포함하지 않는다.
 
