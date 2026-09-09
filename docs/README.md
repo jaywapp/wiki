@@ -4,6 +4,8 @@
 
 ## 위키 웹 리더
 
+- 업데이트 페이지: [분석](wiki-updates-analysis.md) · [설계](wiki-updates-design.md) · [작업](wiki-updates-tasks.md)
+
 - [분석](wiki-reader-analysis.md) · [설계](wiki-reader-design.md) · [작업 계획](wiki-reader-tasks.md)
 - [화면 콘셉트 비교](ux-concepts/wiki-reader/index.html)
 - [카탈로그 추가 디자인 비교](ux-concepts/wiki-reader/catalog-index.html)

@@ -4,6 +4,8 @@ import './style.css';
 import { escapeHtml as e, filterDocuments, createTree } from './catalog.js';
 import { renderMarkdown, enhanceDiagrams } from './markdown.js';
 import { parsePreferences } from './preferences.js';
+import { isDailySummary } from './updates-model.js';
+import { renderUpdates } from './updates.js';
 
 const app=document.getElementById('app');
 let dataset,documents=[],paths,state,filtered=[],readerVersion=0,visibleCount=50;
@@ -46,6 +48,8 @@ function skeleton(){
   [...new Set(documents.flatMap(doc=>doc.tags))].sort((a,b)=>a.localeCompare(b,'ko')).forEach(tag=>$('tag-filter').add(new Option(tag,tag)));
   if(state.folder&&!folders.has(state.folder))$('folder-filter').add(new Option(state.folder,state.folder));
   if(state.tag&&![...$('tag-filter').options].some(o=>o.value===state.tag))$('tag-filter').add(new Option(state.tag,state.tag));
+  document.querySelector('.topbar nav').insertAdjacentHTML('afterbegin','<a href="/" aria-current="page">자료실</a><a href="/?page=updates">업데이트</a>');
+  document.querySelector('.topbar nav').classList.add('site-pages');
   bindEvents();syncControls();renderCategories();renderResults();renderReader();showReading(state.reading);
 }
 function syncControls(){ $('search').value=state.query;$('folder-filter').value=state.folder;$('tag-filter').value=state.tag;$('sort').value=state.sort; }
@@ -107,6 +111,7 @@ function scrollAnchor(anchor){
   requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({block:'start'}));
 }
 function selectDocument(path,anchor=''){
+  if(path==='SUMMARY.md'){location.href='/?page=updates'+anchor;return;}
   const changed=state.document!==path;state.document=path;showReading(true);saveState(true,anchor);
   if(changed)renderReader(anchor);else if(anchor)scrollAnchor(anchor);
   renderResults();
@@ -137,16 +142,18 @@ function bindEvents(){
     }
   });
 }
-window.addEventListener('popstate',()=>{if(!dataset)return;state=readState();visibleCount=50;syncControls();renderCategories();renderResults();showReading(state.reading);renderReader(location.hash);});
+window.addEventListener('popstate',()=>{if(!state)return;state=readState();visibleCount=50;syncControls();renderCategories();renderResults();showReading(state.reading);renderReader(location.hash);});
 window.addEventListener('keydown',event=>{
-  if(event.key==='/'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)&&!event.target.isContentEditable){event.preventDefault();if(dataset){showReading(false);$('search').focus();}}
+  if(state&&event.key==='/'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)&&!event.target.isContentEditable){event.preventDefault();showReading(false);$('search').focus();}
 });
 async function start(){
   try{
     const response=await fetch('/content.json');if(!response.ok)throw new Error('Content unavailable');
     dataset=await response.json();documents=dataset.documents;
     if(!Array.isArray(documents)||!documents.length)throw new Error('Empty catalog');
-    paths=new Set(documents.map(d=>d.path));state=readState();skeleton();if(location.hash)scrollAnchor(location.hash);
+    const params=new URLSearchParams(location.search);
+    if(params.get('page')==='updates'||params.get('doc')==='SUMMARY.md'){renderUpdates(dataset,app);return;}
+    paths=new Set(documents.map(d=>d.path));documents=documents.filter(doc=>!isDailySummary(doc));state=readState();skeleton();if(location.hash)scrollAnchor(location.hash);
   }catch{
     app.innerHTML='<div class="loading-page"><h1>문서를 불러오지 못했습니다</h1><p>연결 상태를 확인하고 다시 시도해 주세요.</p><button id="retry">다시 시도</button><p><a href="https://github.com/jaywapp/wiki">GitHub에서 원문 보기</a></p></div>';$('retry').onclick=()=>location.reload();
   }
