@@ -6,3 +6,7 @@
 - 범위: 기존 시각 체계를 유지하는 날짜별 업데이트 읽기 페이지, 최신순·날짜 이동, 자료 본문 링크, 모바일 탭, 이전 SUMMARY 주소 호환.
 - 비범위: 문서 내용 재작성, 백엔드 도입. 정적 Git 문서이므로 Supabase는 필요하지 않다.
 - 완료 기준: 일반 목록에서 SUMMARY 제외, 날짜 역순, 내부 문서 이동, 빌드·테스트 통과 및 승인된 Git 병합.
+
+## 완료 확인
+
+2026-09-09: 구현 커밋 `74ad4a5`를 푸시하고 [PR #10](https://github.com/jaywapp/wiki/pull/10)을 develop에 squash 병합했다 (`6be43e15`). 병합 콘텐츠 157개로 테스트 23개와 production build를 다시 통과했다. [운영 업데이트 페이지](https://jaywapp-wiki.vercel.app/?page=updates)에 수동 배포 완료, 17개 날짜·정상 화면·콘솔 오류 없음 확인. 배포 ID: `dpl_4C3gEJbuoVQfpPkwGPtXjiKLiWBz`. Git 자동 배포 연결은 기존 미완료 상태다.
