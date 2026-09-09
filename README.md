@@ -38,6 +38,13 @@
 
 ## 기획/설계
 
+- [워크스페이스 하네스 분석](docs/workspace-harness-analysis.md) — Codex·Claude 실제 기능, 로컬 근거와 규칙 충돌 조사
+- [워크스페이스 하네스 설계 초안](docs/workspace-harness-design.md) — 권장 구조와 단일 프로젝트 질문·응답 검증 절차
+- [워크스페이스 하네스 작업 계획](docs/workspace-harness-tasks.md) — 병렬 조사 결과와 다음 구현 작업
+- [워크스페이스 하네스 구현 진행](docs/workspace-harness-execution-tasks.md) — 읽기 전용 왕복 검증과 관리 하네스 후속 구현
+
+- [Windows Terminal 멀티 프로젝트 설정](docs/windows-terminal-workspace-guide.md) — 오케스트레이터와 프로젝트 터미널 배치·사용법
+
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계
 
 ## 관련 링크
