@@ -25,3 +25,17 @@
 - 시크릿·토큰·키·`.env` 값은 문서·로그·커밋에 기록하지 않습니다.
 
 이 저장소의 기존 문서 인덱스와 생성 규칙이 있으면 그 규칙을 우선하며, 기존 파일을 덮어쓰지 않습니다.
+
+## 로컬 터미널 작업 공간
+
+- [사용법](windows-terminal-workspace-guide.md)
+- [분석](windows-terminal-workspace-analysis.md)
+- [설계](windows-terminal-workspace-design.md)
+- [작업 계획](windows-terminal-workspace-tasks.md)
+
+## 워크스페이스 오케스트레이션 하네스
+
+- [분석](workspace-harness-analysis.md) — 확인 기능·로컬 근거·미확인 사항
+- [설계 초안](workspace-harness-design.md) — 작업 전달·질문·응답·결과 회수
+- [작업 계획](workspace-harness-tasks.md) — 조사 완료 기준과 후속 구현 의존성
+- [구현 재개 분석](workspace-harness-execution-analysis.md) · [설계](workspace-harness-execution-design.md) · [진행 상태](workspace-harness-execution-tasks.md) — 별도 workspace-harness 프로젝트의 구현·검증
