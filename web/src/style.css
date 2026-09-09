@@ -19,4 +19,29 @@
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
+.site-pages{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.site-pages a{display:inline-flex;align-items:center;min-height:44px}
+.site-pages a[aria-current=page]{color:var(--accent);text-decoration:underline;text-underline-offset:8px}
+.updates-layout{max-width:1100px;margin:0 auto;padding:48px 32px 80px;display:grid;grid-template-columns:160px minmax(0,1fr);gap:36px 48px}
+.updates-heading{grid-column:1/-1}
+.updates-heading h1{font-size:36px;margin:0 0 12px}
+.updates-heading>a{font-size:13px;color:var(--accent)}
+.update-dates{display:flex;flex-direction:column;align-self:start;position:sticky;top:24px;max-height:85vh;overflow:auto}
+.update-dates a{padding:12px 8px;min-height:44px;font-size:13px;font-variant-numeric:tabular-nums}
+.update-feed{min-width:0;max-width:75ch}
+.update-entry{padding-bottom:36px;margin-bottom:36px;border-bottom:1px solid var(--line)}
+.update-entry>h2{font-size:24px;margin:0 0 24px;scroll-margin-top:24px;font-variant-numeric:tabular-nums}
+.update-entry>h2 a{color:var(--accent)}
+.update-entry .markdown-body{overflow-wrap:anywhere}
+@media(max-width:800px){
+  .topbar{height:auto;min-height:64px;flex-wrap:wrap;gap:8px;padding-block:8px}
+  .site-pages{gap:16px;font-size:12px}
+  .site-pages a[target=_blank]{display:none}
+  .updates-view{padding-bottom:0}
+  .updates-layout{display:block;padding:28px 22px 48px}
+  .updates-heading h1{font-size:28px}
+  .update-dates{position:static;flex-direction:row;gap:8px;margin:24px 0 32px;max-height:none;white-space:nowrap;padding-bottom:8px}
+  .update-entry>h2{font-size:22px}
+}
+
 .row-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;line-height:1.4}.row-tag,.row-tag-more{display:inline-block;color:var(--accent);font-size:10px;line-height:1.5;border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-weight:500}.row-tag-more{color:var(--muted)}.document-description{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:var(--muted);font-size:11px;line-height:1.65;margin-top:6px;overflow-wrap:anywhere}
