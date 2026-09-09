@@ -9,6 +9,190 @@
 
 ---
 
+## 2026-09-08
+
+> **2 commits · 핵심 주제 2건**
+
+### 1. vs-token-safer — LSP·tree-sitter 기반 구조화 검색으로 Agent Context 비용 절감
+
+[`ai/tools/vs-token-safer.md`](./ai/tools/vs-token-safer.md)
+
+- Claude Code의 저장소 탐색을 `grep`·전체 파일 Read 중심에서 **LSP / tree-sitter 기반 심볼 질의**로 전환하고, 모델에는 필요한 `file:line` 중심의 제한된 결과만 전달하는 로컬 코드 인덱싱/MCP 플러그인을 분석.
+- PreToolUse Hook이 안전한 grep을 구조화 질의로 재작성하며 C++/Unreal은 clangd, C#/.NET은 Roslyn 계층을 활용하고, semantic backend가 준비되지 않으면 tree-sitter로 내려가는 graceful degradation 구조를 제공.
+- 검색 결과 토큰 절감뿐 아니라 Hook 안내 자체의 토큰 overhead까지 telemetry로 관찰하고 `hookNoise`를 조정하는 점, compile DB/index를 source tree 밖에 둬 Perforce reconcile 오염을 줄이는 운영 설계가 실무적으로 중요하다고 평가.
+
+### 2. Uber Efficient Software Factory — AI 개발을 완료 가치 단위의 Unit Economics로 운영
+
+[`ai/research/uber-efficient-software-factory.md`](./ai/research/uber-efficient-software-factory.md)
+
+- Uber는 AI 코딩 비용을 단순 `token price × tokens`가 아니라 **완료된 PR·리뷰·정리 작업 같은 업무 결과당 비용**으로 보고, 모델·컨텍스트·도구·캐시·관측성을 하나의 Software Factory 운영 문제로 최적화.
+- 실제 workload benchmark를 기반으로 Main Model과 저비용 Subagent를 분리하고, 400K automatic compaction·세션 특성별 cache TTL·MCP tool schema 동적 로딩·code-mode batching으로 불필요한 turn과 context 전송을 줄이는 전략을 정리.
+- 1,000+ MCP 환경의 Tool Search/CLI projection, 조직 지식을 연결한 Context Graph, session cost anti-pattern 분석까지 결합해 **Agent Execution Platform 전체를 측정·라우팅·최적화하는 운영 모델**로 평가.
+
+---
+
+## 2026-09-07
+
+> **5 commits · 핵심 주제 4건**
+
+### 1. Claude Code Function Hooks — Plugin을 Agent Runtime Middleware로 확장하는 제안
+
+[`ai/news/claude-code-function-hooks.md`](./ai/news/claude-code-function-hooks.md)
+
+- 기존 lifecycle hook보다 깊게 Claude Code의 Tool·Agent·UI·Model 흐름을 TypeScript 함수와 `next()` 기반 middleware로 감싸 **입력/결과 변환, 호출 차단·대체, UI 확장**까지 가능하게 하는 Function Hooks 제안을 분석.
+- `$` capability interface와 중첩 Hook 구조를 통해 조직 보안 정책·secret redaction·audit/telemetry 같은 cross-cutting concern을 상위 계층에서 강제하는 **programmable Agent Runtime extension layer**로 발전할 가능성을 정리.
+- 아직 proposal/preview 단계이므로 운영 의존은 이르지만, Perforce checkout guard, TeamCity/빌드 상태 UI, Tool cache·observability 같은 사내 AX Plugin PoC 후보로 평가.
+
+### 2. UI Design Agent Skills — UI 작업을 작은 판단·검증 Skill Pipeline으로 분해
+
+[`ai/skills/ui-design-agent-skills.md`](./ai/skills/ui-design-agent-skills.md)
+
+- Emil Kowalski·Matt Pocock·kill-ai-slop 사례를 묶어 UI Agent가 곧바로 production code를 생성하기보다 **prototype → library 선택 → animation opportunity 판단 → 구현 → anti-slop 검수**로 작업을 분해하는 흐름을 정리.
+- 작은 Skill이 모델의 생성 능력을 키우기보다 선택·판단·검증 규칙을 주입해 자유도를 제한하고, 필요한 단계만 로딩함으로써 context/token 낭비를 줄이는 **composable AX pattern**을 분석.
+- 웹 전용 규칙을 그대로 도입하기보다 WPF/DevExpress 환경에서는 `pick-company-control`, 사내 theme 규칙, AI UI smell checklist 같은 내부 Skill로 포팅하는 방향을 제안.
+
+### 3. Spotify Shunt — Hook으로 강제하는 Context I/O·모델 라우팅 최적화
+
+[`ai/harness/spotify-agent-architecture.md`](./ai/harness/spotify-agent-architecture.md)
+
+- Spotify 사례를 바탕으로 고성능 Main Agent는 reasoning·architecture·정확한 edit에 집중시키고, **대용량 파일 읽기와 정형 코드 생성은 저비용 Worker로 라우팅**해 메인 컨텍스트를 보호하는 Shunt 패턴을 정리.
+- `PreToolUse Hook → Script → Skill/Worker`의 3계층으로 큰 Read와 Bash 우회를 정책적으로 차단하고, targeted read·grep 같은 축소 작업은 허용해 `prompt는 suggestion, hook은 architecture`라는 enforcement 원칙을 강조.
+- 단순 모델 교체가 아니라 bulk read 요약, disk 직접 code-write, 임계값 기반 routing을 결합한 토큰 최적화 구조로서 사내 Claude/Codex Harness의 Large File Guardrail에 적용 가치가 높다고 평가.
+
+### 4. Evidence-First Agent Harness — Context 비용과 추론 재작업 비용을 함께 줄이는 Guardrail
+
+[`ai/harness/evidence-first-agent-harness.md`](./ai/harness/evidence-first-agent-harness.md)
+
+- Shunt의 Context Routing을 확장해 Agent 비용을 **Context I/O Cost**와 잘못된 전제·가설로 Build/Render를 반복하는 **Reasoning Rework Cost**로 나누고, 두 비용을 각각 Context Guardrail과 Reasoning Guardrail로 제어하는 설계를 제시.
+- `결정론적 Tool → Cheap Worker → Main Reasoning Model` 순으로 가장 싼 계층을 우선하고, enum/API/default/config 같은 사실은 기억 대신 원본으로 확인하며, 비싼 실행 전에는 가장 싼 관측으로 가설을 검증하는 Evidence-First 정책을 정의.
+- Large Read Hook, targeted edit, Mechanical Edit Worker + pending CL, Build/Test/Render 횟수·hypothesis reversal 같은 지표까지 포함해 토큰 절감보다 **전체 작업 재실행 비용과 완료 지연을 줄이는 Harness 운영 모델**로 구체화.
+
+---
+
+## 2026-09-06
+
+> **2 commits · 핵심 주제 2건**
+
+### 1. Matt Pocock Skills — 작은 조합형 Agent Skill과 프로젝트 컨텍스트 규율
+
+[`ai/skills/matt-pocock-skills.md`](./ai/skills/matt-pocock-skills.md)
+
+- AI Coding Agent가 개발 프로세스 전체를 장악하는 거대한 프레임워크보다 **요구사항 정렬, 도메인 모델링, TDD, 디버깅, 코드 리뷰** 같은 기존 엔지니어링 규율을 작고 조합 가능한 Skill로 제공하는 접근을 정리.
+- `CONTEXT.md`에 프로젝트의 공통 용어와 도메인 어휘를 축적해 Agent의 장황한 설명과 명명 불일치를 줄이고, 세션을 넘어 재사용 가능한 **공유 Context 인터페이스**로 활용하는 패턴을 분석.
+- user-invoked orchestration skill과 model-invoked reusable discipline을 분리하고, Standards/Spec을 서로 다른 Subagent가 병렬 검토하는 방식처럼 **작은 Skill 조합 + 독립 검증**으로 품질을 높이는 구조를 제시.
+
+### 2. Linear UI/UX — 고밀도 생산성 도구의 일관된 작업 모델
+
+[`ai/research/linear-ui-ux.md`](./ai/research/linear-ui-ux.md)
+
+- Linear의 핵심 UI 원칙을 **high density, low visual noise**, attention hierarchy, predictable chrome으로 정리하고, 정보량을 줄이지 않으면서도 실제 작업 대상이 화면의 시각적 중심이 되도록 복잡도를 관리하는 방식을 분석.
+- Keyboard shortcut, Command Menu, Context Menu, Visible Control이 서로 다른 기능이 아니라 **동일한 domain action을 호출하는 여러 interaction surface**가 되어야 동작 일관성과 학습 가능성을 함께 유지할 수 있다고 정리.
+- Progressive Disclosure, Favorites/개인화, List/Board 같은 multiple views를 같은 data model의 projection으로 취급하는 패턴을 Agent Task Viewer·운영 Dashboard·개발 생산성 도구 UX에 재사용할 수 있다고 평가.
+
+---
+
+## 2026-09-05
+
+> **6 commits · 핵심 주제 4건**
+
+### 1. Claude Code Agent Teams + Dynamic Workflows — 협업형 Team과 대규모 Batch Orchestration 구분
+
+[`ai/harness/claude-code-agent-teams.md`](./ai/harness/claude-code-agent-teams.md) · [`ai/harness/claude-code-dynamic-workflows.md`](./ai/harness/claude-code-dynamic-workflows.md)
+
+- **Agent Teams**는 독립 context의 teammate들이 공유 Task List와 직접 Agent-to-Agent 메시징으로 협업하는 구조로, 장기 기능 개발·경쟁 가설 디버깅·Research Team처럼 소수의 Peer가 서로 결과를 참고해야 하는 작업에 적합하다고 정리.
+- **Dynamic Workflows**는 오케스트레이션을 JavaScript 코드와 별도 runtime으로 옮겨 loop/branch/retry, 최대 수백~1,000 Agent 규모의 fan-out, 저장·재실행, 실행 관찰을 지원하는 **programmable Agent Batch/Graph Runtime**으로 분석.
+- 둘을 `소수 장기 협업 = Agent Teams`, `대규모 반복·배치 = Dynamic Workflows`로 구분하고, durable state·이기종 모델 라우팅·외부 Dashboard가 필요하면 별도 Harness가 여전히 유리하다고 평가.
+
+### 2. Agent Team 운영 UI — Claude Agent Team Manager + Pixel Agents
+
+[`ai/tools/claude-agent-team-manager.md`](./ai/tools/claude-agent-team-manager.md) · [`ai/tools/pixel-agents.md`](./ai/tools/pixel-agents.md)
+
+- **Claude Agent Team Manager**는 Agent/Skill/Team을 조직도와 Pipeline으로 설계하고 One-click Deploy, OS 스케줄링, 변수/Context 관리까지 제공하는 **Claude Code Control Plane/UI**로 정리.
+- **Pixel Agents**는 Claude Code Hooks와 JSONL transcript를 읽어 세션·Subagent·Agent Team의 `working / waiting / permission` 상태와 context gauge를 픽셀 오피스 형태로 보여주는 **Runtime Visualization/Monitoring 계층**으로 분석.
+- 두 도구를 함께 보면 `조직·구성 설계 = ATM`, `실행 상태 관제 = Pixel Agents`로 역할이 보완되며, 실제 사내 Agent Team Dashboard에는 Task Queue·Token/Cost·Tool Call·SCM 변경·Approval Gate를 추가하는 방향을 제안.
+
+### 3. Lieflat Charts — 템플릿 중심 Agent 데이터 시각화 Skill
+
+[`ai/skills/lieflat-charts.md`](./ai/skills/lieflat-charts.md)
+
+- 데이터 형태를 판별해 catalog에서 차트/보고서 템플릿을 선택하고, 정해진 디자인 토큰과 구현 골격을 유지한 채 **single HTML chart/report**를 생성하는 Agent Skill로 분석.
+- `LLM = 자유 디자인 생성기`가 아니라 **template selection/adaptation orchestrator**로 제한해 반복 보고서의 스타일 드리프트와 잘못된 차트 선택을 줄이는 접근이 핵심.
+- TeamCity·Perforce·Agent 운영 지표 같은 개발 생산성 리포트에 활용 가치가 높지만 PolyForm Noncommercial 라이선스와 외부 Chart.js/ECharts/폰트 의존성은 사내 도입 전에 별도 검토가 필요하다고 정리.
+
+### 4. GPT-6 Pro / GPT-5.6 Sol Pro — ChatGPT 사용량 제한 정리
+
+[`ai/news/gpt-6-pro-gpt-5-6-sol-pro-usage-limits.md`](./ai/news/gpt-6-pro-gpt-5-6-sol-pro-usage-limits.md)
+
+- OpenAI 공식 Help Center 기준 Pro $200의 **GPT-6 Pro 주 200회**, **GPT-5.6 Sol Pro 일 170회**, 두 Pro 모델 **합산 일 200회** 제한을 구분해 정리.
+- Pro $100·Business 일부 플랜은 두 모델이 allowance를 공유하며, Chat과 Work/Codex는 별도 allowance라는 점을 명확히 해 모델 전환만으로 사용량이 늘어나는 경우와 그렇지 않은 경우를 구분.
+- 고난도 분석·설계·최종 리뷰에 Pro 모델을 집중하고 일반 실행은 다른 모델/환경으로 라우팅하는 사용량 최적화 방향을 제안.
+
+---
+
+## 2026-09-04
+
+> **12 commits · 핵심 주제 7건**
+
+### 1. GPT-6 Astra — Agentic Workflow 중심 차세대 모델 분석
+
+[`ai/news/gpt-6-astra.md`](./ai/news/gpt-6-astra.md)
+
+- GPT-6 Astra를 단순 대화 모델보다 **computer use·브라우징·코딩·다단계 tool workflow를 끝까지 수행하는 agentic work 모델**로 정리하고, 1.05M context·128K output·`low~max` reasoning effort를 포함한 실행 특성을 분석.
+- Async Tool Calling과 Mid-turn Steering을 장시간 Agent Harness의 핵심 변화로 보고, 모든 작업에 Astra를 쓰기보다 **고난도 Orchestrator/Analysis/Review → 저비용 Worker**로 난이도 기반 라우팅하는 방향을 권장.
+- 높은 단가와 강한 사이버 역량 때문에 sandbox, permission boundary, audit log를 포함한 제한된 실행 환경이 필요하다고 정리.
+
+### 2. Agent Team 실행환경 — Herdr + Claude Workspace Orchestrator + 공통 작업 계약
+
+[`ai/tools/herdr.md`](./ai/tools/herdr.md) · [`idea/claude-workspace-orchestrator.md`](./idea/claude-workspace-orchestrator.md) · [`AGENTS.md`](./AGENTS.md) · [`CLAUDE.md`](./CLAUDE.md) · [`docs/README.md`](./docs/README.md) · [`docs/workspace-environment-setup-analysis.md`](./docs/workspace-environment-setup-analysis.md) · [`docs/workspace-environment-setup-design.md`](./docs/workspace-environment-setup-design.md) · [`docs/workspace-environment-setup-tasks.md`](./docs/workspace-environment-setup-tasks.md)
+
+- **Herdr**를 Claude Code·Codex 등 기존 CLI를 유지하면서 persistent terminal, agent 상태(`working/blocked/idle/done`), attach/resume, socket/CLI 제어를 제공하는 **Agent Runtime substrate**로 분석하고, orchestration brain보다 실행·상태 계층으로 쓰는 방향을 제안.
+- **Claude Workspace Orchestrator**는 root의 Main Claude가 프로젝트별 장기 Claude 세션에 작업을 분배하고 결과를 취합하며 별도 Deploy Agent가 `release/`를 담당하는 `Main Orchestrator + Persistent Project Agents + Deploy Agent` 구조로 구체화.
+- 저장소 공통 계약에는 분석/설계/작업계획 artifact, model/effort·병렬 그룹, file ownership, UX 3안 gate, 검증·Git·보안 규칙을 명시해 Claude/Codex가 같은 운영 경계를 따르도록 표준화.
+
+### 3. oh-my-fable — Claude Fable 5.1 실행 규칙의 Hook 기반 자동 주입
+
+[`ai/tools/oh-my-fable.md`](./ai/tools/oh-my-fable.md)
+
+- Fable 5.1 프롬프팅 권장사항을 `SessionStart`/`SubagentStart` hook으로 자동 주입해 프로젝트별 `CLAUDE.md`에 반복 복사하지 않고 **자율 완료, surgical edit, 병렬 tool call, 진행 보고** 같은 행동 정책을 공통 적용하는 플러그인으로 정리.
+- `/fable-prompt`가 짧은 요청을 Goal/Context/Scope/Done criteria로 구조화하고, 메인 세션과 서브에이전트의 공통 행동 규칙을 맞추는 패턴을 Agent Team 운영에 참고할 수 있다고 평가.
+
+### 4. Magnitude — 기존 Coding Agent를 유지하는 로컬 추론 Control Layer
+
+[`ai/tools/magnitude.md`](./ai/tools/magnitude.md)
+
+- 하드웨어를 프로파일링해 적합한 로컬 모델·quantization·예상 token/s를 추천하고 다운로드·튜닝·서빙·Agent provider 연결까지 자동화하는 **agent-first local inference runtime**으로 분석.
+- OpenAI-compatible API와 모델 lifecycle/scheduling을 통해 Claude Code·Codex·OpenCode 등의 기존 Harness를 유지하면서 반복 탐색·로그 분석·문서화 Worker만 로컬 모델로 이동하는 **Frontier Orchestrator + Local Workers** 구조를 PoC 대상으로 제안.
+- Windows는 WSL 의존이며 초기 runtime 안정성·권한·로컬 endpoint 보안 이슈가 있어 Enterprise 표준화 전 격리된 PoC가 필요하다고 정리.
+
+### 5. Humanizer + polish-doc — AI 문서의 문체·정보구조 후처리 계층
+
+[`ai/skills/humanizer.md`](./ai/skills/humanizer.md) · [`ai/skills/polish-doc.md`](./ai/skills/polish-doc.md)
+
+- **Humanizer**는 35개 AI writing pattern을 검사해 사실·숫자·링크를 보존하면서 과장, rule-of-three, 챗봇 잔여 표현, 과도한 구조화 등을 다시 쓰는 범용 Skill로 분석하고, Wiki에서는 fact/citation 검증 뒤 최종 prose polishing 단계에 두는 흐름을 제안.
+- **polish-doc**은 초안·분석 결과를 결론 우선, 짧은 문장, 반복 제거, 표/inline SVG 등으로 재구성해 standalone HTML로 만드는 편집 Skill로, `LLM = 편집 엔진 / Skill = 편집 정책 / Template = 표현 규격` 구조를 정리.
+- 두 도구 모두 생성 단계와 분리된 **최종 Human-readable Quality Pass**로 활용하되, 기술 명세의 정보 손실과 LLM 기반 비결정성을 별도 검증해야 한다고 평가.
+
+### 6. Agent Development Loop + Commerce Agents — 자율 실행과 안전 Gate 설계
+
+[`ai/tips/ai-agent-development-operating-model.md`](./ai/tips/ai-agent-development-operating-model.md) · [`ai/tools/claude-commerce-agents.md`](./ai/tools/claude-commerce-agents.md)
+
+- 개발 방식을 `Human → Prompt → Result` 중심 Assistant에서 **Goal → Context → Plan → Execute → Observe → Verify → Iterate**의 Agent Development Loop로 전환하고, 사람은 세부 Driver보다 Goal/Policy/Decision Owner로 이동해야 한다고 정리.
+- Claude Commerce Agents에서는 실제 쓰기 작업을 prompt 신뢰에 맡기지 않고 **fencing, provenance gate, grounding, cap/guardrail, stage → approval → apply → re-check**를 코드 계층에서 강제하는 reference architecture를 분석.
+- 두 문서에서 공통적으로 Agent 자율성의 핵심은 더 긴 prompt가 아니라 **도구 권한 경계, 외부 evidence 기반 완료 판정, Human Gate**라는 원칙을 도출.
+
+### 7. public-apis-4Kr — 국내 Public API Discovery 레퍼런스
+
+[`development/public-apis-4kr.md`](./development/public-apis-4kr.md)
+
+- 한국 서비스 개발에서 활용 가능한 공공·민간 Public API를 분야별로 탐색하는 카탈로그를 정리하고, 날씨·부동산·금융·관광·사업자 정보 등 국내 데이터 연동의 시작점으로 활용할 수 있다고 평가.
+- Agent/MCP 환경에서는 `요구사항 → API 카탈로그 검색 → 후보 선택 → 인증 확인 → Tool/호출 코드 생성`의 discovery layer나 사내 API Registry 원천으로 확장하는 아이디어를 제안.
+
+### 기타
+
+- [`idea/README.md`](./idea/README.md)에 Claude Workspace Orchestrator 링크를 추가해 아이디어 인덱스에 연결.
+
+---
+
 ## 2026-09-03
 
 > **2 commits · 핵심 문서 변경 2건 · 핵심 주제 2건**
