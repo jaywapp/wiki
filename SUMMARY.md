@@ -9,6 +9,83 @@
 
 ---
 
+## 2026-09-09
+
+> **22 commits · 핵심 주제 9건**
+
+### 1. Context / Token 최적화 — Skill Progressive Disclosure + Context Mode + Bounded Review
+
+[`ai/skills/skill-file-context-optimization.md`](./ai/skills/skill-file-context-optimization.md) · [`ai/tools/context-mode.md`](./ai/tools/context-mode.md) · [`ai/tips/astra-plus-coding-usage-strategy.md`](./ai/tips/astra-plus-coding-usage-strategy.md)
+
+- 대형 `SKILL.md`를 단순 압축하지 않고 **작은 control plane/router + 필요 시 로드하는 references + deterministic scripts**로 분해해 `reference tokens × load probability` 관점의 평균 Context 비용을 낮추는 Progressive Disclosure 방법론을 정리.
+- Context Mode는 대형 Read·로그·MCP 결과를 LLM Context에 직접 쌓는 대신 **Sandbox/SQLite/FTS5에서 계산·검색하고 필요한 결과만 반환**하며, 세션 이벤트도 retrieval 방식으로 복구하는 Context Gateway 패턴을 제공.
+- Astra Plus 운용에서는 reasoning level보다 context surface와 agent loop가 더 큰 비용 요인이 될 수 있으므로 **Sol이 구현·테스트 → 작은 evidence packet → Astra bounded diagnosis/review**로 역할을 분리하는 전략을 제안.
+
+### 2. GPT-6 Astra 운영 지침 + Read-only Planner / Write-enabled Worker 패턴
+
+[`ai/news/gpt-6-astra.md`](./ai/news/gpt-6-astra.md) · [`ai/harness/codex-with-chatgpt.md`](./ai/harness/codex-with-chatgpt.md)
+
+- Astra 문서에 공식 Prompting/Migration Guidance를 보강해 **자율 완료 편향, Skill/AGENTS.md instruction conflict 감사, 명시적 Subagent 위임, 변경 위험도에 맞춘 테스트 범위, `configuration_update` 기반 동적 reasoning**을 Harness 운영 규칙으로 구체화.
+- Codex with ChatGPT는 ChatGPT 웹을 Reason/Plan/Review, Codex를 Edit/Shell/Git/Test로 분리하고 **읽기 전용 MCP data plane + 실행 권한이 있는 Worker** 구조로 서로 다른 컨텍스트·사용량·권한 경계를 조합.
+- 공통적으로 강한 모델에 전체 저장소와 실행 루프를 열기보다 판단 범위·권한·전달 Context를 좁혀 Agent 효율성과 안전성을 함께 높이는 방향을 보여준다.
+
+### 3. Multi-Agent Orchestration / Router — Delegation Gate와 결과 기반 라우팅
+
+[`ai/harness/codex-astra-luna-orchestrator.md`](./ai/harness/codex-astra-luna-orchestrator.md) · [`ai/harness/slm-multi-agent-router.md`](./ai/harness/slm-multi-agent-router.md)
+
+- Codex Astra Luna Orchestrator는 **고성능 Root/Reviewer + 빠른 Explorer/Worker/Tester**를 역할별로 나누고, delegation gate·bounded contract·one-writer ownership·독립 작업만 병렬화하는 규칙으로 불필요한 orchestration 비용을 제어.
+- SLM Router 연구는 0.6B급 모델이 agent 선택·keyword·시간 범위를 생성하고, SFT 이후 실제 downstream retrieval 품질을 reward로 RL해 **의도상 맞는 Agent가 아니라 실제 결과가 좋은 Agent**를 선택하도록 보정하는 접근을 제시.
+- 두 사례 모두 모델 이름보다 **작업 난이도·결과 품질·비용을 관측해 라우팅 정책을 데이터로 조정**하는 것이 핵심임을 보여준다.
+
+### 4. Team Harness / Learning Platform — ECC + TeamAI CLI
+
+[`ai/harness/ecc.md`](./ai/harness/ecc.md) · [`ai/tools/teamai-cli.md`](./ai/tools/teamai-cli.md)
+
+- ECC는 `plan → test → implement → review → verify → remember → improve` 루프와 Skills·Agents·Hooks·Memory·Security를 여러 Coding Harness에 설치하고, **현재 Context는 작게 유지하고 나머지 상태·학습은 persistent artifact로 외부화**하는 운영 계층을 지향.
+- TeamAI CLI는 Git 저장소를 팀 Harness의 제어면으로 사용해 Skills/Rules/Agents/Hooks/MCP를 Claude Code·Codex 등으로 배포하고, Recall·Codebase Graph·friction 기반 Learning을 통해 **Execute → Understand → Learn → Improve** 루프를 팀 단위로 확장.
+- 둘 다 자동 학습 결과를 곧바로 규칙에 덮어쓰기보다 review/verification과 versioned knowledge를 거치는 방식이 Enterprise Agent 운영에 중요하다고 평가.
+
+### 5. Agent Skill 설계·출력 UX — Google Skills + i-have-adhd + im-not-ai
+
+[`ai/skills/google-skills.md`](./ai/skills/google-skills.md) · [`ai/skills/i-have-adhd.md`](./ai/skills/i-have-adhd.md) · [`ai/skills/im-not-ai.md`](./ai/skills/im-not-ai.md)
+
+- Google 공식 Skills에서 **작은 trigger/policy/workflow + references/assets 분리, 실행 전 validation, tool output limit/filter/projection** 등 Skill을 지식 문서가 아니라 실행 정책으로 쓰는 패턴을 추출.
+- i-have-adhd는 코딩 Agent 응답을 설명 우선에서 **Action First · 현재 상태 재표시 · 오류=위치/원인/해결 · 하나의 구체적 next action** 중심으로 재구성하는 Response UX Skill로 분석.
+- im-not-ai는 한국어 후처리 자체보다 deterministic pre-score로 light/standard/heavy를 라우팅하고 **single-call-first로 반복 rulebook/context loading을 줄이는 비용 최적화 패턴**이 Skill Pipeline 설계에 참고 가치가 있다고 정리.
+
+### 6. Spotify Shunt — 공개 구현 기준으로 Context Shunting 구조 구체화
+
+[`ai/harness/spotify-agent-architecture.md`](./ai/harness/spotify-agent-architecture.md)
+
+- 기존 개념 분석을 Spotify의 공개 `portal-ai-plugins` 구현 기준으로 갱신해, Claude Code `PreToolUse` Hook이 기본 350줄 초과 full Read와 Bash 우회를 실제로 차단하고 targeted read는 허용하는 **강제형 Large Read Guardrail**을 확인.
+- Portal CLI Actions Registry의 `aika:invoke-chat`, `bulk-read`/`code-write` script, worker mode resolve/pin, one-shot worker, direct-to-disk generation 등 실제 배관과 설정을 보강.
+- `prompt는 suggestion, hook은 architecture`라는 원칙을 코드 수준 구현으로 확인했고, 메인 모델은 reasoning·precise edit에 집중하고 I/O-heavy 작업만 Worker로 빼는 경계를 더 명확히 했다.
+
+### 7. Claude Managed Agents — Scheduled Deployments와 Vaults
+
+[`ai/news/claude-managed-agents-scheduled-deployments-vaults.md`](./ai/news/claude-managed-agents-scheduled-deployments-vaults.md)
+
+- Claude Managed Agents가 cron 기반 반복 실행과 pause/resume/archive를 지원해 일회성 대화형 Agent를 **지속 운영되는 Scheduled Worker**로 확장.
+- Vault는 실제 secret을 Agent sandbox에 직접 노출하지 않고 **network boundary에서 allowlisted domain 요청에만 credential을 주입**해 CLI/API/MCP 연동의 secret 노출 면을 줄인다.
+- 결정론적인 build/deploy는 TeamCity·GitHub Actions에 유지하고, Wiki digest·로그 분석·상태 점검처럼 매 실행마다 AI 판단이 필요한 정기 업무만 Agent scheduler로 분리하는 기준을 제안.
+
+### 8. Wiki Reader — 검색 가능한 자료실과 날짜별 업데이트 페이지 운영화
+
+[`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md) · [`docs/wiki-updates-design.md`](./docs/wiki-updates-design.md)
+
+- Markdown Wiki를 검색·폴더/태그 필터·정렬·트리/리스트·모바일 읽기·안전한 Markdown 렌더링으로 탐색하는 hosted reader를 구현하고 검색/정렬 재계산 제거와 손상된 localStorage 설정 방어 등 runtime hardening을 적용.
+- `SUMMARY.md`를 일반 자료실에서 분리해 `/?page=updates`에서 날짜 최신순으로 읽고 원문 문서로 이동하도록 구성했으며, 기존 `?doc=SUMMARY.md` 주소도 호환.
+- PR 병합 후 production에 수동 배포하고 테스트·빌드·모바일 검증을 완료했으며, Vercel Git 자동 배포는 GitHub 저장소 접근 승인 전까지 미연결 상태로 기록.
+
+### 9. 기타 신규 지식 — TabZipsa + System Design Notes
+
+[`tools/tabzipsa.md`](./tools/tabzipsa.md) · [`ai/research/system-design-notes.md`](./ai/research/system-design-notes.md)
+
+- TabZipsa를 여러 Chrome 창의 탭을 한 패널에서 관리하고 AI가 네이티브 탭 그룹으로 분류·정렬하는 경량 업무 도구로 정리하면서, 탭 제목 등 외부 전송 정보와 회사 환경 보안 검토 포인트를 함께 기록.
+- System Design Notes를 scaling·rate limiting·consistent hashing·chat/news feed 등 대표 패턴을 담은 학습형 reference corpus로 분석하고, Agent에는 전체를 고정 Context로 넣기보다 **필요한 챕터만 retrieval하는 Architecture Skill/RAG** 형태를 권장.
+
+---
+
 ## 2026-09-08
 
 > **2 commits · 핵심 주제 2건**
@@ -597,7 +674,6 @@
 
 [`ax/skills/gsd-core.md`](./ax/skills/gsd-core.md)
 
-- GSD Core를 AI 개발 Workflow / Context Engineering Framework 관점으로 다시 정리.
 - `Discuss → Plan → Execute → Verify → Ship` 흐름과 fresh-context subagent 기반 Context Rot 대응을 상세화.
 - 기존 `gsd-build/get-shit-done`에서 `open-gsd/gsd-core`로 이어진 현재 프로젝트 관계와 지원 Runtime을 정리.
 - 장기 Agent 개발에서 상태를 모델 기억보다 `STATE.md`, `CONTEXT.md` 같은 파일 기반 artifact로 유지하는 관점을 강조.
