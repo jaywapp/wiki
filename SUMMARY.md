@@ -9,6 +9,75 @@
 
 ---
 
+## 2026-09-10
+
+> **13 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 8건**
+
+### 1. Agent Harness 운영 모델 — Durable State, Runtime Adapter, Local Hive
+
+[`ai/news/ai-harness-scout-2026-09-10.md`](./ai/news/ai-harness-scout-2026-09-10.md) · [`ai/harness/munder-difflin.md`](./ai/harness/munder-difflin.md)
+
+- Harness Scout에서 최근 Coding Harness의 공통 방향을 **durable state + task lifecycle + verification gate + runtime-neutral adapter**로 정리하고, 세션 대화가 아닌 file-backed handoff와 evidence artifact로 작업 연속성을 유지하는 패턴을 추출.
+- Munder Difflin은 Claude Code·Codex 등 기존 CLI를 실제 PTY 프로세스로 실행하면서 registry/task/log/mailbox/memory를 로컬 Hive에 저장하고, 중앙 orchestrator·single-writer·agent별 작업 디렉터리·human/circuit-breaker를 결합하는 로컬 멀티에이전트 실행 계층을 제공.
+- Perforce 환경에서는 Git worktree/commit/PR 개념을 **agent workspace / pending changelist / review-submit gate**로 대응시키고, one workspace per agent + CL ownership + durable handoff + evidence gate를 조합하는 방향이 현실적이라고 평가.
+
+### 2. Agent Skill 운영 — 선택·배포·공급망 보안까지 하나의 Lifecycle로 관리
+
+[`ai/skills/agent-skills-practical-shortlist.md`](./ai/skills/agent-skills-practical-shortlist.md) · [`ai/tools/my-ai-tools.md`](./ai/tools/my-ai-tools.md) · [`ai/tools/skillspector.md`](./ai/tools/skillspector.md)
+
+- 실무 Skill 목록을 **계획/상태 → 구현 규율 → 전문 작업 → 품질 게이트**로 계층화하고, 모든 Skill을 모든 Agent에 노출하지 않고 역할별 lazy-load하는 것이 context 비용과 instruction 충돌을 줄이는 핵심이라고 정리.
+- my-ai-tools는 Claude Code·Codex 등 여러 AI CLI의 설정·MCP·Skills를 Git 기반 Source of Truth로 관리하고 repo→local 배포와 local→repo 역동기화를 제공하는 **AI 개발환경 Configuration as Code** 패턴을 보여준다.
+- NVIDIA SkillSpector는 외부 Agent Skill을 설치하기 전에 정적 분석·선택적 LLM 분석·MCP 위험 검사·SARIF 출력을 수행해, 사내 Skill Registry나 TeamCity 파이프라인의 pre-install security gate로 활용할 수 있다.
+
+### 3. Claude Code 토큰 최적화 — Context 유입량과 재작업을 함께 줄이는 운영법
+
+[`ai/tips/claude-code-token-saving-practical-tips.md`](./ai/tips/claude-code-token-saving-practical-tips.md)
+
+- 서브에이전트를 역할에 맞는 저비용 모델로 라우팅하고 기본 effort를 medium으로 두되 어려운 문제에서만 승격하며, `rg`/`ast-grep`·Explore 등으로 후보를 먼저 좁혀 전체 파일/검색 결과가 Main Context에 들어오는 양을 줄이는 방식을 검증.
+- 사용하지 않는 MCP를 끄고 안정적인 prompt prefix를 유지해 cache 재사용성을 높이며, 논리적 작업 단위가 끝난 뒤 diff를 정리해 동일 변경을 반복해서 읽는 비용을 줄이는 흐름을 제안. Perforce에서는 이를 changelist 단위 상태 정리로 해석한다.
+- 목표를 단순 token 최소화가 아니라 **cost per successful task**로 두고, 공식 문서에서 확인되지 않은 `subagentPromptCacheTtl` 같은 설정은 검증 전 적용하지 않도록 구분.
+
+### 4. AI Agent Framework 7종 — 역할 대화보다 명시적 State/Checkpoint가 중요한 선택 기준
+
+[`ai/research/agent-frameworks-comparison-2026.md`](./ai/research/agent-frameworks-comparison-2026.md)
+
+- AutoGPT·LangChain·Dify·MetaGPT·AutoGen·CrewAI·LangGraph를 동일 범주의 경쟁 제품으로 보지 않고, visual workflow·integration layer·role team·state graph 등 **오케스트레이션 추상화 수준**에 따라 구분.
+- 장기 실행·checkpoint·retry·human-in-the-loop가 필요한 production orchestration은 LangGraph, 빠른 visual PoC는 Dify, 역할 중심 실험은 CrewAI를 우선 검토하며 AutoGen 신규 도입은 후속 Microsoft Agent Framework를 함께 고려하도록 정리.
+- 기존 자체 Harness를 전면 교체하기보다 명시적 state machine·checkpoint·retry 개념을 선택적으로 흡수하고, Perforce에서는 Git 지원 여부보다 workspace 격리·pending CL ownership·복구 상태 관리가 더 중요하다고 평가.
+
+### 5. Semantica — Agent Shared Context를 Graph·Provenance·Decision History로 확장
+
+[`ai/tools/semantica.md`](./ai/tools/semantica.md)
+
+- Vector RAG만으로는 약한 관계·출처·결정 근거·시간축을 보완하기 위해 Knowledge/Context Graph, W3C PROV-O provenance, deterministic reasoning, temporal/decision intelligence를 결합하는 graph-native AI infrastructure를 분석.
+- Orchestrator·Analysis·Work·Review Agent가 동일 Context Graph에서 설계 결정과 근거를 읽고 쓰는 **Shared Context / Decision Layer**로 배치할 수 있으며, 단순 session memory보다 감사 가능성과 multi-hop 관계 탐색에 강점이 있다.
+- Perforce·TeamCity 환경에서는 `Issue → CL → File → Symbol → Build → Crash/Incident → Fix CL` 관계를 그래프로 연결해 변경 이력·빌드·장애·결정을 한 번에 조회하는 PoC 가치가 높다고 평가.
+
+### 6. GPT-6 Astra / Codex Desktop — Prompt보다 Harness Contract를 구체화
+
+[`ai/news/gpt-6-astra.md`](./ai/news/gpt-6-astra.md)
+
+- 연속 2개 커밋에서 기존 Astra 문서를 보강해 **합리적 가정과 action bias, 완료까지 지속, 저장소 탐색 우선, 세션 간 authorization/state 유지, mid-turn steering, compaction 이후 중복 작업 방지**를 Codex Desktop형 Harness Contract로 구체화.
+- Subagent 위임 조건과 risk-based verification을 명시하고, `configuration_update`로 prompt/cache prefix를 유지하면서 단계별 reasoning 강도를 바꾸는 운영 패턴을 정리.
+- CL4R1T4S의 Codex Desktop prompt 수집본은 공식 OpenAI 저장소가 아닌 제3자 자료이므로 내부 프롬프트 원본으로 단정하지 않고, 공개 Model Guidance와 교차되는 Harness 설계 원칙을 연구 자료로만 활용하도록 경계를 명시.
+
+### 7. OpenAlice — Persistent Workspace와 Managed Skill Update Lifecycle
+
+[`ai/tools/openalice.md`](./ai/tools/openalice.md)
+
+- 트레이딩 도메인 도구이지만 Harness 관점에서는 Claude Code·Codex 같은 native Agent를 **파일·Git history·Issue·schedule·provenance가 유지되는 Workspace**에 연결해 세션 이후에도 연구와 후속 작업이 이어지는 구조가 핵심.
+- Skill을 `.agents/skills`의 primary와 runtime mirror로 분리하고, install/update/remove/restore를 preview한 뒤 local customization과 upstream을 three-way comparison하며 atomic replacement·commit·rollback/recovery까지 처리하는 관리 패턴을 제공.
+- 특정 도메인 실행 자체보다 **Workspace provenance + self-scheduling + managed Skill lifecycle + human approval**을 사내 Agent Harness에 재사용할 가치가 높다고 평가.
+
+### 8. 기타 — ChatGPT Slash-style Prompt Label 검증
+
+[`ai/tips/chatgpt-slash-style-prompt-labels.md`](./ai/tips/chatgpt-slash-style-prompt-labels.md)
+
+- `/explain`, `/summarize`, `/rewrite`, `/debug`, `/plan` 등 SNS에서 명령어처럼 소개되는 표현 대부분은 고정 기능을 호출하는 숨은 command가 아니라 모델이 자연어로 해석하는 **prompt shorthand/label**이라는 점을 현재 항목 기준으로 재검증.
+- `/` 자체가 기능이나 품질을 보장하지 않으며 대상·길이·제약·출력 형식을 함께 지정해야 안정적인 결과를 얻을 수 있고, Study Mode 같은 실제 제품 shortcut/UI 기능과 prompt label을 구분해야 한다고 정리.
+
+---
+
 ## 2026-09-09
 
 > **22 commits · 핵심 주제 9건**
