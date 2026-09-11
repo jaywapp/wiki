@@ -72,13 +72,18 @@ vercel.cmd deploy --prebuilt --prod --yes --scope <scope>
 on:
   push:
     branches: [develop]
+  workflow_dispatch:
 concurrency:
   group: deploy-wiki-reader
   cancel-in-progress: true
 ```
 
-`VERCEL_TOKEN`·`VERCEL_ORG_ID`·`VERCEL_PROJECT_ID`를 저장소 시크릿으로 넣어야 한다.
-Linux 러너에서는 `vercel build`가 정상 동작하므로 Windows용 prebuilt 포장 우회가 필요 없다.
+`VERCEL_TOKEN`·`VERCEL_ORG_ID`·`VERCEL_PROJECT_ID`를 시크릿으로 넣어야 한다. 토큰은 해당 프로젝트 범위로
+좁히고, 빌드 단계에는 넘기지 않는다. 그 단계에서 의존성의 설치·빌드 스크립트가 모두 실행되기 때문이다.
+Linux 러너에서 `vercel build`가 동작해 Windows용 prebuilt 포장 우회가 필요 없는지는 첫 성공 실행에서 확인한다.
+
+검증은 push된 커밋이 아니라 **이번 빌드가 구운 커밋**을 기준으로 한다. 콘텐츠는 빌드 시점 develop tip에서
+오므로 두 값이 다를 수 있고, 라이브가 더 새로운 커밋이면 그 커밋은 러너 클론에 없어 조상 비교가 실패한다.
 
 이 방식의 장점은 **Vercel 프로젝트 설정을 건드리지 않는다**는 것이다. Root Directory를
 그대로 비워 둘 수 있어 워크스테이션의 수동 배포가 예비 경로로 계속 살아 있다.
@@ -113,7 +118,9 @@ Error: The provided path "D:\work\wiki\web\web" does not exist.
 
 Root Directory를 설정하면 수동 배포는 저장소 루트에서 실행해야 하는데, 루트에는 프로젝트
 링크(`.vercel`)가 없다. 즉 Git 연동을 붙이는 순간 기존 수동 배포 절차는 그대로 쓸 수 없다.
-수동 배포를 예비 경로로 유지하려면 Root Directory를 비워 두고 CI 방식을 쓴다.
+CI 워크플로도 `web/`에서 `vercel build`를 돌리므로 같은 이유로 함께 깨진다. Git 연동으로 바꾸려면
+워크플로를 먼저 지우거나 비활성화해야 한다. 수동 배포를 예비 경로로 유지하려면 Root Directory를
+비워 두고 CI 방식을 쓴다.
 
 ### Root Directory는 CLI로 못 바꾼다
 

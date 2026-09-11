@@ -6,9 +6,15 @@
 # falls behind develop. See tools/vercel-build-time-content-stale-trap.md.
 #
 # Required repository secrets:
-#   VERCEL_TOKEN       - https://vercel.com/account/tokens
+#   VERCEL_TOKEN       - https://vercel.com/account/tokens, scoped to the
+#                        jaywapp-wiki project only (see docs/wiki-reader-guide.md)
 #   VERCEL_ORG_ID      - orgId in web/.vercel/project.json (not sensitive)
 #   VERCEL_PROJECT_ID  - projectId in web/.vercel/project.json (not sensitive)
+#
+# The build syncs documents from the develop tip of the public repository, so the
+# app code being deployed must also be the develop tip: a re-run of an older run
+# would pair stale app code with current content. The guard step below refuses
+# anything else.
 #
 # Pull requests intentionally get no preview: the build's sync step reads
 # documents from the develop remote, so a PR preview would show develop's
@@ -21,61 +27,100 @@ on:
     branches: [develop]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-wiki-reader
   cancel-in-progress: true
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     defaults:
       run:
         working-directory: web
+        shell: bash
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 0            # the verify step compares commits with merge-base
+          persist-credentials: false # nothing after checkout needs git auth
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@59
+        run: npm install --global vercel@59.16.0
+
+      - name: Check secrets and the develop tip
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::error::VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID secrets are required."
+            exit 1
+          fi
+          tip=$(git ls-remote origin refs/heads/develop | cut -f1)
+          echo "develop tip $tip, this run $GITHUB_SHA"
+          if [ "$tip" != "$GITHUB_SHA" ]; then
+            echo "::error::Refusing to deploy $GITHUB_SHA because the develop tip is $tip. Push to develop instead of re-running an old run."
+            exit 1
+          fi
 
       - name: Pull project settings
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
+      # No token here: after `vercel pull` the build reads web/.vercel/project.json
+      # only, and this step runs every dependency's install and build scripts.
       - name: Build
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod
+
+      - name: Test the built output
+        run: npm test
+
+      - name: Check the built index contains this commit
+        run: |
+          built=$(node -p 'require("./.vercel/output/static/content.json").commit')
+          echo "built index $built, this run $GITHUB_SHA"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "$built"; then
+            echo "::error::The built index ($built) does not contain this commit ($GITHUB_SHA). The sync read a stale develop tip."
+            exit 1
+          fi
 
       - name: Deploy to production
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" > deployment-url.txt
+        run: vercel deploy --prebuilt --prod --yes > deployment-url.txt
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-      - name: Verify the live site actually advanced
+      - name: Verify the live site serves this build
+        env:
+          LIVE_URL: https://jaywapp-wiki.vercel.app/content.json
         run: |
-          set -euo pipefail
+          built=$(node -p 'require("./.vercel/output/static/content.json").commit')
           echo "Deployed: $(cat deployment-url.txt)"
-          live=$(curl -fsS https://jaywapp-wiki.vercel.app/content.json \
-            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.error(`live commit ${j.commit}, ${j.documents.length} documents, generated ${j.generatedAt}`);console.log(j.commit)})')
-          echo "live=$live pushed=$GITHUB_SHA"
-          if [ "$live" = "$GITHUB_SHA" ]; then
-            echo "Live index matches the pushed commit."
-            exit 0
-          fi
-          # A newer push may have raced ahead; that is fine, older content is not.
-          if git merge-base --is-ancestor "$GITHUB_SHA" "$live"; then
-            echo "Live index is newer than the pushed commit (a later push won)."
-            exit 0
-          fi
-          echo "::error::Live index ($live) is older than the pushed commit ($GITHUB_SHA)."
+          read_commit='const j=JSON.parse(require("fs").readFileSync(0,"utf8"));console.error(`live commit ${j.commit}, ${j.documents.length} documents, generated ${j.generatedAt}`);console.log(j.commit)'
+          for attempt in 1 2 3 4 5 6; do
+            live=$(curl -fsS -H 'Cache-Control: no-cache' "$LIVE_URL" | node -e "$read_commit") || live=""
+            if [ "$live" = "$built" ]; then
+              echo "Live index matches this build ($built)."
+              exit 0
+            fi
+            # A later deploy may have raced ahead; newer content is fine, older is not.
+            if [ -n "$live" ] && git fetch --quiet origin develop && git merge-base --is-ancestor "$built" "$live"; then
+              echo "::notice::Live index ($live) is newer than this build ($built); a later deploy won."
+              exit 0
+            fi
+            echo "Attempt $attempt: live=${live:-unreachable}, built=$built"
+            sleep 10
+          done
+          echo "::error::Live index (${live:-unreachable}) does not match this build ($built)."
           exit 1

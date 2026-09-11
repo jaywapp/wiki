@@ -38,7 +38,7 @@ vercel.cmd deploy --prebuilt --prod --yes --scope jaywapp16-2281s-projects
 
 ## 배포
 
-프로젝트 이름은 `jaywapp-wiki`. `web/.vercel/project.json`은 로컬 연결 정보이며 커밋하지 않는다. 작업 브랜치 `codex/workspace-environment-20260904`의 커밋 `88dc2a6`은 GitHub에 푸시했다. production 배포는 아직 수동 prebuilt 업로드가 유일한 경로다.
+프로젝트 이름은 `jaywapp-wiki`. `web/.vercel/project.json`은 로컬 연결 정보이며 커밋하지 않는다. 작업 브랜치 `codex/workspace-environment-20260904`의 커밋 `88dc2a6`은 GitHub에 푸시했다. production 배포는 develop push마다 GitHub Actions가 수행하고, 수동 prebuilt 업로드는 예비 경로로 남겨 둔다.
 
 ### develop push만으로는 사이트가 바뀌지 않는다
 
@@ -55,11 +55,15 @@ git ls-remote https://github.com/jaywapp/wiki.git develop
 
 ### 자동 배포 선택: GitHub Actions (권장) 또는 Vercel Git 연동
 
-두 방법은 **동시에 쓸 수 없다.** Vercel Git 연동은 Root Directory가 `web`이어야 하고, 그 값을 설정하면 워크스테이션의 수동 `vercel deploy --prebuilt`가 깨진다(아래 함정 참고).
+두 방법은 **동시에 쓸 수 없다.** Vercel Git 연동은 Root Directory가 `web`이어야 하고, 그 값을 설정하면 워크스테이션의 수동 `vercel deploy --prebuilt`가 깨진다(아래 함정 참고). GitHub Actions 워크플로도 `web`에서 `vercel build`를 돌리므로 같은 이유로 깨진다. B로 전환한다면 `.github/workflows/deploy-wiki-reader.yml`을 먼저 지우거나 비활성화한다.
 
 #### A. GitHub Actions — `.github/workflows/deploy-wiki-reader.yml`
 
-`develop` push와 수동 실행(`workflow_dispatch`)에서 `vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`를 돌리고, 마지막에 라이브 `content.json`의 커밋이 push된 커밋과 같은지(또는 더 새로운지) 검증한다. Root Directory를 건드리지 않으므로 수동 배포 경로가 그대로 살아 있다. Linux 러너에서는 `vercel build`가 정상 동작해 `package-vercel.mjs` 우회가 필요 없다.
+`develop` push와 `workflow_dispatch`(develop ref에서만 실행된다)에서 `vercel pull` → `vercel build --prod` → `npm test` → `vercel deploy --prebuilt --prod`를 돌리고, 라이브 `content.json`의 커밋이 이번 빌드가 구운 커밋과 같은지(또는 더 새로운지) 최대 6회 재시도하며 검증한다.
+
+빌드 전에 이번 실행의 커밋이 develop 끝인지 먼저 확인한다. sync가 콘텐츠를 develop 원격에서 새로 읽어 오므로, 옛 실행을 재실행하면 옛 앱 코드에 최신 콘텐츠가 얹혀 배포되기 때문이다. 빌드 뒤에는 구워진 인덱스가 이번 커밋을 포함하는지도 확인한다.
+
+Root Directory를 건드리지 않으므로 수동 배포 경로는 그대로 살아 있다. Linux 러너에서 `vercel build`가 동작해 `package-vercel.mjs` 우회가 필요 없는지는 첫 성공 실행에서 확인한다.
 
 필요한 저장소 시크릿 3개:
 
@@ -69,7 +73,11 @@ gh secret set VERCEL_ORG_ID --repo jaywapp/wiki --body (Get-Content web\.vercel\
 gh secret set VERCEL_PROJECT_ID --repo jaywapp/wiki --body (Get-Content web\.vercel\project.json | ConvertFrom-Json).projectId
 ```
 
-`VERCEL_TOKEN`은 https://vercel.com/account/tokens 에서 만든다. `--body` 없이 실행하면 값을 입력받으므로 셸 히스토리에 남지 않는다. orgId·projectId는 시크릿이 아니어도 되는 식별자지만 Vercel 공식 문서의 패턴을 따라 시크릿으로 둔다.
+`VERCEL_TOKEN`은 https://vercel.com/account/tokens 에서 만든다. **Scope는 `jaywapp-wiki` 프로젝트 하나로 좁히고 만료를 지정한다.** 팀 범위 토큰은 같은 팀의 다른 프로젝트까지 재배포할 수 있어, 그 프로젝트의 환경 변수에 든 다른 토큰(예: `wam-feedback`의 GitHub 토큰)까지 함께 위험해진다. `--body` 없이 실행하면 값을 입력받으므로 셸 히스토리에 남지 않는다. orgId·projectId는 시크릿이 아니어도 되는 식별자지만 Vercel 공식 문서의 패턴을 따라 시크릿으로 둔다.
+
+토큰을 교체할 때는 Vercel 대시보드에서 기존 토큰을 revoke한 뒤 `gh secret set VERCEL_TOKEN --repo jaywapp/wiki`로 다시 등록한다. 더 좁히려면 저장소 시크릿 대신 `production` Environment 시크릿으로 옮기고, 배포 브랜치를 develop으로 제한한 뒤 워크플로 잡에 `environment: production`을 추가한다. 저장소 시크릿은 어느 브랜치의 워크플로에서도 읽을 수 있기 때문이다.
+
+워크플로는 액션을 커밋 SHA로 고정하고 Vercel CLI 버전도 정확히 고정한다. 빌드 단계에는 토큰을 넘기지 않는다. 그 단계에서 의존성의 설치·빌드 스크립트가 모두 실행되는데, `vercel pull` 이후의 빌드는 `web/.vercel/project.json`만 읽으므로 토큰이 필요 없다.
 
 PR에는 의도적으로 프리뷰를 만들지 않는다. 빌드의 sync 단계가 문서를 develop 원격에서 읽으므로, PR 프리뷰는 PR의 앱 코드와 develop의 콘텐츠가 섞인 오해를 부르는 결과가 된다.
 
