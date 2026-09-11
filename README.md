@@ -21,14 +21,14 @@
 
 기존 `ai-workflow/`와 `ax/` 자료를 하나의 영역으로 통합했습니다.
 
-- [ax/ai/](ax/ai/README.md) — AX / AI 통합 인덱스
-- [ax/ai/news/](ax/ai/README.md#categories) — AI·에이전트 생태계 소식과 업데이트
-- [ax/ai/tips/](ax/ai/tips/) — 설정, 운영, 토큰·비용 최적화, 문제 해결
-- [ax/ai/harness/](ax/ai/harness/) — Claude/Codex 등 모델·에이전트 실행 하니스와 워크플로우
-- [ax/ai/tools/](ax/ai/tools/) — 에이전트 도구·MCP·프레임워크·오픈소스 분석
-- [ax/ai/skills/](ax/ai/skills/) — Agent Skill 및 작업 능력 확장
-- [ax/ai/research/](ax/ai/research/) — 비교·검토·심층 분석
-- [ax/ai/etc/](ax/ai/README.md#categories) — 기타 AX/AI 자료
+- [ai/](ai/README.md) — AX / AI 통합 인덱스
+- [ai/news/](ai/news/) — AI·에이전트 생태계 소식과 업데이트
+- [ai/tips/](ai/tips/) — 설정, 운영, 토큰·비용 최적화, 문제 해결
+- [ai/harness/](ai/harness/) — Claude/Codex 등 모델·에이전트 실행 하니스와 워크플로우
+- [ai/tools/](ai/tools/) — 에이전트 도구·MCP·프레임워크·오픈소스 분석
+- [ai/skills/](ai/skills/) — Agent Skill 및 작업 능력 확장
+- [ai/research/](ai/research/) — 비교·검토·심층 분석
+- [기타 AX/AI 자료](ai/README.md#categories) — `etc/` 범주. 해당 폴더는 아직 만들지 않았다.
 
 ## 디자인 자료
 
@@ -38,6 +38,7 @@
 
 ## 기획/설계
 
+- [위키 웹 리더 운영 안내](docs/wiki-reader-guide.md) — 공개 사이트 배포·갱신 절차와 Git 자동 배포 연결 순서
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계
 
 ## 관련 링크
