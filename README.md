@@ -38,6 +38,7 @@
 
 ## 기획/설계
 
+- [위키 웹 리더 운영 안내](docs/wiki-reader-guide.md) — 공개 사이트 배포·갱신 절차와 Git 자동 배포 연결 순서
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계
 
 ## 관련 링크

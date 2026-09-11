@@ -1,6 +1,6 @@
 # 위키 웹 리더 운영 안내
 
-공개 주소: **https://jaywapp-wiki.vercel.app** (2026-09-09 최신 기능 배포, 공개 문서 145개).
+공개 주소: **https://jaywapp-wiki.vercel.app** (2026-09-11 배포, 커밋 `9985c9a9` 기준 공개 문서 179개).
 
 ## 구성
 
@@ -38,9 +38,32 @@ vercel.cmd deploy --prebuilt --prod --yes --scope jaywapp16-2281s-projects
 
 ## 배포
 
-프로젝트 이름은 `jaywapp-wiki`. `web/.vercel/project.json`은 로컬 연결 정보이며 커밋하지 않는다. 작업 브랜치 `codex/workspace-environment-20260904`의 커밋 `88dc2a6`은 GitHub에 푸시했다. 현재 production은 수동 prebuilt 배포로 최신 상태다.
+프로젝트 이름은 `jaywapp-wiki`. `web/.vercel/project.json`은 로컬 연결 정보이며 커밋하지 않는다. 작업 브랜치 `codex/workspace-environment-20260904`의 커밋 `88dc2a6`은 GitHub에 푸시했다. production 배포는 아직 수동 prebuilt 업로드가 유일한 경로다.
 
-Git 자동 배포 연결은 Vercel 계정의 GitHub 연동 승인이 필요하다. [Vercel Git 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/git)에서 GitHub를 연결하고 `jaywapp/wiki` 저장소 접근을 승인한 뒤 `vercel git connect --yes`를 실행하면 된다. 연결되면 `develop` push는 production, 다른 브랜치와 PR은 preview로 배포된다.
+### develop push만으로는 사이트가 바뀌지 않는다
+
+콘텐츠는 런타임에 GitHub에서 읽어오지 않고 빌드 시점에 `public/content.json`으로 구워진다. 따라서 **배포가 실행되지 않으면 develop에 무엇을 push해도 사이트는 그대로다.** 2026-09-09 배포 이후 2026-09-11까지 28개 커밋·21개 신규 문서가 반영되지 않고 누적된 사례가 있었다. 에러도 빌드 실패 알림도 없이 조용히 낡으므로 캐시 문제로 오진하기 쉽다.
+
+갱신 여부는 라이브 인덱스의 수집 커밋과 develop 원격 HEAD를 비교해 판별한다.
+
+```powershell
+curl.exe -s https://jaywapp-wiki.vercel.app/content.json | Select-String -Pattern '"commit"', '"generatedAt"'
+git ls-remote https://github.com/jaywapp/wiki.git develop
+```
+
+원인·진단·일반화는 [빌드 시점에 콘텐츠를 구워 넣는 Vercel 사이트가 Git 연동 없이 조용히 낡는 함정](../tools/vercel-build-time-content-stale-trap.md)에 정리했다.
+
+### Git 자동 배포 연결 순서
+
+Vercel 계정의 GitHub 연동 승인이 필요하며, **순서가 중요하다.**
+
+1. [Build & Deployment 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/build-and-deployment)에서 **Root Directory를 `.`에서 `web`으로** 바꾼다. 저장소 루트에 `package.json`이 없고 `web/`에 있으므로, 이 단계를 건너뛰고 연동하면 첫 빌드가 install 단계에서 실패한다.
+2. [Vercel Git 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/git)에서 GitHub를 연결하고 `jaywapp/wiki` 저장소 접근을 승인한다.
+3. `web`에서 `vercel git connect --yes --scope jaywapp16-2281s-projects`를 실행한다.
+
+Root Directory는 Vercel CLI로 바꿀 수 없다. `vercel project`는 `add`/`checks`/`inspect`만, `vercel git`은 `connect`/`disconnect`만 제공하므로 대시보드나 REST API(`PATCH /v9/projects/{id}`의 `rootDirectory`)를 써야 한다.
+
+연결되면 `develop` push는 production, 다른 브랜치와 PR은 preview로 배포된다. Root Directory가 `web`이면 설정 파일은 `web/vercel.json`이 되고, 빌드 컨테이너에서는 로컬 `.content-cache` 없이 공개 저장소를 새로 clone하므로 동기화 스크립트가 그대로 동작한다.
 
 Windows에서 `vercel build --prod`가 `spawn cmd.exe ENOENT`로 실패하여, 검증된 Vite 산출물을 Vercel Build Output API v3로 포장하는 `package-vercel.mjs`를 제공한다. 이 스크립트는 정확한 `web/.vercel/output` 경로를 검증하고 이전 빌드 출력만 교체한다. `.vercel`의 환경 파일은 업로드 산출물에 포함하지 않는다.
 
