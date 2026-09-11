@@ -62,26 +62,73 @@ vercel.cmd deploy --prebuilt --prod --yes --scope <scope>
 
 배포 후 라이브 `content.json`의 `commit`이 원격 HEAD와 일치하는지 반드시 재확인한다.
 
-### 2. 근본 해결 (Git 연동) — 순서가 중요하다
+### 2. 근본 해결 A — CI에서 배포 (권장)
 
-**앱이 저장소 하위 디렉터리(`web/`)에 있으면 Root Directory를 먼저 바꿔야 한다.**
-저장소 루트에 `package.json`이 없으므로, 이 단계를 건너뛰고 연동하면
-연동 직후 첫 빌드가 install 단계에서 실패한다.
+배포 트리거를 저장소 안으로 가져온다. GitHub Actions가 `develop` push마다 `vercel pull` →
+`vercel build --prod` → `vercel deploy --prebuilt --prod`를 실행하고, 마지막에 라이브
+`content.json`의 커밋을 검증한다.
+
+```yaml
+on:
+  push:
+    branches: [develop]
+concurrency:
+  group: deploy-wiki-reader
+  cancel-in-progress: true
+```
+
+`VERCEL_TOKEN`·`VERCEL_ORG_ID`·`VERCEL_PROJECT_ID`를 저장소 시크릿으로 넣어야 한다.
+Linux 러너에서는 `vercel build`가 정상 동작하므로 Windows용 prebuilt 포장 우회가 필요 없다.
+
+이 방식의 장점은 **Vercel 프로젝트 설정을 건드리지 않는다**는 것이다. Root Directory를
+그대로 비워 둘 수 있어 워크스테이션의 수동 배포가 예비 경로로 계속 살아 있다.
+
+### 3. 근본 해결 B — Vercel Git 연동
+
+앱이 저장소 하위 디렉터리(`web/`)에 있으면 **Root Directory를 먼저 바꿔야 한다.**
+저장소 루트에 `package.json`이 없으므로, 이 단계를 건너뛰고 연동하면 연동 직후 첫 빌드가
+install 단계에서 실패한다.
 
 1. Settings › Build & Deployment에서 **Root Directory를 `.` → `web`**으로 변경.
-2. Settings › Git에서 GitHub 연결 후 대상 저장소 접근 승인 (계정 소유자의 OAuth 승인 필요).
-3. `vercel git connect --yes --scope <scope>`.
+2. Settings › Git에서 GitHub를 고른다.
+3. 저장소 검색 결과가 비어 있으면 Vercel GitHub App이 **선택된 저장소만** 접근하도록
+   설치된 것이다. "Configure GitHub App"에서 Repository access에 해당 저장소를 추가한다.
+4. `vercel git connect --yes --scope <scope>`.
 
-Root Directory가 `web`이면 설정 파일은 `web/vercel.json`이 되고, 빌드 컨테이너에서는
-로컬 `.content-cache` 없이 공개 저장소를 새로 clone하므로 동기화 스크립트가 그대로 동작한다.
+#### 이 경로에서 실제로 막히는 지점
 
-연결되면 `develop` push는 production, 다른 브랜치·PR은 preview로 배포된다.
+- **계정 수준 GitHub 연결은 이미 되어 있을 수 있다.** 막힌 원인이 OAuth 미승인이라고
+  단정하지 말고 저장소 목록이 비어 있는 것인지 먼저 확인한다. 둘의 해결책이 다르다.
+- **GitHub App 설치 설정 변경은 GitHub sudo mode 재인증을 요구한다.** 패스키·TOTP이므로
+  계정 소유자만 통과할 수 있고 자동화로 대신할 수 없다.
+
+### 함정: Root Directory와 수동 CLI 배포는 양립하지 않는다
+
+Root Directory를 `web`으로 설정한 뒤 `web/`에서 수동 배포를 실행하면 CLI가 경로를
+한 번 더 붙여 실패한다.
+
+```
+Error: The provided path "D:\work\wiki\web\web" does not exist.
+```
+
+Root Directory를 설정하면 수동 배포는 저장소 루트에서 실행해야 하는데, 루트에는 프로젝트
+링크(`.vercel`)가 없다. 즉 Git 연동을 붙이는 순간 기존 수동 배포 절차는 그대로 쓸 수 없다.
+수동 배포를 예비 경로로 유지하려면 Root Directory를 비워 두고 CI 방식을 쓴다.
 
 ### Root Directory는 CLI로 못 바꾼다
 
 Vercel CLI에는 이 값을 변경하는 명령이 없다. `vercel project`는 `add`/`checks`/`inspect`만,
 `vercel git`은 `connect`/`disconnect`만 제공한다. 대시보드 또는 REST API
 (`PATCH /v9/projects/{id}`, `rootDirectory` 필드)로만 변경할 수 있다.
+
+### 버전은 추측하지 말고 확인한다
+
+워크플로우를 쓸 때 액션·CLI 메이저 버전을 기억으로 적으면 대체로 틀린다. 확인 후 고정한다.
+
+```powershell
+gh api repos/actions/checkout/releases/latest --jq .tag_name
+npm view vercel version
+```
 
 ## 일반화
 

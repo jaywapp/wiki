@@ -53,17 +53,44 @@ git ls-remote https://github.com/jaywapp/wiki.git develop
 
 원인·진단·일반화는 [빌드 시점에 콘텐츠를 구워 넣는 Vercel 사이트가 Git 연동 없이 조용히 낡는 함정](../tools/vercel-build-time-content-stale-trap.md)에 정리했다.
 
-### Git 자동 배포 연결 순서
+### 자동 배포 선택: GitHub Actions (권장) 또는 Vercel Git 연동
 
-Vercel 계정의 GitHub 연동 승인이 필요하며, **순서가 중요하다.**
+두 방법은 **동시에 쓸 수 없다.** Vercel Git 연동은 Root Directory가 `web`이어야 하고, 그 값을 설정하면 워크스테이션의 수동 `vercel deploy --prebuilt`가 깨진다(아래 함정 참고).
 
-1. [Build & Deployment 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/build-and-deployment)에서 **Root Directory를 `.`에서 `web`으로** 바꾼다. 저장소 루트에 `package.json`이 없고 `web/`에 있으므로, 이 단계를 건너뛰고 연동하면 첫 빌드가 install 단계에서 실패한다.
-2. [Vercel Git 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/git)에서 GitHub를 연결하고 `jaywapp/wiki` 저장소 접근을 승인한다.
-3. `web`에서 `vercel git connect --yes --scope jaywapp16-2281s-projects`를 실행한다.
+#### A. GitHub Actions — `.github/workflows/deploy-wiki-reader.yml`
 
-Root Directory는 Vercel CLI로 바꿀 수 없다. `vercel project`는 `add`/`checks`/`inspect`만, `vercel git`은 `connect`/`disconnect`만 제공하므로 대시보드나 REST API(`PATCH /v9/projects/{id}`의 `rootDirectory`)를 써야 한다.
+`develop` push와 수동 실행(`workflow_dispatch`)에서 `vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`를 돌리고, 마지막에 라이브 `content.json`의 커밋이 push된 커밋과 같은지(또는 더 새로운지) 검증한다. Root Directory를 건드리지 않으므로 수동 배포 경로가 그대로 살아 있다. Linux 러너에서는 `vercel build`가 정상 동작해 `package-vercel.mjs` 우회가 필요 없다.
+
+필요한 저장소 시크릿 3개:
+
+```powershell
+gh secret set VERCEL_TOKEN --repo jaywapp/wiki
+gh secret set VERCEL_ORG_ID --repo jaywapp/wiki --body (Get-Content web\.vercel\project.json | ConvertFrom-Json).orgId
+gh secret set VERCEL_PROJECT_ID --repo jaywapp/wiki --body (Get-Content web\.vercel\project.json | ConvertFrom-Json).projectId
+```
+
+`VERCEL_TOKEN`은 https://vercel.com/account/tokens 에서 만든다. `--body` 없이 실행하면 값을 입력받으므로 셸 히스토리에 남지 않는다. orgId·projectId는 시크릿이 아니어도 되는 식별자지만 Vercel 공식 문서의 패턴을 따라 시크릿으로 둔다.
+
+PR에는 의도적으로 프리뷰를 만들지 않는다. 빌드의 sync 단계가 문서를 develop 원격에서 읽으므로, PR 프리뷰는 PR의 앱 코드와 develop의 콘텐츠가 섞인 오해를 부르는 결과가 된다.
+
+#### B. Vercel Git 연동
+
+1. [Build & Deployment 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/build-and-deployment)에서 Root Directory를 `web`으로 바꾼다. 저장소 루트에 `package.json`이 없어 이 단계를 건너뛰면 첫 빌드가 install에서 실패한다.
+2. [Git 설정](https://vercel.com/jaywapp16-2281s-projects/jaywapp-wiki/settings/git)에서 GitHub를 고른다. **계정 수준 GitHub 연결은 2026-09-11 시점에 이미 되어 있다.** 다만 Vercel GitHub App이 선택된 저장소만 접근하도록 설치돼 있고 `wiki`가 목록에 없어서 저장소 검색 결과가 비어 있다.
+3. "Configure GitHub App"으로 [GitHub App 설치 설정](https://github.com/settings/installations)에 들어가 Vercel의 Repository access에 `wiki`를 추가한다. **이 화면은 GitHub sudo mode 재인증(패스키)을 요구하므로 계정 소유자가 직접 해야 한다.**
+4. `web`에서 `vercel git connect --yes --scope jaywapp16-2281s-projects`.
 
 연결되면 `develop` push는 production, 다른 브랜치와 PR은 preview로 배포된다. Root Directory가 `web`이면 설정 파일은 `web/vercel.json`이 되고, 빌드 컨테이너에서는 로컬 `.content-cache` 없이 공개 저장소를 새로 clone하므로 동기화 스크립트가 그대로 동작한다.
+
+### 함정: Root Directory와 수동 배포는 양립하지 않는다
+
+Root Directory를 `web`으로 설정한 뒤 `web`에서 수동 배포를 실행하면 CLI가 경로를 한 번 더 붙여 실패한다.
+
+```
+Error: The provided path "D:\work\wiki\web\web" does not exist.
+```
+
+Root Directory를 설정하면 수동 배포는 저장소 루트에서 실행해야 하고, 루트에는 프로젝트 링크(`.vercel`)가 없다. Root Directory는 Vercel CLI로 바꿀 수 없어 대시보드나 REST API(`PATCH /v9/projects/{id}`의 `rootDirectory`)를 써야 한다. 그래서 수동 배포를 예비 경로로 유지하려면 Root Directory를 비워 두고 GitHub Actions를 쓰는 편이 낫다.
 
 Windows에서 `vercel build --prod`가 `spawn cmd.exe ENOENT`로 실패하여, 검증된 Vite 산출물을 Vercel Build Output API v3로 포장하는 `package-vercel.mjs`를 제공한다. 이 스크립트는 정확한 `web/.vercel/output` 경로를 검증하고 이전 빌드 출력만 교체한다. `.vercel`의 환경 파일은 업로드 산출물에 포함하지 않는다.
 
