@@ -9,6 +9,48 @@
 
 ---
 
+## 2026-09-11
+
+> **8 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. Context / Token 최적화 — Durable Context, Stable Prefix, Same-turn Rewrite, Cost per Success
+
+[`ai/news/ai-harness-token-scout-2026-09-11.md`](./ai/news/ai-harness-token-scout-2026-09-11.md) · [`ai/tools/strands-agents-context-manager.md`](./ai/tools/strands-agents-context-manager.md) · [`ai/tools/token-optimizer-mcp.md`](./ai/tools/token-optimizer-mcp.md) · [`ai/tips/claude-api-cost-optimization.md`](./ai/tips/claude-api-cost-optimization.md)
+
+- Strands Context Manager는 활성 L0 working context와 원본을 보존하는 L1 durable stash를 분리하고, tool별 offload·bounded retrieval·session-derived cache key로 긴 Agent session의 context lifecycle을 관리하는 패턴을 제시.
+- Token Optimizer MCP는 비싼 Tool을 거부한 뒤 다시 호출시키는 `deny → retry`가 추가 turn과 cache-read 비용 때문에 오히려 비싸질 수 있음을 자체 실험으로 확인하고, **같은 Tool call 안에서 outline/compact 결과로 rewrite**하는 방향과 gross saving - expansion debit 형태의 순절감 계측을 강조.
+- Claude API 비용 최적화 가이드는 stable prefix·prompt caching·instruction debt 제거·Effort calibration을 `cost per successful task` 기준으로 함께 최적화하고, AI Harness Scout는 Claude Code v2.1.268의 prefix stability 개선과 Codex compaction을 durable transcript와 분리해야 한다는 운영 원칙까지 통합.
+
+### 2. base-harness — 공통 Harness SoT에서 Claude/Codex/OpenCode 설정을 생성하고 증거로 검증
+
+[`ai/harness/base-harness.md`](./ai/harness/base-harness.md)
+
+- Contract·Skills·Rules·Hooks를 `harness/` 한 곳에서 정의하고 runtime adapter가 Claude Code·Codex·OpenCode용 네이티브 설정을 생성해, 런타임별 수동 복제로 생기는 configuration drift를 줄이는 구조를 분석.
+- Doctor가 `configured → loaded → trusted → fired → enforced → outcome-proven` 단계로 실제 정책 적용 증거를 구분하고, Native Hook이 불가능하면 Contract Rule, 최종적으로 SCM Guard로 내려가는 degradation ladder를 제공.
+- Perforce 환경에서는 Git pre-commit을 **Pending CL/submit validator**로 치환하고 workspace·stream·CL을 registry fact로 관리하는 `Common Harness SoT → Runtime Adapter → Evidence Doctor → Perforce Submit Guard` 패턴이 PoC 가치가 높다고 평가.
+
+### 3. Jarvis OS 4-Part Local AI Stack — Engine / Memory / Input / Face 분리와 작은 Skill 중심 개인 AI
+
+[`ai/harness/jarvis-os-four-part-local-ai-stack.md`](./ai/harness/jarvis-os-four-part-local-ai-stack.md)
+
+- Claude Code를 Engine, Markdown/Obsidian을 Memory, 음성 입력을 Ears, 로컬 Dashboard를 Face로 분리하고, 거대한 단일 prompt 대신 작은 단일 책임 Skill을 조합하는 local-first 개인 AI 아키텍처를 정리.
+- 핵심은 특정 제품 조합보다 **Engine / Memory / Input / UI를 교체 가능한 adapter로 분리**하는 것이며, 실행 상태는 event store, 영속 지식은 Markdown으로 나누는 2-tier state/memory가 더 안정적이라고 평가.
+- 개발 생산성 환경에서는 Claude/Codex + Perforce/TeamCity/UE Skill + MCP/internal CLI + local dashboard로 확장할 수 있고, 기업 환경에서는 음성·Vault·파일 실행 권한을 별도로 통제해야 한다고 정리.
+
+### 4. Wiki Reader DevOps — 빌드 시점 정적 콘텐츠와 배포 트리거 분리로 생기는 Silent Staleness
+
+[`tools/vercel-build-time-content-stale-trap.md`](./tools/vercel-build-time-content-stale-trap.md) · [`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md)
+
+- Wiki Reader가 런타임에 GitHub를 읽는 것이 아니라 빌드 중 `public/content.json`에 콘텐츠를 구워 넣기 때문에, **Vercel Git 연동/배포 트리거가 없으면 develop push만으로는 사이트가 갱신되지 않는** silent staleness 문제를 실제 사례로 기록.
+- 라이브 `content.json`의 source commit과 `develop` HEAD를 비교해 stale 여부를 진단하고, Git 자동 배포 연결 전 Root Directory를 저장소 루트가 아니라 `web`으로 먼저 지정해야 install 단계 실패를 피할 수 있음을 정리.
+- 2026-09-09 이후 배포가 실행되지 않아 28 commits·21 documents가 반영되지 않은 사례를 바탕으로, build-time content 사이트에서는 **content source 변경과 deployment trigger를 반드시 함께 관측**해야 한다는 일반 DevOps 원칙을 도출.
+
+### 기타
+
+- README와 `ai/README.md`에서 과거 `ax/ai/`로 잘못 연결되던 AX/AI 경로를 실제 루트 `ai/` 구조로 정정하고, Wiki Reader 운영 안내 링크를 인덱스에 추가.
+
+---
+
 ## 2026-09-10
 
 > **13 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 8건**
@@ -559,7 +601,7 @@
 [`DeepSeek-V4-Flash.md`](./DeepSeek-V4-Flash.md)
 
 - 1M 토큰 컨텍스트와 MoE 구조를 가진 DeepSeek-V4-Flash를 **비용 민감형 Coding/Agent Worker 모델** 후보로 분석.
-- 모든 작업을 최고가 모델에 맡기기보다 `Planner/Reviewer → V4-Flash Worker → Build/Test → Reviewer` 형태의 계층형 모델 라우팅을 제안.
+- 모든 작업을 최고가 모델에 맡기보다 `Planner/Reviewer → V4-Flash Worker → Build/Test → Reviewer` 형태의 계층형 모델 라우팅을 제안.
 - CI 로그 분석, 대규모 코드베이스 탐색, 반복 수정 Worker, 문서/RAG 등 처리량 중심 AX 워크로드와 자체 평가 지표를 정리.
 
 ### 4. Toss Open API 자동 트레이딩 사례 조사
