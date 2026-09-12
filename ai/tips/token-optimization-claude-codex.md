@@ -2,11 +2,11 @@
 
 > 태그: `Claude Code`, `Codex`, `Token Optimization`, `Context Engineering`, `AX`, `AI Workflow`
 >
-> Claude Code/Codex를 장시간 사용하는 개발자를 위한 비용·사용량 절감 가이드. 2026-09-12 Claude Code v2.1.269와 Codex의 최근 context-budget/token-telemetry 구현을 반영해 업데이트.
+> Claude Code/Codex를 장시간 사용하는 개발자를 위한 비용·사용량 절감 가이드. 2026-09-13 Knowledge Triage 실험과 Codex의 model-visible token accounting, bounded recap, cache-affinity 구현을 반영해 업데이트.
 
 ## 한줄 요약
 
-**Claude Code/Codex 비용 절감의 핵심은 짧은 프롬프트가 아니라 작고 관련성 높은 컨텍스트를 유지하면서, 필수 증거를 보존하고 실제 사용 모델별 비용을 측정하는 것**이다.
+**Claude Code/Codex 비용 절감의 핵심은 짧은 프롬프트가 아니라 작고 관련성 높은 컨텍스트를 유지하면서, 필수 증거와 규칙을 보존하고 실제 모델이 보는 토큰과 사용 모델별 비용을 측정하는 것**이다.
 
 ## 프로젝트 개요
 
@@ -21,6 +21,8 @@ Anthropic의 Claude Code 운영 가이드와 context engineering 원칙, 최근 
 - 작업 상태를 대화에만 의존해 새 세션 전환 비용 증가
 - context window 초과 직전에 임의 truncate하여 중요한 지침·승인·검증 증거를 잃는 문제
 - 한 turn 안에서 compaction/reviewer/worker가 다른 모델을 쓰는데 session 총량만 보아 비용 원인을 잘못 판단하는 문제
+- 저장용 JSON/ledger 크기를 model-visible context 크기로 착각해 너무 일찍 compaction하는 문제
+- hard rule, exact command, episodic log를 동일한 압축률로 줄여 중요한 규칙이 사라지는 문제
 
 ## 핵심 기능
 
@@ -146,6 +148,90 @@ Claude Code v2.1.269에서는 다음 prompt-cache correctness 문제가 수정�
 
 따라서 Harness benchmark는 정상 연속 대화만 측정하면 부족하다. 최소한 `normal`, `interrupt/resume`, `output-limit auto-resume`, `compaction` 경로별 cache hit/비용을 비교해야 한다.
 
+### 12. Token Estimator는 저장 데이터가 아니라 `Model-visible Content`를 기준으로
+
+2026-09-12 Codex main은 history token estimate에서 serialized response envelope의 ID, metadata, JSON escaping 같은 **transport/storage overhead**가 token budget 판단을 부풀리지 않도록 변경했다.
+
+Harness에서도 다음 값을 분리한다.
+
+```text
+raw_storage_bytes
+      │
+      ├─ IDs / metadata / audit fields
+      ├─ transport envelope
+      └─ model-visible payload
+                   │
+                   ▼
+         estimated_input_tokens
+```
+
+즉 `.ai/ledger.jsonl`이 100MB라고 해서 모델에 100MB가 들어가는 것은 아니다. 반대로 작은 DB row라도 렌더링 과정에서 긴 tool schema나 context가 붙으면 실제 request는 커질 수 있다.
+
+권장 telemetry:
+
+- `raw_storage_bytes`
+- `model_visible_bytes`
+- `estimated_input_tokens`
+- `actual_input_tokens`
+- `compaction_trigger_reason`
+
+### 13. Compaction은 `Type-aware Retention`으로
+
+`The Compaction Cliff in Long-Running AI Agent Memory` 연구는 타입 구분 없는 반복 compaction에서 hard rule 보존율이 급격히 떨어질 수 있음을 측정했다. 공개 실험에서 Claude Code `/compact` + Sonnet 4.6은 50% compaction 1회 후 constraint recall 약 53%, 5회 후 약 10%였고, type-aware `TypeCompact`는 5회 후 약 96%를 보고했다.
+
+따라서 context를 다음처럼 구분한다.
+
+```text
+PINNED
+  hard rule / exact command / approval / invariant
+
+REQUIRED
+  current objective / pending CL / core diff / failing test
+
+RETRIEVABLE
+  architecture / previous decision / source evidence
+
+EPHEMERAL
+  verbose log / successful command output / old exploration
+```
+
+`PINNED`만으로 budget을 넘는다면 rule을 잘라서 성공하는 척하지 말고 `COMPACTION_UNSAFE`와 유사하게 fail/defer한다.
+
+### 14. Session Identity와 Cache Affinity를 분리
+
+Codex의 ephemeral fork 관련 변경은 child session이 독립 identity를 가지면서도 parent의 prompt-cache affinity를 재사용할 수 있도록 분리했다.
+
+내부 Harness에도 다음 ID를 분리하는 것이 좋다.
+
+```text
+task_id
+agent_session_id
+parent_session_id
+cache_affinity_id
+pending_cl
+```
+
+Subagent마다 audit/ownership을 위해 session ID는 달라야 하지만, stable prompt/tool surface가 같은 분석·리뷰 fork라면 cache group은 공유할 수 있다.
+
+### 15. Handoff/Recap은 `Summary`와 `Next Action`을 분리하고 의미 단위로 줄인다
+
+Codex recent recap 구현은 오래된 내용을 단순 byte truncate하는 대신 answered exchange 단위로 선택하고, 오래된 **whole exchange부터** 제거한 뒤 oversized message에만 head/tail excerpt를 적용한다.
+
+권장 handoff schema:
+
+```text
+goal
+completed_outcomes[]
+unresolved_caveats[]
+corrections[]
+evidence_refs[]
+next_action?
+```
+
+`summary`는 상태를 설명하고, `next_action`은 아직 해야 할 것이 명확할 때만 둔다. 완료된 일과 제안만 된 일을 구분해 handoff hallucination을 줄인다.
+
+또 recap/summary 자체도 model call이므로 짧은 context switch마다 생성하지 말고 debounce하는 것이 좋다.
+
 ## 아키텍처
 
 ```text
@@ -156,18 +242,19 @@ Task / Pending CL
       │
       └─ Working Context Manager
              ├─ stable prefix
-             ├─ recent turns
-             ├─ JIT file/context retrieval
-             ├─ mandatory evidence
-             ├─ optional evidence
-             └─ budget admission + compaction
+             ├─ PINNED / REQUIRED
+             ├─ JIT RETRIEVABLE context
+             ├─ EPHEMERAL output compaction
+             ├─ recent turns / structured recap
+             └─ model-visible budget admission
                        │
                 Runtime Adapter
                 ├─ Claude Code
                 └─ Codex
                        │
                  Token Ledger
-                 └─ turn × model × token type
+                 ├─ turn × model × token type
+                 └─ cache affinity / actual usage
 ```
 
 장기 작업에서는 대화를 영구 메모리로 사용하지 않고 progress 문서, VCS 정보, task ledger를 외부 durable state로 사용한다.
@@ -180,6 +267,8 @@ Task / Pending CL
 - 작업 단위 세션 관리가 자동화/Agent workflow와 잘 맞음
 - 중요 evidence의 의미 손실을 줄이면서 optional context만 줄일 수 있음
 - multi-model routing의 실제 비용을 더 정확하게 측정 가능
+- 반복 compaction에서 hard rule이 사라지는 위험을 줄일 수 있음
+- premature compaction을 유발하는 잘못된 token estimate를 줄일 수 있음
 
 ## 단점
 
@@ -190,6 +279,8 @@ Task / Pending CL
 - subagent도 토큰을 사용하므로 작은 작업까지 위임하면 총량 증가
 - 정확한 request-budget 계산에는 provider별 token estimator 차이를 다뤄야 함
 - 모델별 telemetry를 세밀하게 저장하면 observability/저장 구조가 복잡해짐
+- knowledge type 오분류 시 잘못된 정보가 pin되거나 중요한 rule이 drop될 수 있음
+- cache affinity를 잘못 공유하면 서로 다른 prompt/tool configuration을 같은 그룹으로 묶는 문제가 생길 수 있음
 
 ## 기존 도구와 비교
 
@@ -204,6 +295,8 @@ Task / Pending CL
 | RTK/Hook 출력 압축 | CLI 로그 축소 | 추가 도구 운영 | 로그 많은 환경 |
 | Budget admission | 필수 evidence 보존 | estimator/우선순위 설계 필요 | reviewer/agent handoff |
 | Turn×Model telemetry | routing 비용 정확히 파악 | 계측 복잡도 | multi-model Harness |
+| Type-aware retention | hard rule 보존 | classifier 필요 | 반복 compaction/장기 Agent |
+| Cache affinity 분리 | fork 간 prefix cache 재사용 | group invalidation 정책 필요 | multi-agent fork |
 
 ## 활용 사례
 
@@ -217,16 +310,17 @@ Task / Pending CL
 
 ### 장기 Agent 작업
 
-`raw task ledger + compact working context`로 분리하고 fresh context의 다음 agent가 필요한 evidence만 재조회하도록 한다.
+`raw task ledger + typed compact working context`로 분리하고 fresh context의 다음 agent가 필요한 evidence만 재조회하도록 한다.
 
 ### Reviewer Agent
 
 ```text
 전체 evidence 수집
-→ Mandatory / Optional 분류
-→ Request overhead 포함 budget 계산
-→ Optional 제거
-→ 필요하면 1회 compact
+→ PINNED / REQUIRED / RETRIEVABLE / EPHEMERAL 분류
+→ model-visible request overhead 포함 budget 계산
+→ EPHEMERAL 제거
+→ RETRIEVABLE은 pointer/JIT
+→ 필요하면 1회 type-aware compact
 → Reviewer 실행
 → PASS / RETRY / HUMAN
 ```
@@ -241,6 +335,10 @@ Task / Pending CL
 6. **Evidence Priority**: 사용자 지시/승인, `p4 opened`, 핵심 diff, failing test를 mandatory로 두고 오래된 build log를 optional로 분류.
 7. **Per-model Cost Ledger**: Orchestrator/Worker/Reviewer/Compactor의 실제 사용 모델별 usage를 task ID와 함께 저장.
 8. **Cache Regression Test**: normal/resume/auto-resume/compact 시나리오별 cache read와 uncached input을 자동 비교.
+9. **Typed Context Manifest**: `.ai/context.json`에 `pinned/required/retrievable/ephemeral` 등급과 token estimate를 저장.
+10. **Model-visible Estimator**: DB/file 크기가 아니라 실제 prompt renderer 결과에 대해 token estimate를 수행.
+11. **Cache Group**: parent task의 stable prefix를 공유하는 child agent에 별도 `cache_affinity_id` 부여.
+12. **Structured Recap**: 자유형 handoff 대신 `goal/completed/unresolved/evidence/next_action` schema 사용.
 
 ## 실무 SOP
 
@@ -249,19 +347,21 @@ Task / Pending CL
 1. /context 확인
 2. 무관한 MCP/지침 과다 로드 여부 확인
 3. stable prefix와 dynamic tail 분리
-4. 난이도에 맞춰 model/effort 결정
+4. PINNED/REQUIRED context 로드
+5. 난이도에 맞춰 model/effort 결정
 
 [작업 중]
-5. 필요한 파일만 JIT 로드
-6. 빌드·테스트·검색 출력 최소화
-7. 큰 탐색은 subagent로 분리
-8. reviewer 요청은 mandatory/optional evidence로 예산 편성
-9. 동일 작업이 길어지면 /compact
+6. 필요한 파일만 JIT 로드
+7. 빌드·테스트·검색 출력 최소화
+8. 큰 탐색은 subagent로 분리
+9. reviewer 요청은 model-visible token 기준으로 예산 편성
+10. 동일 작업이 길어지면 type-aware compact
 
 [작업 완료]
-10. 결정사항/진행상태를 VCS·durable ledger에 기록
-11. task별 turn/model/token telemetry 기록
-12. 다음 작업이 무관하면 /clear
+11. 결정사항/진행상태를 VCS·durable ledger에 기록
+12. structured recap/handoff 생성
+13. task별 turn/model/token/cache telemetry 기록
+14. 다음 작업이 무관하면 /clear
 ```
 
 ## 2026-09-12 업데이트에서 얻은 운영 원칙
@@ -282,6 +382,24 @@ Task / Pending CL
 
 Prompt cache는 정상 루프뿐 아니라 interrupt/resume, output-limit auto-resume, cloud first request 같은 경계에서 깨질 수 있다.
 
+## 2026-09-13 업데이트에서 얻은 운영 원칙
+
+### 원칙 E — Context 크기는 Model-visible Representation으로 잰다
+
+Audit/transport metadata가 큰 durable ledger와 실제 model input budget을 분리한다. Compaction trigger는 prompt renderer 이후 예상 token을 기준으로 판단한다.
+
+### 원칙 F — Rule과 Log에 같은 압축률을 쓰지 않는다
+
+hard rule, exact command, approval, invariant는 pin하고 episodic/log부터 줄인다. pinned set이 budget을 넘으면 silent truncate하지 않는다.
+
+### 원칙 G — Session ID와 Cache Group ID는 다를 수 있다
+
+multi-agent child의 ownership/session은 분리하면서 parent와 동일한 stable prefix를 공유할 수 있다.
+
+### 원칙 H — Handoff는 의미 단위로 줄이고 상태와 다음 행동을 분리한다
+
+오래된 exchange부터 제거하고 correction/unresolved caveat/evidence를 보존한다. summary와 next_action을 한 문장에 섞지 않는다.
+
 ## 참고 링크
 
 - Anthropic Engineering — Effective context engineering for AI agents (2025-09-29)
@@ -289,4 +407,9 @@ Prompt cache는 정상 루프뿐 아니라 interrupt/resume, output-limit auto-r
 - Claude Code v2.1.269: https://github.com/anthropics/claude-code/releases/tag/v2.1.269
 - Codex complete Guardian request budget commit: https://github.com/openai/codex/commit/fcd90d8f07ab558dc4a5d44ca85f9c6ae67d13e1
 - Codex per-model turn token telemetry commit: https://github.com/openai/codex/commit/c8a8295e798af970ef5a2bcd9ce2229db87edb6b
+- Codex model-visible history token estimate: https://github.com/openai/codex/commit/b04a2c264516ec2e6b3c91dd73ad18a21fd5a88f
+- Codex bounded recap: https://github.com/openai/codex/commit/8d3c6cc13d41127faa25eebeac00c48410dfe5c5
+- Codex ephemeral fork cache affinity: https://github.com/openai/codex/commit/bc5957eac9e89e66f990ed490d11e625a4a3b02c
+- The Compaction Cliff / Knowledge Triage: https://arxiv.org/abs/2608.22752
+- Reference implementation: https://github.com/searchsim-org/cikm26-knowledge-triage
 - Headroom / RTK / token-optimizer 등 외부 압축 도구는 벤더 주장과 실제 워크로드 실측을 구분해 평가할 것.
