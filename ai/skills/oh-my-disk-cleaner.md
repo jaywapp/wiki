@@ -197,6 +197,82 @@ Before/After Report
 
 다만 과거 Critical 데이터 손실 Issue가 실제로 보고된 프로젝트이므로, 'AI에게 PC 정리를 전권 위임'하기보다는 **분석 자동화 + 승인 기반 정리** 형태가 적절하다. 자체 PC 관리 Harness를 만든다면 프로젝트를 그대로 채택하는 것보다 분석 엔진과 안전 설계를 참고해 회사/개인 환경에 맞는 protected/allowlist 정책을 추가하는 것을 권장한다.
 
+## 실제 설치·검증 (2026-09-12, Windows 11 한국어 로캘)
+
+위 내용은 저장소 문서와 이슈 기반 조사다. 아래는 실제로 설치해 실행한 결과이며, 조사 단계에서 드러나지 않은 결함 두 가지를 확인했다.
+
+### 설치
+
+저장소 루트가 아니라 **`skills/disk-cleaner/` 하위만** 스킬 본체다. README의 `npx add-skill gccszs/disk-cleaner`는 이 포크가 아니라 원본 저장소를 가리키므로 수동 설치한다.
+
+```powershell
+git clone --depth 1 https://github.com/open-agent-power/oh-my-disk-cleaner.git
+Copy-Item -Recurse .\oh-my-disk-cleaner\skills\disk-cleaner "$env:USERPROFILE\.claude\skills\disk-cleaner"
+
+# 동일 내용의 중복 zip 제거
+Remove-Item "$env:USERPROFILE\.claude\skills\disk-cleaner\disk-cleaner.skill"
+```
+
+`python scripts/check_skill.py`가 `Passed: 6/6`이면 정상이며, 새 세션부터 `disk-cleaner` 스킬로 로드된다.
+
+### 함정 1: 한글 Windows(cp949) 콘솔에서 크래시
+
+SKILL.md는 "모든 스크립트 출력이 ASCII 안전"이라고 반복 주장하지만 사실이 아니다. `monitor_disk.py:205`가 진행률 바에 `█`(U+2588)을 사용해 cp949 콘솔에서 죽는다.
+
+```text
+UnicodeEncodeError: 'cp949' codec can't encode character '\u2588'
+in position 10: illegal multibyte sequence
+```
+
+우회 방법은 `--json`(권장), `--no-progress`, `$env:PYTHONIOENCODING = "utf-8"` 세 가지다. `analyze_disk.py`와 `clean_disk.py`도 진행률 바를 그리므로 `--no-progress`를 기본으로 붙이는 편이 안전하다.
+
+### 함정 2: 디렉터리 용량 집계를 신뢰할 수 없음
+
+`analyze_disk.py`의 `[DIR] Largest Directories` 섹션을 같은 시점 `du -sm` 실측과 대조한 결과다.
+
+| 디렉터리 | 스킬 보고 | `du` 실측 | 오차 |
+|---|---|---|---|
+| `AppData` | 목록에 없음 | 103 GB | 누락 |
+| `Documents` | 0.02 GB | 30.4 GB | **약 1500배** |
+| `.android` | 목록에 없음 | 17.1 GB | 누락 |
+| `Downloads` | 목록에 없음 | 8.1 GB | 누락 |
+| `.nuget` | 목록에 없음 | 7.9 GB | 누락 |
+| `.gradle` | 목록에 없음 | 6.5 GB | 누락 |
+| `.cache` | 0.05 GB | 2.3 GB | 약 45배 |
+| `.codex` | 1.01 GB | 2.4 GB | 약 2.4배 |
+
+원인으로 추정되는 동작은 두 가지다.
+
+- **숨김 디렉터리를 건너뛴다.** `AppData`가 통째로 누락된다. 반면 같은 리포트의 `[x] Temporary Directories` 항목은 `AppData\Local\Temp`를 정확히 보고하므로, 집계 경로와 스캔 경로가 서로 분리되어 있다.
+- **파일 수 한도 판정이 잘못 동작한다.** `--file-limit 2000000`으로 올려도 수십 초 만에 `Scan stopped early: file_limit`가 출력된다.
+
+결과적으로 위 '활용 사례'에서 가장 적합하다고 본 **"C 드라이브가 왜 부족한지 분석해줘" 시나리오가 실제로는 동작하지 않는다.** 디렉터리별 용량은 `du -sm` 또는 WizTree로 확인해야 한다.
+
+```bash
+du -sm /c/Users/<user>/* /c/Users/<user>/.[a-z]* 2>/dev/null | sort -rn | head -20
+```
+
+### 기능별 신뢰도
+
+| 기능 | 명령 | 판단 |
+|---|---|---|
+| 드라이브 사용률 | `monitor_disk.py --json` | ✅ 정확 (`--json` 필수) |
+| 대용량 **파일** 목록 | `analyze_disk.py --top N --no-progress` | ✅ 정확 |
+| 정리 미리보기·실행 | `clean_disk.py --dry-run` / `--force` | ✅ 동작 (dry-run이 기본값) |
+| 디렉터리별 용량 | `analyze_disk.py`의 `[DIR]` 섹션 | ❌ 사용 금지 |
+
+`clean_disk.py --dry-run`은 `%TEMP%`의 8,132개 파일 6.68 GB를 정리 후보로 정확히 식별했고, 권한이 없는 `C:\Windows\Prefetch`와 `SoftwareDistribution\Download`는 오류로 건너뛰었다(의도된 동작).
+
+### SKILL.md 자체의 문제
+
+- 46 KB로 과도하게 길어 매 세션 컨텍스트를 크게 소모한다.
+- "Multi-Agent Acceleration" 절에 존재하지 않는 API(`Anthropic().agent.create`)를 호출하는 의사 코드가 실려 있어 그대로는 실행되지 않는다.
+- 따라서 에이전트는 SKILL.md의 지침보다 각 스크립트의 `--help` 출력을 확인하는 편이 정확하다.
+
+### 결론 보정
+
+조사 단계의 평가("PoC 가치 높음")는 **정리 기능에 한해** 유효하다. 분석 기능의 핵심인 디렉터리 집계가 실제로 깨져 있으므로, 이 스킬은 `%TEMP%`·캐시 정리 용도로 한정해 쓰고 디스크 용량 진단은 전용 도구에 맡기는 것이 맞다.
+
 ## 참고 자료
 
 - Repository: https://github.com/open-agent-power/oh-my-disk-cleaner
