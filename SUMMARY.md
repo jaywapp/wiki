@@ -9,6 +9,75 @@
 
 ---
 
+## 2026-09-12
+
+> **15 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 8건**
+
+### 1. Context / Token Engineering — Request Budget, Turn×Model Telemetry, Source-linked Project Brain
+
+[`ai/news/ai-harness-token-scout-2026-09-12.md`](./ai/news/ai-harness-token-scout-2026-09-12.md) · [`ai/tips/token-optimization-claude-codex.md`](./ai/tips/token-optimization-claude-codex.md) · [`ai/tools/flow-coding-harness.md`](./ai/tools/flow-coding-harness.md)
+
+- Claude Code v2.1.269의 resume/auto-resume/cloud-first-request prompt-cache correctness 개선을 바탕으로 정상 turn뿐 아니라 **interrupt/resume·output-limit auto-resume·compaction 경로까지 cache regression test**에 포함해야 한다는 운영 원칙을 정리.
+- Codex의 최근 구현에서 최종 request 전체의 overhead를 먼저 계산하고 사용자 지침·승인·핵심 evidence를 mandatory로 보존한 뒤 optional evidence만 제거하는 **budget admission control**, 그리고 `turn × 실제 사용 model × token type` 단위 telemetry를 추출.
+- Flow는 transcript 전체 replay 대신 revision·source evidence를 가진 Conversation Notes와 bounded linked retrieval, Auto-Docs/Auto-Skills를 Project Brain으로 묶어 **세션 지식을 검증 가능한 durable context로 승격**하는 패턴을 제시.
+
+### 2. codebase-memory-mcp — 영속 Code Graph를 공통 Agent Memory Layer로 확장
+
+[`ai/tools/codebase-memory-mcp.md`](./ai/tools/codebase-memory-mcp.md)
+
+- 기존 분석을 크게 보강해 Tree-sitter 158개 언어 + 주요 언어 Hybrid LSP, coordination daemon, compact tree output, IaC·cross-service 관계 인덱싱까지 포함하는 **로컬 persistent code graph backend**로 재정리.
+- Claude/Codex가 같은 구조 정보를 재사용해 반복 `grep → read → reference search`를 줄일 수 있고, local working tree를 분석하므로 Git에 종속되지 않아 **Perforce workspace에도 구조적으로 적용 가능**하다고 평가.
+- 자체 benchmark 수치는 실제 저장소에서 재검증해야 하며 Windows daemon/update 안정성, dynamic C++/generated code 관계 정확도 같은 운영 리스크도 추가로 명시.
+
+### 3. Agent Kanban — Session보다 Task를 Durable Context의 Primary Key로 사용
+
+[`ai/tools/agent-kanban-vscode.md`](./ai/tools/agent-kanban-vscode.md) · [`ai/harness/agent-kanban-company-workflow-insights.md`](./ai/harness/agent-kanban-company-workflow-insights.md)
+
+- VS Code의 활성 Task와 Agent 실행을 연결하고 `MEMORY.md`·`TECHNICAL.md`·MCP context·todo를 이용해 중단 후 **Resume 가능한 task-scoped context**를 유지하는 Agent Kanban 구조를 분석.
+- 회사 워크플로우 관점에서는 `Task ID → Agent Runtime → Workspace → SCM Change → CI Evidence`를 하나의 Task Binding Layer로 묶고, session은 교체 가능한 executor로 취급하는 방향을 도출.
+- Perforce에서는 branch/worktree를 **Pending CL / Agent Workspace**로 치환하고 Hansoft·TeamCity까지 task ID로 연결해 Claude 구현과 Codex 리뷰가 같은 durable state를 공유하는 구조를 제안.
+
+### 4. GPT-6 Astra Skills & Prompt — 긴 지침보다 Progressive Disclosure와 명확한 Activation Boundary
+
+[`ai/tips/gpt-6-astra-skills-prompts.md`](./ai/tips/gpt-6-astra-skills-prompts.md)
+
+- OpenAI의 2026-09-11 공식 가이드를 바탕으로 강한 모델에서는 과거의 긴 Skill·AGENTS·prompt scaffolding이 오히려 context 비용과 행동 제약을 만들 수 있음을 정리.
+- `SKILL.md`는 작은 router/control plane으로 유지하고 세부 reference·script는 필요할 때만 읽는 **Progressive Disclosure**, AGENTS.md는 문서 체크리스트보다 invariant와 context routing에 집중하는 방식을 권장.
+- 안전하고 되돌릴 수 있는 local action은 자율 실행하되 외부·파괴적 작업은 approval boundary를 분리하고, 중복 handholding을 제거하면서 완료 계약을 명확히 하는 운영 원칙을 추가.
+
+### 5. Dryforge + Agency Agents — Bounded Autonomy와 역할 자산의 표준화
+
+[`ai/harness/dryforge.md`](./ai/harness/dryforge.md) · [`ai/tools/agency-agents.md`](./ai/tools/agency-agents.md)
+
+- Dryforge는 User / Specification / Plan / Code의 권한을 분리하고 `/ready → 승인 → /go` 흐름에서 구현 HOW는 Agent에 맡기되 완료는 실제 build/test evidence로 증명하는 **bounded-autonomy harness**를 제시.
+- 원시 사용자 의도는 main session에 유지하고 subagent는 intent completeness·final gate 같은 독립 검증에만 사용하는 방식, `cheap map → 필요한 계약만 deep read` 방식이 context 보존 관점에서 유용.
+- Agency Agents는 279 agents × 14 tools 수준으로 확장된 역할 카탈로그와 multi-tool 변환/설치, sequential handoff·parallel work·quality gate 예제를 제공하며, 자체 orchestrator라기보다 **재사용 가능한 역할/업무 규약 자산 계층**으로 평가.
+
+### 6. Agentic 실행 안전 패턴 — Manifest/Checkpoint와 Deterministic Executor
+
+[`ai/tools/openmontage.md`](./ai/tools/openmontage.md) · [`ai/research/windows-ai-pc-caretaker.md`](./ai/research/windows-ai-pc-caretaker.md) · [`ai/skills/oh-my-disk-cleaner.md`](./ai/skills/oh-my-disk-cleaner.md)
+
+- OpenMontage에서 `Manifest → Skill → Tool → Artifact → Checkpoint → Review → Approval`로 복잡한 장시간 작업을 단계화하고, Agent는 orchestration/판단을 맡고 Python Tool과 상태 artifact가 실제 실행·복구를 담당하는 범용 workflow 패턴을 추출.
+- Windows PC Caretaker 조사와 oh-my-disk-cleaner에서는 파일 삭제 같은 위험 작업을 **read-only scan → candidate/manifest → exact approval → dry-run → target revalidation → deterministic executor → verify**로 분리해야 한다는 안전 계약을 확인.
+- 회사 개발 PC에서는 Perforce workspace, Visual Studio/.NET, Unreal 경로를 protected root로 두고 자동 정리는 분석/report까지만 허용하며 실제 삭제는 사용자 승인 뒤 실행하는 방향을 권장.
+
+### 7. shadcn/ui Registry — UI 컴포넌트를 넘어 Agent Project Bootstrap 배포 계층으로 확장
+
+[`ai/tips/ai-ui-shadcn.md`](./ai/tips/ai-ui-shadcn.md)
+
+- 기존 AI UI 공통 vocabulary 분석을 2026 shadcn Registry/CLI 기준으로 보강해, Registry가 component뿐 아니라 `AGENTS.md`, Claude command, config/rule, CI workflow, MCP 설정, migration 같은 **프로젝트 자산 배포 단위**까지 다룰 수 있음을 정리.
+- `shadcn docs/info/build`와 Registry를 이용하면 Agent가 현재 설치 상태와 공식 문서를 구조적으로 조회하고, 조직 표준 UI·Agent 지침·자동화 자산을 같은 bootstrap 경로로 배포하는 패턴을 만들 수 있다고 평가.
+
+### 8. Wiki Reader 자동 배포 — develop Push부터 Live Commit 검증까지 Hardened CI
+
+[`docs/wiki-reader-auto-deploy-analysis.md`](./docs/wiki-reader-auto-deploy-analysis.md) · [`docs/wiki-reader-auto-deploy-design.md`](./docs/wiki-reader-auto-deploy-design.md) · [`docs/wiki-reader-auto-deploy-tasks.md`](./docs/wiki-reader-auto-deploy-tasks.md) · [`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md)
+
+- build-time `content.json` 때문에 develop과 production이 조용히 어긋나던 문제를 해결하기 위해 **develop push → build → test → Vercel deploy → live commit verification** GitHub Actions 경로를 추가.
+- 옛 workflow 재실행이 stale app code와 최신 content를 섞지 못하도록 현재 develop tip과 `GITHUB_SHA`를 비교하고, secret 존재 확인·action SHA pinning·Vercel CLI version pinning·최소 permissions·credential 비보존 등 CI hardening을 적용.
+- 배포 후 live `content.json`을 여러 번 재검증하고 더 최신 배포가 이미 앞섰다면 성공으로 인정하는 방식으로 race를 처리해, **배포 성공 자체보다 실제 서비스가 해당 build 이상을 제공하는지**를 완료 조건으로 삼음.
+
+---
+
 ## 2026-09-11
 
 > **8 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
