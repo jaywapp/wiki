@@ -9,6 +9,79 @@
 
 ---
 
+## 2026-09-13
+
+> **19 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 9건**
+
+### 1. Context / Token Engineering — Typed Retention, Model-visible Accounting, Bounded Recap
+
+[`ai/news/ai-harness-token-scout-2026-09-13.md`](./ai/news/ai-harness-token-scout-2026-09-13.md) · [`ai/research/compaction-cliff-knowledge-triage.md`](./ai/research/compaction-cliff-knowledge-triage.md) · [`ai/tips/token-optimization-claude-codex.md`](./ai/tips/token-optimization-claude-codex.md)
+
+- 반복 compaction에서 hard rule과 exact procedure까지 같은 비율로 압축하면 제약 회상이 급격히 무너질 수 있음을 확인하고, Context를 **PINNED / REQUIRED / RETRIEVABLE / EPHEMERAL**로 분류해 정책·승인·정확한 명령은 보존하고 로그부터 줄이는 Knowledge Triage 패턴을 정리.
+- Codex의 최근 구현을 바탕으로 저장 JSON이나 transport envelope 크기가 아니라 **실제로 모델에 노출되는 content**를 기준으로 token budget을 추정하고, `raw_storage_bytes / model_visible_bytes / estimated_input_tokens / actual_input_tokens`를 분리 계측하는 방향을 보강.
+- Subagent session identity와 prompt-cache affinity를 분리하고, handoff는 오래된 whole exchange부터 줄이는 bounded recap과 `goal/completed/unresolved/evidence/next_action` 구조로 만들어 compaction·handoff의 정보 손실과 불필요한 재호출을 줄이는 운영 원칙을 추가.
+
+### 2. Production Coding Harness — 7 Subsystems, Durable State, Workspace Context Gateway
+
+[`ai/research/harness-engineering-source-study.md`](./ai/research/harness-engineering-source-study.md) · [`ai/harness/gsd-pi.md`](./ai/harness/gsd-pi.md) · [`ai/harness/open-terminal.md`](./ai/harness/open-terminal.md)
+
+- Claude Code·Codex·Gemini CLI 등 production coding harness를 실제 소스 기준으로 비교해 **Agent Loop / LLM Integration / Tools / Context / Safety / Orchestration / Extensibility**의 7개 subsystem으로 수렴하며, 범용 framework보다 작은 명시적 runtime loop·deterministic retrieval·JIT context·runtime policy가 반복되는 패턴임을 정리.
+- GSD Pi는 milestone→slice→task를 DB/journal에 durable하게 유지하고 requested/effective model provenance, interrupted state reconciliation, fail-closed recovery, model-visible tool binding을 관리해 장시간 Agent 작업의 복구·검증을 conversation 밖의 상태로 외부화하는 사례를 제공.
+- Open Terminal 분석에서는 Workspace를 외부 메모리이자 실행환경으로 두고 **Context Gateway가 Perforce·Build·TeamCity 같은 대량 출력을 요약한 뒤 실패 시에만 세부 로그를 확장**하는 구조를 제안해 Context I/O를 줄이는 방향을 구체화.
+
+### 3. Agent Knowledge / Reviewer Skills — book-to-skill + No AI Slop
+
+[`ai/skills/book-to-skill.md`](./ai/skills/book-to-skill.md) · [`ai/skills/no-ai-slop.md`](./ai/skills/no-ai-slop.md)
+
+- `book-to-skill`은 긴 PDF/EPUB/DOCX 문서를 작은 `SKILL.md` core/index와 필요할 때만 읽는 `chapters/*.md`로 사전 컴파일해 **compile-time knowledge structuring + runtime progressive disclosure**로 반복 참조 Context 비용을 줄이는 방식을 제시.
+- No AI Slop은 특정 실패 패턴을 명문화하고 최소 수정 후 `eval.md`로 재검증하는 편집 Skill로, 거대한 프롬프트보다 **작은 전문 Reviewer Skill + 명시적 self-eval**을 조합하는 Agent Workflow 설계 패턴이 재사용 가치가 높음.
+
+### 4. DevSecOps Agent Pipeline — Strix + VibeSec
+
+[`ai/tools/strix.md`](./ai/tools/strix.md) · [`ai/skills/vibesec-skill.md`](./ai/skills/vibesec-skill.md)
+
+- Strix는 Orchestrator와 전문 Worker를 분리하고 Kali/Docker sandbox에서 Semgrep·Nuclei·SQLMap·Trivy·Nmap 등 결정론적 도구를 실행해 실제 exploit/PoC까지 검증하는 **Agentic DevSecOps 후단 검증 계층**으로 분석.
+- 대형 Semgrep 결과가 Agent context를 폭주시킨 실제 사례를 통해 보안 도구도 `tool output → filter/truncate/summarize → model`의 결과 예산 계층이 필수임을 확인.
+- VibeSec은 보안 지식을 모든 Worker에 상시 로드하지 않고 웹/API 또는 Security Reviewer 작업에만 선택적으로 주입하는 Skill로, **생성 단계의 shift-left 규칙 + SAST/DAST 같은 deterministic scanner**를 함께 사용하는 구성을 권장.
+
+### 5. Agent-ready Web / Data Tooling — Scrapling, OpenSEO, public-apis
+
+[`ai/tools/scrapling.md`](./ai/tools/scrapling.md) · [`ai/tools/open-seo.md`](./ai/tools/open-seo.md) · [`ai/tools/public-apis.md`](./ai/tools/public-apis.md)
+
+- Scrapling은 Adaptive Scraping·HTTP/브라우저 Fetcher·Spider·MCP·RAG용 targeted Markdown을 결합해 Agent가 전체 HTML 대신 필요한 콘텐츠만 받는 **Web Acquisition Layer**로 활용할 수 있음.
+- OpenSEO는 사람이 쓰는 UI, 원시 기능을 노출하는 MCP, 업무 절차를 정의하는 Agent Skills를 하나의 서비스에 결합해 `Domain Service → Human UI + MCP Tools + Agent Skills`라는 Agent-ready 서비스 패턴을 보여주며 Perforce/TeamCity 같은 내부 도메인에도 일반화 가능.
+- public-apis는 Runtime Tool이 아니라 거대한 API Discovery Dataset으로 보고 `catalog → health/auth 검증 → 공식 문서 재확인 → allowlist → MCP/Tool wrapper` 순서로 승격하는 Tool Discovery 파이프라인을 제안.
+
+### 6. Stateful Domain AI Workflows — ai-job-search + Open Notebook
+
+[`ai/tools/ai-job-search.md`](./ai/tools/ai-job-search.md) · [`ai/tools/open-notebook.md`](./ai/tools/open-notebook.md)
+
+- ai-job-search는 후보자 프로필과 지원 이력을 로컬 상태로 유지하고 `setup → scrape → rank → apply → reviewer → artifact validation → outcome`으로 연결해, 특정 업무 도메인을 **파일 기반 state + command + Skill + Reviewer + final validation**으로 자동화한 Harness 사례를 제공.
+- Open Notebook은 문서·웹·오디오·비디오 수집, Full-text/Semantic RAG, provider abstraction, LangGraph workflow와 background worker를 묶은 self-hosted Research Workspace로, Wiki 앞단의 원자료 수집·검색·질의 계층이나 Agent Research Memory Layer 후보로 평가.
+
+### 7. Unified AI Workspace — Task-specific Studio와 Provider Routing
+
+[`ai/tools/open-generative-ai.md`](./ai/tools/open-generative-ai.md)
+
+- 이미지·영상·오디오·로컬 추론·Agent·Workflow를 하나의 Next.js/Electron shell에 묶고 provider router로 local/cloud backend를 선택하는 구조를 분석.
+- Coding Harness 자체를 대체하기보다는 **공통 Agent/Model Router 위에 Code·Review·Research·Release 같은 task-specific Studio를 배치하는 통합 Workspace UX**의 참고 구조로 평가.
+
+### 8. DevOps Resource Discovery — free-for-dev 최신성 검증
+
+[`ai/tools/free-for-dev.md`](./ai/tools/free-for-dev.md)
+
+- 전달된 `jixserver/free-for-dev`는 실제 최신 커밋이 2017년으로 오래되어 현재 무료 티어 판단에는 부적절하고, 활발히 관리되는 `ripienaar/free-for-dev`를 우선 사용해야 함을 확인.
+- DevOps/PoC 비용 탐색에서는 목록을 최종 사실 데이터가 아니라 후보 discovery index로 사용하고, Agent가 실제 추천하기 직전에 **공식 pricing·무료 한도·보안·서비스 존속 여부를 재검증**하는 Free Stack Finder 패턴을 제안.
+
+### 9. AI Wiki Onboarding — 초보자용 Visual Guidebook
+
+[`ai/guidebook.html`](./ai/guidebook.html)
+
+- Wiki의 AI 자료를 처음 접하는 사람이 Model → Tool/MCP → Skill → Agent → Harness의 관계와 `news / tips / harness / tools / skills / research` 분류를 한눈에 이해할 수 있도록 시각적 입문 가이드를 추가.
+- 토큰/Context, Tool 권한, Skill 재사용, Harness 운영·검증이라는 핵심 개념과 추천 학습 순서를 정리해 기존 지식 베이스의 탐색성과 온보딩 경로를 보강.
+
+---
+
 ## 2026-09-12
 
 > **15 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 8건**
