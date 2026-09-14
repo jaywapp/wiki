@@ -11,7 +11,7 @@ tags:
   - token-optimization
   - claude-code
 source: internal-session-analysis
-updated: 2026-09-14
+updated: 2026-09-07
 ---
 
 # Evidence-First Agent Harness
@@ -380,31 +380,34 @@ PoC 가치 있음.
 
 제한적 PoC.
 
-작업별 Pending CL, 필요한 물리 workspace 격리, 변경물 리뷰와 Build/Test가 갖춰진 경우에만 반복 편집을 위임한다.
+Perforce pending CL/workspace 격리, diff review, Build/Test가 갖춰진 경우에만 반복 편집을 위임한다.
 
 ## Enterprise / Windows / Perforce 적용
 
 기존 Perforce checkout Hook 체계가 있다면 Large Read Guard도 같은 PreToolUse/PostToolUse 계층에 추가할 수 있다.
 
-Perforce에서는 독립 client와 실제 쓰기 root로 파일 시스템을 격리한다. Pending CL은 변경 분류·추적 단위이며, 같은 workspace에서 CL만 나눠도 파일과 빌드 산출물은 공유된다. 하나의 workspace에서는 동시 편집자를 제한하고, 병렬 구현이 필요할 때 workspace를 분리한다. [P4 client](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_client.html)
+Perforce 환경에서는 Git worktree 대신 workspace 또는 pending CL을 isolation boundary로 사용할 수 있다.
 
-```mermaid
-flowchart TD
-    A["Main Agent"] --> B{"작업 종류"}
-    B -->|조사| C["읽기 전용 조사와 근거 요약"]
-    C --> A
-    B -->|수정| D["편집 workspace와 작업 CL 배정"]
-    D --> E["수정과 변경물 식별"]
-    E --> F["Build와 Test"]
-    F --> G{"검증과 리뷰 통과"}
-    G -->|보완| D
-    G -->|통과| H["CL과 증거 인계"]
-    H --> I["정해진 제출 절차"]
+```text
+Main Agent
+   │
+   ├─ Context Guard
+   ├─ Reasoning Guard
+   │
+   ├─ Project Agent
+   │      ↓
+   │   Perforce Workspace / Pending CL
+   │
+   ├─ Mechanical Worker
+   │      ↓
+   │   Isolated Pending CL
+   │
+   ├─ TeamCity Build/Test
+   │
+   └─ Codex/Reviewer
+          ↓
+        Submit
 ```
-
-구체적인 P4 어댑터, checkout hooks, workspace 풀, 수정본과 검증 결과의 연결은 [Perforce·UE5 하네스 설계와 Claude 운영안](perforce-ue5-harness-design-inputs.md)을 참고한다.
-
-2026-09-14 정정: Pending CL 자체를 파일 격리 수단처럼 설명했던 문장을 바로잡았다.
 
 ## Spotify Shunt와의 차이
 
