@@ -3,6 +3,8 @@
 > **jaywapp (Junyoung Park)** 의 개인 위키입니다.
 > 개발 경험, 기술 정리, 프로젝트 메모 등을 기록합니다.
 
+> 🌐 **Web Wiki:** https://jaywapp-wiki.vercel.app/
+
 ---
 
 ## 목차
@@ -46,4 +48,5 @@
 - GitHub: [@jaywapp](https://github.com/jaywapp)
 - 프로젝트 목록: [Projects](https://github.com/jaywapp/Projects)
 - 블로그: [jaywapp.tistory.com](https://jaywapp.tistory.com/)
-- 위키: [wiki](https://github.com/jaywapp/wiki)
+- 위키 웹: [jaywapp-wiki.vercel.app](https://jaywapp-wiki.vercel.app/)
+- 위키 저장소: [wiki](https://github.com/jaywapp/wiki)
