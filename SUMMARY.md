@@ -9,6 +9,66 @@
 
 ---
 
+## 2026-09-14
+
+> **25 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 6건**
+
+### 1. Agent Handoff / Evidence — 계층형 Retrieval, Per-hunk Provenance, Model-visible Context 분리
+
+[`ai/tools/ccompactor.md`](./ai/tools/ccompactor.md) · [`ai/tools/docket.md`](./ai/tools/docket.md) · [`ai/news/ai-harness-token-scout-2026-09-14.md`](./ai/news/ai-harness-token-scout-2026-09-14.md) · [`ai/trend/ai-harness-token-scout-2026-09-14.md`](./ai/trend/ai-harness-token-scout-2026-09-14.md)
+
+- **CCompactor**는 Claude Code·Codex·Pi transcript를 공통 IR로 바꾸고, L0 Brief → L1 선택적 narrative → L2 deterministic ledger → L3 원문 event retrieval index의 4계층 handoff artifact로 만들어 전체 transcript 재주입을 줄이는 구조를 제시. 요약 자체를 source of truth로 두지 않고 provenance pointer로 원문에 돌아갈 수 있게 하는 점이 핵심.
+- **Docket**은 Agent가 만든 최종 diff의 각 hunk에 edit provenance와 변경 이후 실제 실행된 test·type/static check·coverage를 연결하고, attribution이 불확실하면 `unknown`으로 남겨 Reviewer가 낮은 evidence 영역부터 보도록 하는 evidence-aware review 패턴을 제공.
+- 9월 14일 Harness Scout에서는 Codex 최근 구현을 바탕으로 **audit/observability metadata와 model-visible payload를 분리**하고, multi-model workflow의 model·effort·tool inventory·approval policy는 turn 전체가 아니라 실제 Tool을 발행한 issuing step에 귀속해야 한다는 운영 원칙을 추가.
+
+### 2. Context Strategy Routing — Strands의 Task별 Compression Policy
+
+[`ai/tools/strands-agents-context-manager.md`](./ai/tools/strands-agents-context-manager.md)
+
+- 기존 durable stash / bounded retrieval 구조에 `auto`와 `agentic` named strategy preset이 추가되어, exploration-heavy 작업과 focused coding 작업에 서로 다른 tool-result truncation·summarization aggressiveness를 적용할 수 있게 됨.
+- `proactive_summarization`, `large_tool_offloading`, `overflow_protection`, `stale_tool_cleanup` 같은 building-block preset도 분리되어 Context 관리가 하나의 고정 알고리즘이 아니라 **task 성격에 따라 라우팅하는 runtime policy**로 구체화.
+- 실제 Harness에는 threshold 숫자를 그대로 복사하기보다 `focused / exploration / log-heavy → conservative / balanced / aggressive`처럼 Task Classifier와 Context Policy를 연결하고 cost/성공률·retry·lost-evidence를 함께 측정하는 방향이 적합.
+
+### 3. PWN — 보안 자동화와 Agent Harness를 결합한 DevSecOps 실행 구조
+
+[`ai/tools/pwn.md`](./ai/tools/pwn.md)
+
+- Ruby 기반 보안 자동화 프레임워크가 `Registry → Dispatch → ToolGuard → Verification → Memory/Learning`의 Agent Runtime으로 확장되어 SAST·Burp·Recon 등 실제 보안 도구 실행과 LLM 판단을 하나의 폐쇄 루프로 연결하는 구조를 분석.
+- Memory, Learning/Mistakes, Reflect, Reward, Policy, ToolGuard, PromptCache, Swarm, MCP까지 장기 실행 Agent에 필요한 책임을 코드 수준에서 분리한 사례로, 일반 Coding Agent보다 **보안 도구 orchestration + 검증**에 초점이 강함.
+- Windows/Perforce 환경에서는 전체 프레임워크 도입보다 Linux worker/container에서 변경 파일을 분석하고 `SAST findings + diff + repository context`를 Reviewer Agent가 검증하도록 하는 DevSecOps 패턴을 선별 적용하는 편이 현실적이라고 평가.
+
+### 4. Perforce·UE5 Harness — 구현 전에 확정할 12개 설계 입력과 경계
+
+[`ai/harness/perforce-ue5-harness-design-inputs.md`](./ai/harness/perforce-ue5-harness-design-inputs.md)
+
+- Perforce를 쓰는 UE5 Agent Harness를 설계하기 전에 업무/완료조건, UE 구성, P4 구성, workspace·동시성, 기준 revision·handoff, 파일 정책, build/test, 실행 자원, AI runtime/context, 권한·데이터 경계, 기존 TeamCity/Hansoft/도구 연동, 복구·운영 평가의 **12개 입력 묶음**을 확인하도록 체크리스트를 추가.
+- Pending CL은 변경 분류 단위이지 물리 파일 격리 수단이 아니므로 독립 편집에는 실제 client/root 분리가 필요하고, `.uasset/.umap` 같은 binary asset은 text code와 별도의 잠금·편집·검증 계약이 필요하다는 점을 명확히 구분.
+- Shelf/CL 인계는 번호만 넘기지 않고 base revision·변경 파일·snapshot/digest·검증 evidence를 함께 묶고, build 성공과 실제 작업 완료 조건도 분리해 재현성과 검증 범위를 설계하도록 정리.
+
+### 5. Claude Prompt Anatomy — 작업 위험도에 따라 Prompt 단계 자체를 라우팅
+
+[`ai/tips/claude-prompt-anatomy.md`](./ai/tips/claude-prompt-anatomy.md)
+
+- 복잡한 Claude 작업을 `Task → Context → Reference → Success Brief → Rules → Conversation → Plan → Alignment`로 분해해 목표·참조 자료·성공 기준·제약·실행 통제를 서로 다른 책임으로 관리하는 실전 프롬프트 패턴을 정리.
+- 모든 작업에 질문·계획·승인을 강제하면 오히려 왕복과 토큰이 늘어나므로 Small은 `Task → Success → Execute`, Medium은 Relevant Context·Constraints·Verify를 추가하고, Large/Risky에서만 전체 단계를 사용하는 **risk-based prompt routing**을 제안.
+- Harness에서는 이를 `task / success_criteria / context_refs / constraints / risk_level`의 Task Contract로 구조화해 `risk_level`에 따라 plan·approval·verification 수준을 결정하도록 확장할 수 있음.
+
+### 6. Google Stitch — DESIGN.md를 사이에 둔 Design Agent → Coding Agent 연결
+
+[`ai/tools/google-stitch.md`](./ai/tools/google-stitch.md)
+
+- Google Stitch를 자연어·음성·이미지·기존 코드에서 UI를 생성하는 도구를 넘어, infinite canvas·Design Agent·실시간 steering·prototype·MCP/SDK를 묶은 **AI-native design workspace**로 분석.
+- 특히 디자인 규칙과 의도를 machine-readable Markdown인 `DESIGN.md`로 내보내 Coding Agent가 소비하게 하는 방식은 `Requirement → Design Agent → DESIGN.md + Prototype → Coding Agent → Review`의 명시적 인터페이스를 만든다는 점에서 재사용 가치가 있음.
+- WPF/사내 관리도구에서는 생성 코드를 그대로 쓰기보다 레이아웃·정보구조·디자인 토큰을 추출하고 구현 Agent가 기존 UI stack에 맞게 재구성하는 PoC가 현실적이라고 평가.
+
+### 기타
+
+- [`ai/Orchestration.md`](./ai/Orchestration.md)와 [`ai/README.md`](./ai/README.md)에 **`trend/` 카테고리**를 추가해 개별 사건인 `news/`와 날짜별·주제별 연속 관찰 자료를 분리하고, 일일 Harness/Context/Token Scout의 canonical 경로를 `ai/trend/`로 정리. 기존 9월 10~13 Scout도 해당 경로로 이동.
+- 루트 [`README.md`](./README.md)에 배포된 Wiki Reader 링크를 추가한 변경은 단순 인덱스/링크 갱신으로 압축.
+- 같은 날 Perforce 문서에 추가했던 Claude 운영안·정정 일부는 별도 저장소에서 관리하기로 하며 원복되었으므로, 최종적으로 `develop`에 남은 **Perforce·UE5 설계 입력 체크리스트**만 주요 지식 변화로 반영.
+
+---
+
 ## 2026-09-13
 
 > **19 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 9건**
@@ -557,7 +617,6 @@
 - `low → medium → high → xhigh/max`를 작업 난이도에 따라 선택하는 effort 라우팅과, 최신 정보가 중요한 low-effort 작업에는 별도 Search Policy를 두는 방식을 제안.
 - thinking block·prompt cache를 보존하기 위해 이전 turn을 수정하지 않는 append-only 기록과 compaction boundary를 강조하고, 장기 작업에서는 추가 허락을 반복 요구하지 않도록 완료 조건과 scope control을 명시하도록 권장.
 - Subagent를 실행한 뒤 Lead Agent가 idle하지 않고 자신의 분석·구현을 계속하는 **비동기 Subagent + 별도 wait/join** 구조를 통해 Agent Team의 wall-clock time을 줄이는 Harness 패턴을 정리.
-
 ---
 
 ## 2026-08-31
