@@ -18,7 +18,7 @@
 
 ## A. 에이전트에 "이건 Perforce" 선언 (가장 큰 절감)
 
-가장 먼저, `AGENTS.md`(또는 `CLAUDE.md`)에 아래 블록을 넣는다. git 시도를 막는 것만으로 낭비가 크게 준다.
+Claude Code에서는 `CLAUDE.md`에 아래 블록을 넣는다. 다른 실행기와 공동으로 쓰는 `AGENTS.md`가 있다면 `CLAUDE.md`에서 `@AGENTS.md`로 명시적으로 가져온다. P4 사용을 선언하면 불필요한 Git 명령 시도를 줄일 수 있다.
 
 ```markdown
 ## Version control: Perforce (NOT git)
@@ -32,7 +32,7 @@
 - p4 submit / revert / delete 는 사용자 승인 없이는 절대 실행하지 않는다.
 ```
 
-> 워크스페이스 공통 규칙상 `AGENTS.md`와 `CLAUDE.md`는 동등하다 — 어느 쪽이든 무방.
+> 2026-09-14 정정: 두 파일명은 Claude Code의 기본 로딩 규칙에서 동등하지 않다. Claude Code는 `CLAUDE.md`를 읽으며, `AGENTS.md` 공유는 명시적 import 등으로 연결해야 한다. [공식 문서](https://code.claude.com/docs/en/memory#agentsmd)
 
 ---
 
@@ -78,6 +78,10 @@ P4는 출력 토큰을 줄이는 플래그가 풍부하다. **terse 플래그를
 ---
 
 ## D. 리뷰/교차검증 워크플로우 (P4판)
+
+`p4 opened`는 아직 P4에 등록되지 않은 변경을 모두 보여주지 않는다. `p4 diff -du`만으로 신규·삭제·이동과 에셋 변경이 모두 검토되었다고 판단하지 않는다. 작업 CL의 action 목록과 작업 범위 내 reconcile 미리보기를 함께 확인하고, 해당 파일에 맞는 변경물 표현을 제공한다. [P4 reconcile](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_reconcile.html)
+
+번호 있는 CL은 작업 추적에 사용한다. 실제 편집 격리와 checkout·검증 계약은 [Perforce·UE5 하네스 설계와 Claude 운영안](../harness/perforce-ue5-harness-design-inputs.md)을 참고한다.
 
 git diff 대신:
 - **펜딩 변경 리뷰**: `p4 diff -du` 결과를 반대 도구(Claude↔Codex)에 전달.
