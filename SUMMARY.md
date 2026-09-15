@@ -9,6 +9,28 @@
 
 ---
 
+## 2026-09-15
+
+> **3 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 2건**
+
+### 1. AI Harness Token Scout — Delta Review, Evidence Basis, 완료 비용 중심 Context 최적화
+
+[`ai/trend/ai-harness-token-scout-2026-09-15.md`](./ai/trend/ai-harness-token-scout-2026-09-15.md)
+
+- Codex Guardian의 반복 Review를 전체 transcript 재전송이 아니라 `TranscriptCursor` 이후의 **Delta**로 동기화하고, history/reset lineage가 달라지면 Full로 안전하게 되돌리는 구조를 분석. 성공한 review만 checkpoint를 commit해 취소·실패 상태가 다음 reviewer에 전파되지 않도록 하는 패턴을 정리.
+- Durable state는 steering·진행 메타데이터처럼 inference와 background persistence를 겹칠 수 있는 항목과, tool side effect·build/test evidence·Perforce 상태·review checkpoint처럼 **동기 durability barrier가 필요한 항목**으로 구분하고 handoff/review/submit 경계에서 flush하는 운영 원칙을 제안.
+- Docket의 `contact_basis`처럼 evidence 결과와 근거를 분리하고, GitHub Copilot 실험의 **완료 Task 비용 중심 selective output compaction**, HydraFusion의 Single/Cascade/Critique 라우팅을 결합해 단순 token 최소화보다 재작업·품질·비용을 함께 최적화하는 방향을 도출.
+
+### 2. Taskuary — 업무 Intake부터 Coding Agent·Human Review까지 잇는 Local-first Control Plane
+
+[`ai/tools/taskuary.md`](./ai/tools/taskuary.md)
+
+- 이메일·메신저·이슈·리포트를 Unified Timeline으로 모으고 AI가 triage한 뒤 실제 작업은 Claude Code·Codex·Gemini 같은 기존 Coding CLI에 넘기며, 결과·답장은 **Review Queue에서 사람이 최종 승인**하는 local-first 업무 허브를 분석.
+- 자체 Coding Agent로 lock-in하기보다 기존 CLI를 실행하고 Studio/Live Workspace로 상태를 관찰하며, `Timeline → Triage → Agent Session → Review` 흐름과 blackboard 기반 충돌 조정이 **Work Intake + Agent Control Plane** 패턴으로 활용 가치가 높음.
+- Perforce first-class 지원은 확인되지 않았지만 blackboard를 `Agent별 workspace / pending CL / 수정 파일 / lock-conflict` 공유 계층으로 재해석하고, 반복 triage 판정을 deterministic rule로 승격해 불필요한 LLM 호출을 줄이는 PoC 방향을 제시.
+
+---
+
 ## 2026-09-14
 
 > **25 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 6건**
