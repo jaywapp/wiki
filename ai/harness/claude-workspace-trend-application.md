@@ -1,5 +1,5 @@
 ---
-title: Claude Workspace - Trend 적용 설계
+title: Claude Workspace - Trend 기반 심층 설계
 category: harness
 tags:
   - ai
@@ -8,504 +8,608 @@ tags:
   - context-engineering
   - token-optimization
   - perforce
+  - evidence
+  - orchestration
 source: ai/trend/ 2026-09-10~2026-09-16 synthesis
 updated: 2026-09-16
 ---
 
-# Claude Workspace - Trend 적용 설계
+# Claude Workspace - Trend 기반 심층 설계
 
-> `ai/trend/`의 Harness·Context·Token Scout를 Claude 기반 개발 워크스페이스 관점에서 재구성하면, 핵심은 **세션을 오래 유지하는 것**이 아니라 **작업 상태를 외부화하고 필요한 Context만 정확히 투영하며 결과를 Evidence로 검증하는 Workspace OS**를 만드는 것이다.
+> 최근 Harness/Context Engineering 사례가 공통으로 가리키는 방향은 Claude 세션을 더 오래 유지하는 것이 아니라, **작업 상태를 세션 밖에 보존하고, 매 실행에 필요한 Context만 투영하며, 완료 여부를 Evidence로 판정하는 Workspace OS**를 만드는 것이다.
 
 ## 한줄 요약
 
-Claude 기반 Workspace에는 `Durable Task State + Typed Context + Context Topology Router + Evidence Gate + Runtime/Cost Telemetry`를 중심축으로 적용하는 것이 가장 가치가 높다.
+Claude 기반 개발 Workspace의 핵심 구성은 `Durable Task State + Typed Context + Context Topology Router + Evidence Gate + Delta Review + Runtime/Cost Telemetry`이며, 각 요소는 최근 공개된 Harness 구현과 실험에서 반복적으로 관찰된다.
 
-## Trend에서 반복적으로 나타난 공통 방향
+## 1. 왜 Workspace OS인가
 
-2026-09-10~16 Scout를 종합하면 개별 프로젝트는 달라도 다음 방향이 반복된다.
-
-1. Chat/session history를 작업 상태의 SSoT로 사용하지 않는다.
-2. Durable history와 model-visible working context를 분리한다.
-3. Context는 무조건 요약하지 않고 중요도와 용도에 따라 분류한다.
-4. Subagent를 호출할 때 무조건 fresh context를 만들지 않고 inline/fork/isolated를 선택한다.
-5. Review에는 전체 transcript 대신 변경된 delta와 evidence를 우선 전달한다.
-6. 완료 여부를 LLM의 주장보다 build/test/diff 등의 evidence로 판정한다.
-7. Token/tool-call이 아니라 solved-task 전체 비용과 재작업률을 본다.
-8. Claude/Codex 같은 runtime은 orchestration core와 분리한다.
-
-## 제안 Workspace 구조
+일반적인 Claude Code 작업 환경은 대화 세션을 중심으로 움직인다.
 
 ```text
-root/
-├─ CLAUDE.md                  # 최소한의 전역 invariant / routing rule
-├─ .claude/
-│  ├─ agents/                 # 역할 정의
-│  ├─ skills/                 # progressive disclosure 절차
-│  └─ hooks/                  # output rewrite / evidence collection
-├─ .harness/
-│  ├─ tasks/                  # durable task contract
-│  ├─ handoffs/               # structured handoff
-│  ├─ evidence/               # build/test/p4 evidence
-│  ├─ checkpoints/            # context/review checkpoint
-│  └─ ledger/                 # append-only execution events
-├─ src/
-│  ├─ project1/
-│  ├─ project2/
-│  └─ project3/
-├─ release/
-└─ docs/
+User → Claude Session → Read/Search → Edit → Build/Test → Answer
 ```
 
-핵심은 `.claude/`를 Claude에게 보여줄 행동 규칙 계층으로, `.harness/`를 세션 밖에서도 유지되는 작업 상태 계층으로 분리하는 것이다.
+짧은 작업에서는 충분하지만 작업이 길어지면 다음 문제가 생긴다.
 
-## 1. Durable Task State
+- 세션 종료/compact 이후 이전 판단 근거가 약해진다.
+- 다른 agent가 작업을 이어받을 때 transcript를 다시 읽어야 한다.
+- Reviewer가 반복 호출될 때 이미 본 Context까지 재전송된다.
+- build/test 결과가 대화 속 텍스트로만 남으면 완료 판정의 근거가 약하다.
+- 긴 로그를 무조건 압축하면 agent가 원본을 다시 읽어 전체 비용이 오히려 증가할 수 있다.
+- Skill/Subagent를 언제 사용해야 하는지에 대한 실행 정책이 없다.
 
-### 적용 가치: 매우 높음 / 바로 적용
+따라서 세션을 작업의 Single Source of Truth로 두지 않고 Workspace 자체가 상태와 증거를 소유하도록 한다.
 
-세션이 끊기거나 compact되어도 작업을 복구할 수 있도록 task state를 외부화한다.
-
-```json
-{
-  "task_id": "...",
-  "project": "project1",
-  "goal": "...",
-  "pending_cl": 12345,
-  "status": "working",
-  "owner_agent": "project1-worker",
-  "base_revisions": [],
-  "constraints": [],
-  "next_actions": []
-}
+```text
+                    User / Goal
+                        │
+                        ▼
+                 Root Orchestrator
+                        │
+                 ┌──────┴──────┐
+                 │ Task Contract│
+                 └──────┬──────┘
+                        │
+              Context Topology Router
+                 /       |       \
+             INLINE     FORK    ISOLATED
+                │         │         │
+              Skill    Project   Specialist
+                        Agent      Agent
+                 \       |       /
+                  └──────┬──────┘
+                         ▼
+                   Tool Execution
+                         │
+                  Code / Perforce
+                         │
+               Evidence Collector
+                         │
+                  Delta Reviewer
+                         │
+              PASS / RETRY / HUMAN
+                         │
+                   Durable State
 ```
 
-DB는 scheduling/ownership 상태에 적합하고 workspace artifact는 사람이 읽을 수 있는 context/evidence에 적합하다. 둘을 경쟁시키지 말고 hybrid로 운영한다.
+---
 
-## 2. Typed Context
+# 2. Durable Task State
 
-### 적용 가치: 매우 높음 / 바로 적용
+## 아이디어
 
-모든 context를 같은 방식으로 compact하지 않는다.
+**대화가 아니라 외부 artifact가 작업 상태를 보유한다.**
+
+Trend의 `repo-harness`, `superharness`, Flow, Codex Guardian 계열에서 형태는 달라도 반복되는 패턴이다. `repo-harness`는 plan/handoff/check/review evidence를 repository file에 기록하고, `superharness`는 task lifecycle과 ledger를 durable state로 관리한다.
+
+### 근거가 되는 문제
+
+LLM conversation history는 실행에 좋은 working memory이지만 장기 기록의 원본으로 쓰기에는 불안정하다.
+
+- context window 제한
+- compaction
+- session 종료
+- model/runtime 변경
+- subagent delegation
+- reviewer 재시작
+
+때문에 `현재 모델에게 보여주는 상태`와 `실제 작업 상태`를 분리해야 한다.
+
+## Workspace 적용
+
+```text
+.harness/
+├─ tasks/
+│   └─ TASK-1042.json
+├─ handoffs/
+│   └─ TASK-1042.md
+├─ evidence/
+│   └─ TASK-1042/
+├─ checkpoints/
+│   └─ TASK-1042-review.json
+└─ ledger/
+    └─ TASK-1042.jsonl
+```
+
+Task 예시:
+
+```yaml
+id: TASK-1042
+goal: Submit Dialog validation 수정
+project: P4VCustom
+pending_cl: 182934
+status: implementing
+owner: project-p4v-worker
+context_policy: balanced
+review_generation: 3
+```
+
+Claude가 종료되어도 이 정보는 사라지지 않는다.
+
+## 기대 효과
+
+- 세션 재시작 비용 감소
+- Claude → Codex 또는 다른 Claude session handoff 가능
+- 장기 작업 복구 가능
+- 사람이 현재 작업 상태를 직접 확인 가능
+- transcript 전체를 durable memory로 사용할 필요 감소
+
+## 효과의 근거
+
+이 패턴 자체에 대한 단일 정량 benchmark는 아직 부족하다. 따라서 `세션 재시작 시 토큰 N% 감소`처럼 수치화해서 주장해서는 안 된다. 현재 근거는 여러 Harness가 동일한 문제를 durable state/ledger/checkpoint로 해결하고 있다는 구조적 수렴에 있다.
+
+---
+
+# 3. Typed Context — 모든 Context의 가치가 같지 않다
+
+## 아이디어
+
+Context를 단순히 `있음/없음`으로 관리하지 않고 의미와 중요도에 따라 분류한다.
 
 ```text
 PINNED
-- 사용자 요구사항
-- 프로젝트 invariant
-- 금지사항
-- 정확한 명령/경로
-
 REQUIRED
-- 현재 task
-- 현재 diff
-- failing test
-- 현재 Pending CL
-
 RETRIEVABLE
+EPHEMERAL
+```
+
+### PINNED
+
+절대 압축 과정에서 의미가 변하면 안 되는 정보.
+
+- 사용자 restriction
+- 프로젝트 invariant
+- 금지 명령
+- 정확한 build command
+- Perforce workspace 규칙
+
+### REQUIRED
+
+현재 task 해결에 직접 필요한 정보.
+
+- requirement
+- current diff
+- failing test
+- 관련 interface
+
+### RETRIEVABLE
+
+필요할 때 다시 가져올 수 있는 정보.
+
 - architecture docs
 - 과거 findings
-- 상세 evidence
+- API documentation
+- 이전 task evidence
 
-EPHEMERAL
-- 탐색 로그
-- verbose build output
-- 중간 reasoning 흔적
-```
+### EPHEMERAL
 
-`CLAUDE.md`에는 PINNED 성격의 최소 규칙만 두고, 상세 절차는 Skill, 과거 지식은 docs/retrieval로 내린다.
+현재 탐색에만 필요한 정보.
 
-## 3. Stable Prefix + Dynamic Tail
+- verbose build log
+- search 과정
+- 임시 hypothesis
+- progress output
 
-### 적용 가치: 높음 / 바로 적용
+## 근거
 
-Claude prompt cache를 고려해 자주 바뀌지 않는 내용을 앞쪽에 고정한다.
+9/13 Trend의 Knowledge Triage/Compaction 분석에서 Constraint/Procedure와 episodic information을 같은 압축 정책으로 처리하지 않는 방향이 확인됐다. Codex 계열 변화에서도 raw durable state와 model-visible projection을 분리하는 패턴이 반복된다.
 
-```text
-Stable Prefix
-  system / CLAUDE.md core
-  tool contract
-  stable policy
-  stable skill definition
+## 적용 사례
 
-Dynamic Tail
-  task contract
-  current diff
-  recent evidence
-  current handoff
-```
+TeamCity build가 30,000줄 로그를 생성했다고 가정한다.
 
-세션 상태, 시간, 동적 tool 목록처럼 자주 변하는 값을 stable prefix에 섞지 않는다. resume/compact/interrupt/auth 전환도 cache regression 대상으로 본다.
-
-## 4. Context Topology Router
-
-### 적용 가치: 매우 높음 / PoC 우선
-
-Subagent 호출을 하나의 방식으로 고정하지 않는다.
+기존 방식:
 
 ```text
-INLINE
-- 짧은 절차
-- 부모 context가 그대로 필요
-- Skill 호출 비용이 낮음
-
-FORK
-- 부모의 맥락을 많이 알아야 함
-- 병렬 분석/리뷰
-- 기존 context 재탐색을 피하고 싶음
-
-ISOLATED
-- task contract만으로 독립 수행 가능
-- context contamination을 피해야 함
-- 긴 탐색/전문 작업
+30,000 line log
+      ↓
+Claude Context
+      ↓
+context pressure
 ```
 
-Task Contract에 다음을 명시한다.
+Typed Context 방식:
+
+```text
+Raw Build Log                 EPHEMERAL
+     │
+     ├─ Error CS0123          REQUIRED
+     ├─ failed project        REQUIRED
+     ├─ build command         PINNED
+     └─ full artifact path    RETRIEVABLE
+                │
+                ▼
+             Claude
+```
+
+원본을 버리는 것이 아니라 **모델에 보이는 projection만 줄인다.**
+
+---
+
+# 4. 선택적 Output Compaction — 적게 보여주는 것이 항상 싸지는 않다
+
+이 원칙은 실제 공개 실험 결과가 있어 특히 중요하다.
+
+GitHub는 Copilot CLI Harness에서 shell output 압축을 실험했다. 강한 압축으로 개별 tool response는 짧아졌지만 필요한 정보가 사라진 경우 agent가 원본을 다시 열거나 command를 재실행했다. 즉 local token 절약이 task 전체 비용 증가로 이어질 수 있었다.
+
+GitHub가 최종적으로 채택한 방향은 output 종류별 선택적 압축이었다.
+
+```text
+원문 유지
+- source file
+- diff
+- arbitrary script output
+
+lossless 재구성
+- search / grep 결과
+- file 목록
+
+선택적 압축
+- build progress
+- test progress
+- install logs
+- 반복적인 diagnostic noise
+```
+
+또 불필요한 line-number formatting 제거는 Copilot Code Review 실험에서 평균 prompt token을 약 5% 줄였고 추적한 review-quality metric의 유의미한 악화가 관찰되지 않았다.
+
+Task-tool prompt 최적화에서는 처음 약 50%를 줄였더니 subagent parallelism이 직렬화되는 regression이 발생했다. 이를 behavior test로 잡고 한 문장을 수정한 뒤 최종적으로 **turn당 약 1,300 prompt token**, session 전체 prompt token 약 **1.8%**, normalized cost/active-hour 약 **2.9%** 감소가 보고됐다.
+
+Background task 완료 결과를 별도 retrieval turn 없이 직접 전달한 변경은 평균 token-related usage를 약 **2.3%** 줄였다.
+
+## Workspace 적용
+
+따라서 KPI를 이렇게 잡지 않는다.
+
+```text
+BAD
+Tokens / Tool Call
+```
+
+대신:
+
+```text
+GOOD
+Tokens / Solved Task
+Turns / Solved Task
+Recovery Rate
+Command Rerun Rate
+Quality Regression
+Wall-clock / Solved Task
+```
+
+### Perforce / UE / TeamCity 적용
+
+```text
+Exact
+p4 diff
+p4 describe
+source file
+arbitrary script output
+
+Reorganize
+p4 files
+grep/search
+opened file list
+
+Compact
+UE build progress
+TeamCity logs
+test progress
+package/install logs
+```
+
+---
+
+# 5. Result Push — 조회만 하기 위한 LLM Turn을 없앤다
+
+## 기존 방식
+
+```text
+Agent
+  │
+  ├─ start build
+  │
+  └─ 다른 작업
+
+Build System
+  │
+  └─ "completed"
+
+Agent
+  │
+  └─ get_result()      ← 추가 model/tool turn
+```
+
+## 개선
+
+```text
+Build System
+   │
+   └─ completion event
+        status
+        error summary
+        test summary
+        artifact pointer
+             │
+             ▼
+           Agent
+```
+
+GitHub Copilot Harness에서도 background completion 결과를 notification에 직접 포함해 retrieval-only step을 제거한 결과 token-related usage가 약 2.3% 감소했다.
+
+### 우리 Workspace 적용 예
+
+```json
+{
+  "event": "build.completed",
+  "task": "TASK-1042",
+  "status": "failed",
+  "errors": [
+    "SubmitDialogViewModel.cs:142 CS0123"
+  ],
+  "artifact": ".harness/evidence/TASK-1042/build-4.log"
+}
+```
+
+Claude는 `빌드 끝났나? → 결과 가져와`라는 왕복 없이 바로 다음 판단을 할 수 있다.
+
+---
+
+# 6. Context Topology Router — Skill인가, Fork인가, 독립 Agent인가
+
+## 문제
+
+Subagent를 많이 사용한다고 항상 token 효율이 좋아지는 것은 아니다.
+
+새 agent를 만들면 parent context가 줄어드는 대신 child에게 task/background를 다시 설명하고 결과를 parent로 반환해야 한다. 따라서 **peak context 절감과 total token 절감은 다른 문제**다.
+
+## 세 가지 실행 방식
+
+### INLINE
+
+현재 context에서 Skill/Tool을 실행한다.
+
+적합:
+
+- task가 짧음
+- parent context가 중요함
+- 결과가 즉시 필요함
+
+```text
+Parent Context
+      │
+     Skill
+      │
+    Result
+```
+
+### FORK
+
+Parent의 유효 context를 물려받은 별도 execution branch.
+
+적합:
+
+- 현재 조사/설계 context가 중요함
+- 병렬 작업 필요
+- 동일한 문제 공간을 공유함
+
+```text
+Parent Context ──────────┐
+                         ▼
+                    Fork Agent
+                         │
+                       Result
+```
+
+### ISOLATED
+
+명시적인 task contract만 전달하는 독립 context.
+
+적합:
+
+- 독립 조사
+- 보안 경계
+- context pollution 방지
+- Reviewer
+
+```text
+Parent
+  │
+Task Contract
+  │
+  ▼
+Fresh Agent Context
+```
+
+## 적용
+
+Task Contract에 실행 위치를 명시한다.
 
 ```yaml
 execution:
-  agent: reviewer
-  model: claude
-  effort: high
+  runtime: claude
+  model: sonnet
   context_mode: fork
-  input_contract:
-    - task
-    - diff
-    - evidence
+  context_policy: balanced
 ```
 
-이 구조는 기존의 '모델 라우터'를 '모델 + Context topology 라우터'로 확장한다.
+이렇게 하면 Orchestrator는 단순 model router가 아니라 **Context Topology Router** 역할까지 담당한다.
 
-## 5. Structured Handoff
+---
 
-### 적용 가치: 매우 높음 / 바로 적용
+# 7. Structured Handoff — 자유형 요약을 Protocol로 바꾼다
 
-자유형 세션 요약 대신 handoff schema를 고정한다.
+## 문제
+
+`지금까지 한 일을 다음 agent에게 설명해줘` 식의 handoff는 모델마다 형식과 정보 밀도가 달라진다.
+
+## 제안
 
 ```yaml
 handoff:
   goal:
   completed:
+  current_state:
   changed_files:
   constraints:
   decisions:
-  corrections:
   evidence:
+  failures:
   unresolved:
-  next_actions:
+  next_action:
 ```
 
-짧은 기본 handoff → 상세 ledger/evidence → 필요 시 raw transcript 순으로 계층화한다.
+## 효과
 
-## 6. Delta Reviewer
+- 다음 agent가 transcript를 읽을 필요 감소
+- 중요한 restriction 누락 위험 감소
+- machine-readable
+- reviewer input으로 재사용 가능
+- UI dashboard에 바로 표시 가능
 
-### 적용 가치: 매우 높음 / PoC
+단, handoff summary 자체를 원본으로 취급하면 안 된다. Raw ledger/evidence가 원본이고 handoff는 **재생성 가능한 projection**이어야 한다.
 
-Review가 반복될 때 전체 context를 다시 보내지 않는다.
+---
+
+# 8. Delta Reviewer — 이미 본 것을 다시 보내지 않는다
+
+Codex Guardian의 최근 구현에서 매우 직접적인 사례가 나타났다.
+
+Reviewer가 이전에 본 transcript 위치를 cursor로 보존하고 parent history lineage가 동일하면 이후 추가된 event만 `Delta`로 전달한다. history/reset lineage가 달라지면 안전하게 `Full` sync로 되돌아간다.
 
 ```text
 Review #1
-FULL: task + diff + evidence
-        ↓ checkpoint(cursor)
+A B C D
+    │
+    └─ cursor = D
 
-Worker 추가 수정
-        ↓
+Worker 추가 작업
+E F G
+
 Review #2
-DELTA: cursor 이후 edit/test/evidence
+E F G              ← Delta
 ```
 
-단, 다음 사건에서는 FULL로 안전하게 되돌린다.
+하지만 다음과 같은 사건은 이전 review reasoning을 무효화할 수 있다.
 
-- base depot revision 변경
-- `p4 revert` 또는 대규모 resync
-- task goal hard reset
-- evidence policy 변경
-- reviewer/context schema 비호환
+```text
+p4 revert
+base revision 변경
+workspace resync
+requirement hard reset
+review policy 변경
+```
 
-실패하거나 취소된 review는 checkpoint를 commit하지 않는다.
+이때는:
 
-## 7. Evidence Gate
+```text
+review_generation++
+FULL REVIEW
+```
 
-### 적용 가치: 매우 높음 / 바로 적용
+으로 되돌린다.
 
-`Reviewer가 좋아 보인다고 판단`하는 것과 `작업이 검증됨`을 분리한다.
+## Perforce용 Key
+
+```text
+pending_cl
+base_depot_revisions
+diff_hash
+evidence_generation
+review_generation
+review_cursor
+policy_hash
+```
+
+### 기대 효과
+
+반복 Review에서 과거 transcript 재전송을 구조적으로 줄인다. 다만 현재 공개 자료에는 이 변경 하나만의 정량 token 절감률은 없다. 따라서 PoC에서 직접 측정해야 한다.
+
+---
+
+# 9. Evidence Gate — Agent의 '완료했습니다'를 신뢰하지 않는다
+
+## 아이디어
+
+Task completion을 자연어 답변이 아니라 deterministic evidence와 reviewer 판단으로 결정한다.
 
 ```text
 Worker
-  ↓
-p4 diff / opened
-  ↓
-build
-  ↓
-test / static checks
-  ↓
+  │
+  ├─ edit
+  ├─ build
+  ├─ test
+  ├─ p4 diff
+  │
+  ▼
 Evidence Bundle
-  ↓
+  │
+  ▼
 Reviewer
-  ↓
-PASS / RETRY / HUMAN
+  │
+  ├─ PASS
+  ├─ RETRY
+  └─ HUMAN
 ```
 
-Evidence에는 값뿐 아니라 근거를 기록한다.
+## Evidence 예
 
 ```yaml
-claim:
-  status: passed
-  basis: teamcity-build-result
-  source_event_id: ...
-  observed_at: ...
-  strength: deterministic
+build:
+  status: pass
+  command: dotnet build
+  artifact: build.log
+
+tests:
+  total: 132
+  passed: 132
+  failed: 0
+
+perforce:
+  pending_cl: 182934
+  diff_hash: abc123
 ```
 
-`observed`, `inferred`, `model_claimed`를 구분한다.
+## Docket에서 얻을 수 있는 추가 원칙
 
-## 8. Output Compression 정책
-
-### 적용 가치: 높음 / 바로 적용
-
-모든 tool output을 줄이지 않는다.
+Evidence에는 결과만 저장하지 말고 **그 결과를 왜 믿는지**도 기록한다.
 
 ```text
-Exact / Lossless
-- source file
-- p4 diff
-- p4 describe
-- arbitrary script output
-
-Lossless Reorganization
-- search/grep
-- p4 files
-- opened file list
-
-Selective Compaction
-- UE build log
-- TeamCity log
-- test progress
-- install/package output
+EvidenceClaim
+  status
+  basis
+  source_event_id
+  observed_at
+  strength
 ```
 
-압축된 출력에는 항상 raw artifact pointer를 둔다. 압축 때문에 agent가 원본을 다시 조회하는 recovery가 자주 발생하면 최적화 실패로 본다.
+예를 들어 `approval_required`와 `human_reviewed`는 같은 사실이 아니다. 설정상 permission prompt가 필요했다는 것은 관찰/추론 가능한 반면 실제 사람이 diff를 읽었다는 사실은 별도 evidence가 없으면 주장할 수 없다.
 
-## 9. Background Result는 결과까지 Push
+이 원칙은 자동화가 커질수록 중요하다.
 
-### 적용 가치: 높음 / 바로 적용
+---
 
-`빌드 완료` 같은 notification만 보내면 Claude가 결과를 조회하는 추가 turn을 만든다.
+# 10. Stable Prefix + Dynamic Tail
+
+Claude의 prompt cache를 활용하려면 자주 바뀌지 않는 instruction을 앞쪽에 두고 task-specific context를 뒤쪽으로 보낸다.
 
 ```text
-BAD
-Build completed
-→ Claude: 결과 조회
-→ tool call
-→ 다음 turn
+Stable Prefix
+├─ system
+├─ organization policy
+├─ project invariants
+├─ tool contracts
+└─ stable skills
 
-GOOD
-Build completed
-status=failed
-error=...
-artifact=...
-→ 바로 다음 판단
+Dynamic Tail
+├─ task
+├─ current diff
+├─ recent evidence
+└─ latest handoff
 ```
 
-TeamCity/UE build/background agent 결과는 완료 이벤트에 summary + artifact pointer를 포함한다.
+9/11 이후 Scout에서는 Claude Code의 cache correctness 수정 사례가 반복적으로 확인됐다. 중요한 점은 단순히 cache를 켜는 것이 아니라 **불필요한 prefix 변화가 cache reuse를 깨지 않도록 Workspace materialization을 안정화하는 것**이다.
 
-## 10. Runtime Adapter
-
-### 적용 가치: 높음 / PoC
-
-Workspace core가 Claude CLI 세부사항을 직접 알지 않게 한다.
-
-```text
-Workspace Orchestrator
-        ↓
-IAgentRuntime
-  ├─ ClaudeCodeRuntime
-  ├─ CodexRuntime
-  └─ FutureRuntime
-```
-
-회사에서는 Claude가 main이더라도 Review나 특정 task를 Codex로 넘길 수 있고, 향후 runtime 교체 비용도 줄어든다.
-
-## 11. Single / Cascade / Critique Routing
-
-### 적용 가치: 중~높음 / 이후 PoC
-
-모델 하나를 고르는 데서 끝내지 않고 작업 난이도와 위험에 따라 실행 패턴을 고른다.
-
-```text
-SINGLE
-명확하고 저위험 → 한 번 실행
-
-CASCADE
-저비용/빠른 실행 → 실패 또는 낮은 confidence일 때 상위 모델
-
-CRITIQUE
-Worker 생성 → 독립 Reviewer 검증
-```
-
-코드 수정은 기본 SINGLE, 복잡한 분석은 CASCADE, submit 전 검증은 CRITIQUE처럼 사용할 수 있다.
-
-## 12. Token / Cost Telemetry
-
-### 적용 가치: 매우 높음 / 바로 설계
-
-최적화 KPI를 `tokens/tool-call`로 두지 않는다.
-
-최소 계측:
-
-```text
-Task
- └─ Agent
-     └─ Turn / Step
-         ├─ model
-         ├─ effort
-         ├─ skill
-         ├─ MCP/tool
-         ├─ input tokens
-         ├─ cache read
-         ├─ output tokens
-         ├─ duration
-         └─ cost
-```
-
-상위 KPI:
-
-- cost / solved task
-- turns / solved task
-- time / solved task
-- recovery rate
-- tool rerun rate
-- review retry count
-- quality / evidence pass rate
-
-## 13. Context Access Policy
-
-### 적용 가치: 매우 높음 / Enterprise 필수
-
-읽기 권한만 막아서는 부족하다. 같은 allowlist를 다음 경로에 모두 적용한다.
-
-```text
-ContextAccessPolicy
-  ├─ file read
-  ├─ p4 print
-  ├─ search/index
-  ├─ RAG
-  ├─ durable memory
-  ├─ handoff generation
-  └─ prompt preload
-```
-
-특히 회사 Workspace에서는 project별 context boundary가 subagent와 memory에도 유지되어야 한다.
-
-## 14. Atomic Recovery Checkpoint
-
-### 적용 가치: 높음 / 바로 적용
-
-interrupt 직전의 작업 상태와 재개 정보를 여러 파일/트랜잭션으로 따로 쓰지 않는다.
-
-```text
-Checkpoint
-- task state
-- current agent
-- pending tool/action
-- latest evidence generation
-- review cursor
-- handoff pointer
-```
-
-가능하면 하나의 원자적 write/transaction으로 기록하고 resume은 마지막 valid checkpoint에서 시작한다.
-
-## 현재 Workspace에 맞춘 목표 구조
-
-```text
-                         /goal
-                           │
-                           ▼
-                    Root Orchestrator
-                           │
-              Task Contract + Router
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-       INLINE            FORK           ISOLATED
-          │                │                │
-          ▼                ▼                ▼
-        Skill        Project Agent     Specialist Agent
-                           │
-                           ▼
-                  One Agent Workspace
-                           │
-                     Pending CL
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-       Durable Ledger             Evidence Collector
-              │                         │
-              └────────────┬────────────┘
-                           ▼
-                    Delta Reviewer
-                           │
-                    PASS / RETRY
-                           │
-                           ▼
-                     Release Agent
-```
-
-## 도입 우선순위
-
-### Phase 1 — 바로 적용
-
-1. `.harness/` durable task/handoff/evidence 구조
-2. Typed Context (`PINNED/REQUIRED/RETRIEVABLE/EPHEMERAL`)
-3. Structured Handoff
-4. Evidence Bundle schema
-5. background completion result push
-6. Context Access Policy
-7. task/agent/step telemetry schema
-
-### Phase 2 — PoC
-
-1. `inline / fork / isolated` Context Topology Router
-2. Delta Reviewer + review cursor/checkpoint
-3. Runtime Adapter
-4. selective log compactor + raw recovery
-5. atomic recovery checkpoint
-
-### Phase 3 — 최적화
-
-1. Single/Cascade/Critique adaptive routing
-2. Review Decision Cache
-3. Context checkpoint compatibility
-4. model-visible token budget admission
-5. cache-affinity-aware session scheduling
-
-## 당장은 하지 않아도 되는 것
-
-- 복잡한 autonomous multi-agent scheduler부터 만드는 것
-- 모든 로그를 LLM summary로 변환하는 것
-- 모든 subagent에 독립 workspace를 강제하는 것
-- token 수치 하나만 보고 aggressive compaction하는 것
-- 세션 transcript를 장기 기억의 SSoT로 사용하는 것
-
-먼저 **작업 상태·Context·Evidence의 contract를 안정화**한 뒤 자동화를 키우는 편이 안전하다.
-
-## 결론
-
-Trend 전체를 Claude Workspace에 적용할 때 가장 중요한 변화는 'Claude를 더 잘 프롬프트하는 법'이 아니다.
-
-Workspace 자체가 다음 다섯 가지를 책임하도록 만드는 것이다.
-
-1. **State** — 세션 밖에서도 작업을 복구한다.
-2. **Context** — 필요한 정보만 적절한 topology로 전달한다.
-3. **Execution** — Skill/Agent/Runtime을 task에 맞게 선택한다.
-4. **Evidence** — 완료를 deterministic evidence로 검증한다.
-5. **Telemetry** — token이 아니라 solved-task 비용과 품질을 측정한다.
-
-이 구조가 자리 잡으면 Claude Code 세션은 Workspace의 '두뇌' 중 하나가 되고, 실제 연속성과 신뢰성은 Harness가 담당하게 된다.
-
-## 참고 자료
-
-- `ai/trend/ai-harness-scout-2026-09-10.md`
-- `ai/trend/ai-harness-token-scout-2026-09-11.md`
-- `ai/trend/ai-harness-token-scout-2026-09-12.md`
-- `ai/trend/ai-harness-token-scout-2026-09-13.md`
-- `ai/trend/ai-harness-token-scout-2026-09-14.md`
-- `ai/trend/ai-harness-token-scout-2026-09-15.md`
-- `ai/trend/ai-harness-token-scout-2026-09-16.md`
+CLAUDE.md에 runtime state나 timestamp 같은 동적 정보를 계속 삽입하는 것은 피한다.
