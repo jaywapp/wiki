@@ -9,6 +9,44 @@
 
 ---
 
+## 2026-09-16
+
+> **6 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. AI Harness Token Scout — Context Compatibility, Review Freshness, Atomic Recovery
+
+[`ai/trend/ai-harness-token-scout-2026-09-16.md`](./ai/trend/ai-harness-token-scout-2026-09-16.md)
+
+- Claude Code v2.1.273에서 실제 model-visible context와 compact trigger 계측 오류, auth/usage 전환 시 prompt cache rewrite를 바로잡고, Agent/Skill/MCP/Tool별 OTEL 비용 귀속과 ContextAccessPolicy를 강화한 변화를 분석. Context 최적화의 전제를 정확한 계측·cache continuity·context firewall로 확장.
+- Codex Guardian 사례에서 compact checkpoint에 producer model/schema/policy compatibility를 기록하고 불일치 시 raw transcript·retained evidence에서 새 projection을 만드는 패턴, ReviewDecision cache가 action/evidence/policy/model/workspace 변화마다 fresh review를 요구해야 한다는 원칙을 정리.
+- Inline Skill / Fork / Isolated Subagent를 task별 Context topology로 선택하고, interrupt recovery state를 하나의 atomic checkpoint로 보존해 compaction·runtime 교체·중단 이후 재작업과 정보 손실을 줄이는 방향을 제안.
+
+### 2. Claude Workspace — Durable State·Typed Context·Evidence를 중심으로 한 Workspace OS
+
+[`ai/harness/claude-workspace-trend-application.md`](./ai/harness/claude-workspace-trend-application.md)
+
+- 같은 날 2개 연속 커밋을 하나로 통합. Chat/session history를 작업 SoT로 두지 않고 `.harness/tasks / handoffs / evidence / checkpoints / ledger`에 durable state를 외부화하며, PINNED/REQUIRED/RETRIEVABLE/EPHEMERAL typed context와 stable prefix/dynamic tail로 model-visible context를 제한하는 심층 설계를 추가.
+- `Task Contract → Context Topology Router(INLINE/FORK/ISOLATED) → Tool/Perforce → Evidence Collector → Delta Reviewer → PASS/RETRY/HUMAN → Durable State` 흐름을 구체화하고, 반복 review는 cursor 이후 delta만 전달하되 base revision·goal·policy·schema가 달라지면 full review로 복귀하도록 설계.
+- Build/Test/P4/TeamCity 결과를 evidence bundle로 관리하고, selective output compression, background result push, runtime adapter, cost-per-solved-task telemetry, ContextAccessPolicy, atomic recovery checkpoint까지 결합해 Claude/Codex를 교체 가능한 실행기로 다루는 Workspace OS 패턴을 제시.
+
+### 3. TypeSafe AI Jev — 생성형 LLM과 분리된 저비용 Decision Plane
+
+[`ai/news/typesafe-jev.md`](./ai/news/typesafe-jev.md)
+
+- 자유 텍스트를 생성하지 않고 `unstructured state → typed probabilistic decisions`를 반환하는 System One Model을 분석. 반복적인 분류·routing·validation·priority 판단을 frontier LLM 호출에서 분리해 agent inner loop의 latency·output-token·schema parsing 비용을 낮추는 구조.
+- Agent Harness에서는 task/worker routing, tool-call gate, retrieval relevance filter, 반복 rule check, Perforce CL triage 및 human escalation을 decision plane으로 맡기고, 생성·복잡 추론은 Claude/Codex가 계속 담당하도록 역할을 분리.
+- Vendor benchmark·가격은 실제 업무 데이터에서 재검증해야 하며 early access, calibration, enterprise data policy 때문에 전체 교체보다 bool/enum/score 계열 반복 판정부터 제한 PoC가 적합.
+
+### 4. Multica — Coding Agent CLI를 Issue 중심으로 운영하는 Self-hosted Control Plane
+
+[`ai/tools/multica.md`](./ai/tools/multica.md)
+
+- Claude Code·Codex·Cursor 등 기존 Coding Agent CLI를 바꾸지 않고 Issue/Project/Agent/Runtime/Run 모델로 배정·실행·상태·리뷰·토큰 사용을 관리하는 self-hosted Agent Workspace를 분석.
+- 핵심 패턴은 `Control Plane != Execution Plane`, `Issue = durable context anchor`, `Agent != Runtime`, `Run = observable execution unit`, `Human Review Gate`이며 Squad·Skill·Autopilot·retry/timeout까지 팀 운영 계층으로 제공.
+- Perforce native integration은 확인되지 않아 그대로 도입하기보다 `Task/Issue → Agent Role → Runtime/Workspace → Pending CL → Reviewer → Human Gate` 데이터 모델과 observability를 사내 Harness에 이식하는 방식이 현실적.
+
+---
+
 ## 2026-09-15
 
 > **3 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 2건**
