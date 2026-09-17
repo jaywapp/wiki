@@ -37,7 +37,7 @@ Code-Virtualize의 공식 데이터 확장자는 **`.cv`**다.
    └─ current.diff.cv
 ```
 
-`manifest.cv`에는 session ID, 생성 시각, workspace/VCS 기준점, schema version 등을 둔다. Perforce 환경에서는 have revision/changelist/digest 등을 기준점 후보로 검토한다.
+`manifest.cv`에는 session ID, 생성 시각, workspace/VCS 기준점, schema version 등을 둔다.
 
 ### Session Lifecycle
 
@@ -172,16 +172,12 @@ Claude에게는 초기에는 `cv_find`, `cv_get`, `cv_impact` 정도만 노출�
 
 ## 9. Workspace Integration
 
-Claude workspace에서는 Claude 설정과 CV runtime을 분리한다.
-
 ```text
 workspace/
 ├─ CLAUDE.md
 ├─ .claude/
 │  ├─ settings.json
-│  ├─ skills/
-│  │  └─ code-virtualize/
-│  │     └─ SKILL.md
+│  ├─ skills/code-virtualize/SKILL.md
 │  └─ hooks/
 ├─ .code-virtualize/
 │  ├─ config.json
@@ -191,11 +187,9 @@ workspace/
 └─ src/
 ```
 
-`.claude/`는 **Claude가 CV를 어떻게 사용할지 정의하는 AI Integration Layer**, `.code-virtualize/`는 **CV Engine runtime/data layer**다. `.code-virtualize/`는 재생성 가능한 artifact이므로 Git/Perforce ignore 대상으로 본다.
+`.claude/`는 AI Integration Layer, `.code-virtualize/`는 CV Engine runtime/data layer다. `.code-virtualize/`는 재생성 가능한 artifact이므로 VCS ignore 대상으로 본다.
 
 ## 10. Installation Model — Global + Workspace
-
-Code-Virtualize는 전역 설치와 특정 workspace 설치를 모두 지원하는 방향으로 설계한다.
 
 ```text
 Code-Virtualize
@@ -207,26 +201,10 @@ Code-Virtualize
 전역 설치를 해도 `.cv` runtime data는 각 workspace에 존재한다.
 
 ```text
-Global CV Engine
-      ↓
-Project A/.code-virtualize/
-Project B/.code-virtualize/
-Project C/.code-virtualize/
+Built-in Default → Global Config → Workspace Config → Session Override
 ```
 
-설정 precedence는 다음을 기본안으로 한다.
-
-```text
-Built-in Default
-      ↓
-Global Config
-      ↓
-Workspace Config
-      ↓
-Session Override
-```
-
-개념적 CLI UX:
+개념적 CLI:
 
 ```text
 cv install --global
@@ -239,44 +217,9 @@ cv integrate codex --workspace
 
 ## 11. Distribution Architecture — CLI/Core + Agent Plugin
 
-**Code-Virtualize 자체를 Claude Plugin으로 만들지 않는다.** 독립적인 AI Code Context Engine으로 만들고 Claude Plugin은 첫 번째 adapter/integration으로 둔다.
+**Code-Virtualize 자체를 Claude Plugin으로 만들지 않는다.** 독립적인 AI Code Context Engine으로 만들고 Claude Plugin은 첫 번째 integration으로 둔다.
 
-```text
-                 Code-Virtualize Engine
-                         │
-             ┌───────────┼───────────┐
-             ▼           ▼           ▼
-          Claude       Codex       Astra
-             │           │           │
-             └───────────┼───────────┘
-                         ▼
-                  Workspace .cv
-                         │
-                         ▼
-                    Source Code
-```
-
-### npm의 역할
-
-npm은 우선 **배포/launcher 수단**으로 검토한다.
-
-```text
-npm install -g code-virtualize
-
-cv init
-cv build
-cv status
-cv inspect
-```
-
-Workspace local 설치도 지원할 수 있다.
-
-```text
-npm install -D code-virtualize
-npx cv init
-```
-
-단, npm을 사용한다고 해서 Core 구현 전체를 Node/TypeScript로 제한하지 않는다. C#은 Roslyn worker, C++은 clang/tree-sitter 등 언어별 native/별도 adapter를 사용할 수 있다.
+npm은 우선 배포/launcher 수단으로 검토한다.
 
 ```text
 npm package / cv launcher
@@ -286,47 +229,16 @@ npm package / cv launcher
         └─ Generic Adapter → tree-sitter 등
 ```
 
-### Claude Plugin의 책임
-
-Claude Plugin에는 CV engine 자체보다 **언제/어떻게 CV를 사용할지에 대한 integration logic**을 둔다.
-
-```text
-code-virtualize-claude/
-├─ plugin metadata
-├─ skills/
-│  └─ code-virtualize/
-│     └─ SKILL.md
-└─ hooks/
-   ├─ session-start → cv build
-   └─ source-changed → cv update
-```
-
-즉 역할은 다음처럼 분리한다.
-
-```text
-CV CLI/Core
-  Source → .cv
-  .cv → Query / Resolve / Diff / Impact
-
-Claude Plugin
-  Claude session lifecycle
-  ↓
-  언제 CV Engine을 호출할지 결정
-```
-
-이렇게 하면 같은 Engine을 Claude, Codex, Astra, VS Code Extension, CI Review 등에서 공유할 수 있다.
+Claude Plugin은 session lifecycle과 CV 호출 시점을 담당한다.
 
 > **Code-Virtualize는 Claude Plugin이 아니다. 독립적인 AI Code Context Engine이고, Claude Plugin은 첫 번째 integration이다.**
 
 ## 12. Repository / Package 구조 초안
 
-초기에는 하나의 repository에서 monorepo 형태를 검토한다.
-
 ```text
 code-virtualize/
 ├─ packages/
 │  ├─ cli/
-│  │  └─ cv
 │  ├─ core/
 │  ├─ adapters/
 │  │  ├─ csharp/
@@ -338,53 +250,224 @@ code-virtualize/
 └─ tests/
 ```
 
-Core 구현 언어와 npm package 구조는 PoC 결과에 따라 조정한다.
-
 ## 13. 개발 순서
 
 ```text
-cv-build
- → cv-find
- → cv-resolve
- → cv-inspect
- → cv-update
- → virtual-reference / cv-impact
- → cv-diff
- → review integration
+cv-build → cv-find → cv-resolve → cv-inspect → cv-update
+         → virtual-reference / cv-impact → cv-diff → review integration
 ```
 
-### Phase 1 — Symbol PoC
-C# + Roslyn/AST를 우선 후보로 `symbol.cv`를 만들고 기존 Claude 탐색 대비 Read 호출 수, input token, latency를 측정한다.
+Phase 1은 C# + Roslyn/AST 기반 Symbol PoC, Phase 2는 incremental update, Phase 3은 Reference/Review 연동으로 진행한다.
 
-### Phase 2 — Session Consistency
-File watcher/Harness edit detection + `cv-update`로 changed-file incremental indexing을 구현한다.
+## 14. Benchmark / Value Validation Strategy
 
-### Phase 3 — Reference / Review
-`reference.cv`, `cv-impact`, `cv-diff`를 추가하고 Perforce changelist 기반 코드 리뷰에 적용한다.
+Code-Virtualize 완성 후의 평가는 단순히 "토큰이 줄었다"가 아니라 **비용, 속도, 정확도, 작업 품질, 운영 오버헤드의 trade-off**를 함께 측정한다.
 
-## 14. Astra와 구체화할 항목
+### 핵심 비교 원칙: A/B Paired Benchmark
+
+동일한 repository snapshot, 동일한 task, 동일한 모델/설정에서 두 조건을 반복 실행한다.
+
+```text
+A — Baseline
+Claude Code + 기존 grep/search/read
+
+B — CV
+Claude Code + Code-Virtualize
+
+같은 Repo / Commit / Prompt / Model / Tool 권한
+```
+
+가능하면 task 순서 효과와 모델 변동을 줄이기 위해 여러 회 반복하고 A/B 실행 순서를 교차한다. 결과 평가는 모델의 자기평가가 아니라 build/test, 정답 위치, diff, 독립 review 등 외부 기준을 우선한다.
+
+### Benchmark Task Set
+
+단순 symbol lookup만 테스트하지 않고 실제 개발 작업을 난이도별로 구성한다.
+
+| 유형 | 예시 | 주로 검증하는 것 |
+|---|---|---|
+| Navigation | 특정 method/class 위치와 역할 찾기 | `cv-find`, token/read 감소 |
+| Understanding | 기능 동작 흐름 설명 | reference/context 정확도 |
+| Bug Fix | 알려진 버그 수정 | 탐색 + 실제 작업 품질 |
+| Feature Change | 기존 기능 변경/확장 | dependency 탐색 |
+| Refactoring | method/class 구조 변경 | reference completeness |
+| Impact Analysis | 변경 영향 파일/symbol 찾기 | `cv-impact` |
+| Code Review | 준비된 CL/commit 리뷰 | `cv-diff`, review scope |
+| Stale/Missing CV | 일부 `.cv` 고의 손상 | fallback/self-healing |
+
+### Repository Scale Matrix
+
+효과는 코드베이스 크기에 따라 달라질 가능성이 높으므로 최소 세 단계로 나눈다.
+
+```text
+Small   : CV overhead가 이득보다 큰지 확인
+Medium  : 일반 프로젝트에서 break-even 확인
+Large   : CV의 핵심 가치 검증
+```
+
+LOC뿐 아니라 file count, symbol count, reference graph 크기, language(C#/C++), mono/multi-project 여부를 함께 기록한다.
+
+### Primary Metrics
+
+**1. Input Token** — 작업 완료까지 모델에 전달된 총 input token. 가장 핵심적인 효율 지표다.
+
+```text
+Token Saving % = (BaselineToken - CVToken) / BaselineToken × 100
+```
+
+**2. Source Read Volume** — LLM이 실제로 읽은 source line/byte 수와 Read 호출 횟수. 토큰 변화의 원인을 설명하는 지표다.
+
+**3. Tool Calls** — grep/search/read/find/resolve 등 탐색 관련 호출 수. CV가 탐색 왕복을 얼마나 줄였는지 본다.
+
+**4. Time to Completion** — prompt 입력부터 완료까지 wall-clock time. `cv-build` startup 비용을 반드시 포함한 **cold session**과 이미 구축된 **warm session**을 분리한다.
+
+**5. Task Success Rate** — build 성공, test 통과, 요구사항 충족 등 deterministic 기준으로 평가한다. 토큰을 줄이면서 성공률이 떨어지면 가치가 없다.
+
+### CV 자체의 품질 지표
+
+```text
+Symbol Hit Rate
+Reference Recall
+Resolve Accuracy
+Fallback Rate
+Stale Detection Rate
+Repair Success Rate
+```
+
+특히 `Fallback Rate`가 높다면 CV가 실제 탐색을 충분히 대체하지 못하고 있다는 신호다. 반대로 fallback을 무리하게 낮추다가 accuracy가 떨어져서도 안 된다.
+
+### Cost Accounting
+
+CV의 비용도 반드시 포함한다.
+
+```text
+Net Value
+ = LLM 탐색 비용 절감
+ + 작업시간 절감
+ - cv-build 비용
+ - incremental update 비용
+ - storage/memory 비용
+ - fallback/repair 비용
+```
+
+따라서 `cv-build`가 10초 걸리고 Claude 탐색을 2초 줄였다면 해당 작업에서는 손해다. 반대로 한 세션에서 여러 task를 수행한다면 build 비용을 session 전체에 amortize해서 계산한다.
+
+### Cold / Warm / Long Session
+
+세 가지 실행 모드를 별도로 측정한다.
+
+```text
+Cold Session
+cv-build 비용 포함 → 첫 task까지 총비용
+
+Warm Session
+.cv 구축 완료 → 순수 탐색 효율
+
+Long Session
+여러 edit/task 반복 → incremental update와 build 비용 amortization
+```
+
+Code-Virtualize가 **몇 번째 task부터 break-even에 도달하는지**를 중요한 제품 지표로 본다.
+
+### Review Benchmark
+
+미리 정답이 알려진 bug/issue가 포함된 commit 또는 changelist를 준비한다.
+
+```text
+Baseline Review
+Text Diff → Claude Review
+
+CV Review
+Text Diff + CV Diff + Impact → Claude Review
+```
+
+측정 항목:
+
+- 실제 defect 발견률
+- false positive 수
+- review input token
+- review source read volume
+- review 시간
+- 영향 symbol/file recall
+
+CV Review가 더 적은 context로 동일하거나 더 높은 defect recall을 보이는지를 확인한다.
+
+### Failure Injection Benchmark
+
+Self-Healing 설계를 별도로 검증한다.
+
+```text
+1. symbol.cv entry 삭제
+2. 잘못된 line range 삽입
+3. source 수정 후 cv-update 누락
+4. reference 일부 누락
+5. 파일 rename/move
+```
+
+각 상황에서 `오류 감지 → source fallback → repair → 정상 작업 지속` 여부와 추가 token/time 비용을 기록한다.
+
+### Telemetry / Benchmark Artifact
+
+CV Engine 자체가 benchmark에 필요한 telemetry를 남기도록 설계한다.
+
+```text
+.code-virtualize/metrics/
+└─ {session-id}.jsonl
+```
+
+예시 이벤트:
+
+```json
+{"event":"cv_find","durationMs":4,"hit":true,"results":1}
+{"event":"cv_resolve","lines":37,"valid":true}
+{"event":"fallback","reason":"stale_symbol"}
+{"event":"cv_update","files":1,"durationMs":31}
+```
+
+LLM token/tool-call 정보와 결합하여 한 세션의 CV 효율을 자동 리포트할 수 있도록 한다.
+
+### 최종 결과 표현
+
+단일 점수보다 trade-off를 그대로 보여준다.
+
+```text
+Code-Virtualize Benchmark
+
+Input Tokens       -42%
+Source Lines Read  -61%
+Search/Read Calls  -48%
+Wall Time          -18%
+Task Success       94% → 95%
+CV Build            1.8s
+Fallback Rate       3.1%
+Break-even          2.4 tasks/session
+```
+
+위 수치는 예시이며 실제 목표치가 아니다.
+
+### Go / No-Go 판단 원칙
+
+구현 전에 임의의 높은 목표 수치를 확정하기보다 PoC에서 baseline distribution을 확보한다. 이후 다음 질문으로 가치를 판단한다.
+
+1. **Quality Preservation:** CV 사용 시 task success/review quality가 baseline보다 실질적으로 악화되지 않는가?
+2. **Net Efficiency:** build/update/fallback 비용까지 포함해 token 또는 시간에서 순이익이 있는가?
+3. **Scale Benefit:** 프로젝트가 커질수록 이점이 증가하는가?
+4. **Operational Stability:** stale/missing data 상황에서 자동 fallback/repair가 안정적인가?
+5. **Repeatability:** 특정 task 한두 개가 아니라 여러 repository/task에서 효과가 반복되는가?
+
+이 다섯 조건을 만족할 때 Code-Virtualize의 실질적인 도입 가치가 있다고 판단한다.
+
+## 15. Astra와 구체화할 항목
 
 - npm을 launcher/distribution으로 사용할지
 - Core 구현 언어와 package 경계
-- Claude Plugin packaging 방식
-- Global/Workspace installation lifecycle
-- `.cv` serialization: JSONL / SQLite / custom binary
-- `.cv` schema/versioning
+- `.cv` serialization/schema
 - Roslyn / LSP / compiler API / tree-sitter 비교
 - C# / C++ / UE5 공통 schema
 - Progressive Symbol Virtualization depth
 - session start full-build latency
 - changed-file incremental indexing
 - Perforce baseline/freshness 검증
-- symbol ID 안정성
-- UE C++ macro/generated code
 - `cv-impact` dependency expansion
-- textual diff ↔ virtual diff mapping
 - Claude Code MCP/tool/hook 노출 방식
-- token/read-call/latency benchmark
-
----
-
-### 한 줄 정의
-
-> **Code-Virtualize는 세션 시작 시 현재 코드베이스를 `.cv`로 가상화하고 필요한 코드만 지연 materialize하는 독립적인 AI Code Context Engine이며, npm/CLI를 배포 인터페이스로, Claude Plugin을 첫 번째 Agent Integration으로 사용하는 구조를 지향한다.**
+- benchmark용 공개 C#/C++ repository 선정
+- benchmark task/g
