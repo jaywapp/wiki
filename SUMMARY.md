@@ -9,6 +9,44 @@
 
 ---
 
+## 2026-09-17
+
+> **11 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. AI Harness Token Scout — Provider-ledger A/B, Tool/Skill Deferral, Capability Scoping
+
+[`ai/trend/ai-harness-token-scout-2026-09-17.md`](./ai/trend/ai-harness-token-scout-2026-09-17.md)
+
+- Token Optimizer MCP의 실제 Provider usage ledger 기반 A/B에서 **Tool definition deferral은 큰 비용 절감 후보**로 확인된 반면, history substitution은 weighted input·실행시간·output token이 오히려 증가해 기존 proxy/오프라인 측정 결론을 뒤집음. Arm 실행 순서를 회전해 prompt-cache 위치 효과를 상쇄하고, 모든 arm을 같은 proxy 경로로 통과시키며 build/test를 correctness oracle로 삼는 benchmark 원칙까지 정리.
+- Codex는 environment별 disabled Skill을 짧게 요약하는 대신 **catalog/model context에서 완전히 제외**하는 방향으로 이동했고, inference와 durable rollout을 분리한 lossless background compression도 추가. Deep Agents의 offloaded result pointer·private state 보존, HarnessMark의 model-fixed harness benchmark, OpenHands의 Agent별 MCP/secret allow-list도 함께 분석.
+- 공통 결론은 history를 무조건 압축하기보다 **필요 전 capability를 context에 넣지 않는 deferral**, 실제 Provider 비용 계측, 역할별 capability surface 축소를 우선하고 `cost / solved task`와 quality를 함께 보는 방향이 더 안전하다는 것.
+
+### 2. Code-Virtualize — `.cv` 기반 Code Context Engine, Self-Healing, Review·Benchmark 설계
+
+[`ai/harness/code-virtualize.md`](./ai/harness/code-virtualize.md)
+
+- 같은 날 6개 연속 커밋을 하나로 통합. 전체 파일을 반복 `grep/read`하는 대신 세션 시작 시 `.cv` Virtual Index를 만들고 `virtual-symbol / virtual-remark / virtual-reference`에서 필요한 source만 지연 resolve하며, edit 후 changed-file incremental re-index로 freshness를 유지하는 **Code Context Virtualization Layer**를 구체화.
+- `.cv`는 source of truth가 아닌 disposable index로 두고 MISS/STALE이면 실제 source search로 fallback한 뒤 index를 repair하는 self-healing 구조, `CV₀ ↔ CV₁` semantic diff와 Perforce textual diff를 함께 사용해 review scope를 찾되 실제 source/diff를 최종 evidence로 삼는 원칙을 정의.
+- Core는 Claude Plugin 자체가 아니라 독립 Engine으로 두고 npm/CLI + C# Roslyn, C++ clang/tree-sitter adapter를 검토. Baseline vs CV paired benchmark에서 input token·source read·tool call·cold/warm time·task success·reference recall·fallback/repair와 build/update overhead를 함께 측정하고, failure injection·review defect recall까지 검증하도록 가치 평가 전략을 추가.
+
+### 3. Virtual Remark — 주석을 Hot/Warm/Cold로 나누는 Lazy Context Retrieval
+
+[`ai/harness/lazy-comment-context-retrieval.md`](./ai/harness/lazy-comment-context-retrieval.md)
+
+- 소스의 모든 주석을 항상 모델에게 전달하지 않고 AST/Tree-sitter로 별도 Remark Store에 추출해 `VR:*` 참조 키만 유지한 뒤, Coding Agent가 필요할 때 `get_remark`/batch retrieval로 원문을 hydrate하는 **Virtual Remark** 패턴을 추가.
+- 모든 주석을 숨기지 않고 safety invariant·동시성·workaround 같은 중요한 설명은 **Hot**, API 계약·함수 설명은 **Warm(요약+ID)**, 긴 문서·라이선스·반복 설명은 **Cold(ID만)** 로 분류해 의미 손실 위험과 token 절감 사이를 조절.
+- 편집은 원본 source에 유지하고 Virtual Remark는 탐색/분석 read path로 한정하며, 실제 PoC에서는 원본/가상화 token, 추가 retrieval, tool-call 수, task 정확도, build/test 성공률, prompt-cache 상호작용을 함께 측정하도록 제안.
+
+### 4. AgentBox — Coding Agent의 고권한 실행을 Container Boundary 안으로 제한
+
+[`ai/tools/agentbox.md`](./ai/tools/agentbox.md)
+
+- Claude Code·OpenCode 같은 Coding Agent를 프로젝트 디렉터리만 bind mount한 ephemeral Docker/Podman container에서 실행해, permission prompt를 줄이면서도 호스트 전체의 blast radius를 제한하는 경량 execution sandbox를 분석.
+- 프로젝트별 cache/history와 인증 상태는 선택적으로 지속시키고 SSH를 별도 격리하며, 단순 shell script + image 구조와 새 CLI 지원을 Agent가 prompt로 생성하는 **Prompt as Extension** 패턴이 특징. 다만 project mount 자체는 쓰기 가능하고 Docker socket·network control·dependency pinning·Windows/WSL2는 별도 위험/검증 포인트.
+- Perforce/UE5 환경에서는 P4 ticket·client mapping·agent별 workspace·사내 proxy/cert·credential mount를 검증하고, UE Editor/대형 build는 host-side controlled tool에 남기되 Claude의 shell/tool execution만 container에 격리하는 하이브리드 PoC가 현실적인 적용안으로 평가.
+
+---
+
 ## 2026-09-16
 
 > **6 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
@@ -440,7 +478,7 @@
 
 - Claude Managed Agents가 cron 기반 반복 실행과 pause/resume/archive를 지원해 일회성 대화형 Agent를 **지속 운영되는 Scheduled Worker**로 확장.
 - Vault는 실제 secret을 Agent sandbox에 직접 노출하지 않고 **network boundary에서 allowlisted domain 요청에만 credential을 주입**해 CLI/API/MCP 연동의 secret 노출 면을 줄인다.
-- 결정론적인 build/deploy는 TeamCity·GitHub Actions에 유지하고, Wiki digest·로그 분석·상태 점검처럼 매 실행마다 AI 판단이 필요한 정기 업무만 Agent scheduler로 분리하는 기준을 제안.
+- 결정론적인 build/deploy는 TeamCity·GitHub Actions에 유지하고, Wiki digest·로그 분석·상태 점검처럼 매 실행마다 AI 판단이 필요한 정기 업무만 Agent scheduler로 분리하는 기준을 제시.
 
 ### 8. Wiki Reader — 검색 가능한 자료실과 날짜별 업데이트 페이지 운영화
 
@@ -529,7 +567,7 @@
 
 - AI Coding Agent가 개발 프로세스 전체를 장악하는 거대한 프레임워크보다 **요구사항 정렬, 도메인 모델링, TDD, 디버깅, 코드 리뷰** 같은 기존 엔지니어링 규율을 작고 조합 가능한 Skill로 제공하는 접근을 정리.
 - `CONTEXT.md`에 프로젝트의 공통 용어와 도메인 어휘를 축적해 Agent의 장황한 설명과 명명 불일치를 줄이고, 세션을 넘어 재사용 가능한 **공유 Context 인터페이스**로 활용하는 패턴을 분석.
-- user-invoked orchestration skill과 model-invoked reusable discipline을 분리하고, Standards/Spec을 서로 다른 Subagent가 병렬 검토하는 방식처럼 **작은 Skill 조합 + 독립 검증**으로 품질을 높이는 구조를 제시.
+- user-invoked orchestration skill과 model-invoked reusable discipline을 분리하고, Standards/Spec을 서로 다른 Subagent가 병렬 검토하는 방식처럼 **작은 Skill 조합 + 독립 검증**으로 품질을 높이는 구조를 제안.
 
 ### 2. Linear UI/UX — 고밀도 생산성 도구의 일관된 작업 모델
 
@@ -1083,7 +1121,7 @@
 - Hermes Profile을 이름·역할·모델·메모리·Skill을 가진 **영구 Agent**로 운영하는 Bot Mode를 정리.
 - Bot 간 `@mention`, Direct Message, Group Chat, Routine, multi-machine routing 등을 하나의 Desktop UX로 제공.
 - `Profile + Persistent Memory + Skill Isolation + Routine + Bot-to-Bot Messaging`을 결합한 개인 Agent Team 구성에 특히 유용.
-- 2026-08-20 기준 빠르게 개발 중인 기능이므로 중요 작업에 바로 전면 도입하기보다는 테스트 Bot/Profile로 검증 후 확대하는 편이 안전.
+- 2026-08-20 기준 빠르게 개발 중인 기능이므로 중요 작업에 바로 전면 도입하기보다 테스트 Bot/Profile로 검증 후 확대하는 편이 안전.
 
 ### 기타
 
