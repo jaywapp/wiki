@@ -17,3 +17,9 @@
 | [BeScore Reboot](bescore-reboot.md) | Idea | 0.1 | 2026-08-26 | sports, live-score, web, football, bescore |
 | [Marvelog](marvelog.md) | Idea | 0.1 | 2026-08-26 | marvel, checklist, watch-tracking, sharing, recommendation, entertainment |
 | [agent-backlog](agent-backlog.md) | Idea | 0.1 | 2026-08-26 | agent-backlog, claude-code, codex, automation, cli, ai-workflow, scm |
+
+## 검토 의견
+
+| 문서 | 대상 | 검토자 | Updated |
+|---|---|---|---|
+| [Task Token Meter 검토 — Claude 의견](task-token-meter-claude-feedback.md) | [Task Token Meter](task-token-meter.md) | Claude (Opus 5) | 2026-09-19 |
