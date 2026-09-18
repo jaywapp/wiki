@@ -9,6 +9,494 @@
 
 ---
 
+## 2026-09-17
+
+> **11 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. AI Harness Token Scout — Provider-ledger A/B, Tool/Skill Deferral, Capability Scoping
+
+[`ai/trend/ai-harness-token-scout-2026-09-17.md`](./ai/trend/ai-harness-token-scout-2026-09-17.md)
+
+- Token Optimizer MCP의 실제 Provider usage ledger 기반 A/B에서 **Tool definition deferral은 큰 비용 절감 후보**로 확인된 반면, history substitution은 weighted input·실행시간·output token이 오히려 증가해 기존 proxy/오프라인 측정 결론을 뒤집음. Arm 실행 순서를 회전해 prompt-cache 위치 효과를 상쇄하고, 모든 arm을 같은 proxy 경로로 통과시키며 build/test를 correctness oracle로 삼는 benchmark 원칙까지 정리.
+- Codex는 environment별 disabled Skill을 짧게 요약하는 대신 **catalog/model context에서 완전히 제외**하는 방향으로 이동했고, inference와 durable rollout을 분리한 lossless background compression도 추가. Deep Agents의 offloaded result pointer·private state 보존, HarnessMark의 model-fixed harness benchmark, OpenHands의 Agent별 MCP/secret allow-list도 함께 분석.
+- 공통 결론은 history를 무조건 압축하기보다 **필요 전 capability를 context에 넣지 않는 deferral**, 실제 Provider 비용 계측, 역할별 capability surface 축소를 우선하고 `cost / solved task`와 quality를 함께 보는 방향이 더 안전하다는 것.
+
+### 2. Code-Virtualize — `.cv` 기반 Code Context Engine, Self-Healing, Review·Benchmark 설계
+
+[`ai/harness/code-virtualize.md`](./ai/harness/code-virtualize.md)
+
+- 같은 날 6개 연속 커밋을 하나로 통합. 전체 파일을 반복 `grep/read`하는 대신 세션 시작 시 `.cv` Virtual Index를 만들고 `virtual-symbol / virtual-remark / virtual-reference`에서 필요한 source만 지연 resolve하며, edit 후 changed-file incremental re-index로 freshness를 유지하는 **Code Context Virtualization Layer**를 구체화.
+- `.cv`는 source of truth가 아닌 disposable index로 두고 MISS/STALE이면 실제 source search로 fallback한 뒤 index를 repair하는 self-healing 구조, `CV₀ ↔ CV₁` semantic diff와 Perforce textual diff를 함께 사용해 review scope를 찾되 실제 source/diff를 최종 evidence로 삼는 원칙을 정의.
+- Core는 Claude Plugin 자체가 아니라 독립 Engine으로 두고 npm/CLI + C# Roslyn, C++ clang/tree-sitter adapter를 검토. Baseline vs CV paired benchmark에서 input token·source read·tool call·cold/warm time·task success·reference recall·fallback/repair와 build/update overhead를 함께 측정하고, failure injection·review defect recall까지 검증하도록 가치 평가 전략을 추가.
+
+### 3. Virtual Remark — 주석을 Hot/Warm/Cold로 나누는 Lazy Context Retrieval
+
+[`ai/harness/lazy-comment-context-retrieval.md`](./ai/harness/lazy-comment-context-retrieval.md)
+
+- 소스의 모든 주석을 항상 모델에게 전달하지 않고 AST/Tree-sitter로 별도 Remark Store에 추출해 `VR:*` 참조 키만 유지한 뒤, Coding Agent가 필요할 때 `get_remark`/batch retrieval로 원문을 hydrate하는 **Virtual Remark** 패턴을 추가.
+- 모든 주석을 숨기지 않고 safety invariant·동시성·workaround 같은 중요한 설명은 **Hot**, API 계약·함수 설명은 **Warm(요약+ID)**, 긴 문서·라이선스·반복 설명은 **Cold(ID만)** 로 분류해 의미 손실 위험과 token 절감 사이를 조절.
+- 편집은 원본 source에 유지하고 Virtual Remark는 탐색/분석 read path로 한정하며, 실제 PoC에서는 원본/가상화 token, 추가 retrieval, tool-call 수, task 정확도, build/test 성공률, prompt-cache 상호작용을 함께 측정하도록 제안.
+
+### 4. AgentBox — Coding Agent의 고권한 실행을 Container Boundary 안으로 제한
+
+[`ai/tools/agentbox.md`](./ai/tools/agentbox.md)
+
+- Claude Code·OpenCode 같은 Coding Agent를 프로젝트 디렉터리만 bind mount한 ephemeral Docker/Podman container에서 실행해, permission prompt를 줄이면서도 호스트 전체의 blast radius를 제한하는 경량 execution sandbox를 분석.
+- 프로젝트별 cache/history와 인증 상태는 선택적으로 지속시키고 SSH를 별도 격리하며, 단순 shell script + image 구조와 새 CLI 지원을 Agent가 prompt로 생성하는 **Prompt as Extension** 패턴이 특징. 다만 project mount 자체는 쓰기 가능하고 Docker socket·network control·dependency pinning·Windows/WSL2는 별도 위험/검증 포인트.
+- Perforce/UE5 환경에서는 P4 ticket·client mapping·agent별 workspace·사내 proxy/cert·credential mount를 검증하고, UE Editor/대형 build는 host-side controlled tool에 남기되 Claude의 shell/tool execution만 container에 격리하는 하이브리드 PoC가 현실적인 적용안으로 평가.
+
+---
+
+## 2026-09-16
+
+> **6 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. AI Harness Token Scout — Context Compatibility, Review Freshness, Atomic Recovery
+
+[`ai/trend/ai-harness-token-scout-2026-09-16.md`](./ai/trend/ai-harness-token-scout-2026-09-16.md)
+
+- Claude Code v2.1.273에서 실제 model-visible context와 compact trigger 계측 오류, auth/usage 전환 시 prompt cache rewrite를 바로잡고, Agent/Skill/MCP/Tool별 OTEL 비용 귀속과 ContextAccessPolicy를 강화한 변화를 분석. Context 최적화의 전제를 정확한 계측·cache continuity·context firewall로 확장.
+- Codex Guardian 사례에서 compact checkpoint에 producer model/schema/policy compatibility를 기록하고 불일치 시 raw transcript·retained evidence에서 새 projection을 만드는 패턴, ReviewDecision cache가 action/evidence/policy/model/workspace 변화마다 fresh review를 요구해야 한다는 원칙을 정리.
+- Inline Skill / Fork / Isolated Subagent를 task별 Context topology로 선택하고, interrupt recovery state를 하나의 atomic checkpoint로 보존해 compaction·runtime 교체·중단 이후 재작업과 정보 손실을 줄이는 방향을 제안.
+
+### 2. Claude Workspace — Durable State·Typed Context·Evidence를 중심으로 한 Workspace OS
+
+[`ai/harness/claude-workspace-trend-application.md`](./ai/harness/claude-workspace-trend-application.md)
+
+- 같은 날 2개 연속 커밋을 하나로 통합. Chat/session history를 작업 SoT로 두지 않고 `.harness/tasks / handoffs / evidence / checkpoints / ledger`에 durable state를 외부화하며, PINNED/REQUIRED/RETRIEVABLE/EPHEMERAL typed context와 stable prefix/dynamic tail로 model-visible context를 제한하는 심층 설계를 추가.
+- `Task Contract → Context Topology Router(INLINE/FORK/ISOLATED) → Tool/Perforce → Evidence Collector → Delta Reviewer → PASS/RETRY/HUMAN → Durable State` 흐름을 구체화하고, 반복 review는 cursor 이후 delta만 전달하되 base revision·goal·policy·schema가 달라지면 full review로 복귀하도록 설계.
+- Build/Test/P4/TeamCity 결과를 evidence bundle로 관리하고, selective output compression, background result push, runtime adapter, cost-per-solved-task telemetry, ContextAccessPolicy, atomic recovery checkpoint까지 결합해 Claude/Codex를 교체 가능한 실행기로 다루는 Workspace OS 패턴을 제시.
+
+### 3. TypeSafe AI Jev — 생성형 LLM과 분리된 저비용 Decision Plane
+
+[`ai/news/typesafe-jev.md`](./ai/news/typesafe-jev.md)
+
+- 자유 텍스트를 생성하지 않고 `unstructured state → typed probabilistic decisions`를 반환하는 System One Model을 분석. 반복적인 분류·routing·validation·priority 판단을 frontier LLM 호출에서 분리해 agent inner loop의 latency·output-token·schema parsing 비용을 낮추는 구조.
+- Agent Harness에서는 task/worker routing, tool-call gate, retrieval relevance filter, 반복 rule check, Perforce CL triage 및 human escalation을 decision plane으로 맡기고, 생성·복잡 추론은 Claude/Codex가 계속 담당하도록 역할을 분리.
+- Vendor benchmark·가격은 실제 업무 데이터에서 재검증해야 하며 early access, calibration, enterprise data policy 때문에 전체 교체보다 bool/enum/score 계열 반복 판정부터 제한 PoC가 적합.
+
+### 4. Multica — Coding Agent CLI를 Issue 중심으로 운영하는 Self-hosted Control Plane
+
+[`ai/tools/multica.md`](./ai/tools/multica.md)
+
+- Claude Code·Codex·Cursor 등 기존 Coding Agent CLI를 바꾸지 않고 Issue/Project/Agent/Runtime/Run 모델로 배정·실행·상태·리뷰·토큰 사용을 관리하는 self-hosted Agent Workspace를 분석.
+- 핵심 패턴은 `Control Plane != Execution Plane`, `Issue = durable context anchor`, `Agent != Runtime`, `Run = observable execution unit`, `Human Review Gate`이며 Squad·Skill·Autopilot·retry/timeout까지 팀 운영 계층으로 제공.
+- Perforce native integration은 확인되지 않아 그대로 도입하기보다 `Task/Issue → Agent Role → Runtime/Workspace → Pending CL → Reviewer → Human Gate` 데이터 모델과 observability를 사내 Harness에 이식하는 방식이 현실적.
+
+---
+
+## 2026-09-15
+
+> **3 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 2건**
+
+### 1. AI Harness Token Scout — Delta Review, Evidence Basis, 완료 비용 중심 Context 최적화
+
+[`ai/trend/ai-harness-token-scout-2026-09-15.md`](./ai/trend/ai-harness-token-scout-2026-09-15.md)
+
+- Codex Guardian의 반복 Review를 전체 transcript 재전송이 아니라 `TranscriptCursor` 이후의 **Delta**로 동기화하고, history/reset lineage가 달라지면 Full로 안전하게 되돌리는 구조를 분석. 성공한 review만 checkpoint를 commit해 취소·실패 상태가 다음 reviewer에 전파되지 않도록 하는 패턴을 정리.
+- Durable state는 steering·진행 메타데이터처럼 inference와 background persistence를 겹칠 수 있는 항목과, tool side effect·build/test evidence·Perforce 상태·review checkpoint처럼 **동기 durability barrier가 필요한 항목**으로 구분하고 handoff/review/submit 경계에서 flush하는 운영 원칙을 제안.
+- Docket의 `contact_basis`처럼 evidence 결과와 근거를 분리하고, GitHub Copilot 실험의 **완료 Task 비용 중심 selective output compaction**, HydraFusion의 Single/Cascade/Critique 라우팅을 결합해 단순 token 최소화보다 재작업·품질·비용을 함께 최적화하는 방향을 도출.
+
+### 2. Taskuary — 업무 Intake부터 Coding Agent·Human Review까지 잇는 Local-first Control Plane
+
+[`ai/tools/taskuary.md`](./ai/tools/taskuary.md)
+
+- 이메일·메신저·이슈·리포트를 Unified Timeline으로 모으고 AI가 triage한 뒤 실제 작업은 Claude Code·Codex·Gemini 같은 기존 Coding CLI에 넘기며, 결과·답장은 **Review Queue에서 사람이 최종 승인**하는 local-first 업무 허브를 분석.
+- 자체 Coding Agent로 lock-in하기보다 기존 CLI를 실행하고 Studio/Live Workspace로 상태를 관찰하며, `Timeline → Triage → Agent Session → Review` 흐름과 blackboard 기반 충돌 조정이 **Work Intake + Agent Control Plane** 패턴으로 활용 가치가 높음.
+- Perforce first-class 지원은 확인되지 않았지만 blackboard를 `Agent별 workspace / pending CL / 수정 파일 / lock-conflict` 공유 계층으로 재해석하고, 반복 triage 판정을 deterministic rule로 승격해 불필요한 LLM 호출을 줄이는 PoC 방향을 제시.
+
+---
+
+## 2026-09-14
+
+> **25 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 6건**
+
+### 1. Agent Handoff / Evidence — 계층형 Retrieval, Per-hunk Provenance, Model-visible Context 분리
+
+[`ai/tools/ccompactor.md`](./ai/tools/ccompactor.md) · [`ai/tools/docket.md`](./ai/tools/docket.md) · [`ai/news/ai-harness-token-scout-2026-09-14.md`](./ai/news/ai-harness-token-scout-2026-09-14.md) · [`ai/trend/ai-harness-token-scout-2026-09-14.md`](./ai/trend/ai-harness-token-scout-2026-09-14.md)
+
+- **CCompactor**는 Claude Code·Codex·Pi transcript를 공통 IR로 바꾸고, L0 Brief → L1 선택적 narrative → L2 deterministic ledger → L3 원문 event retrieval index의 4계층 handoff artifact로 만들어 전체 transcript 재주입을 줄이는 구조를 제시. 요약 자체를 source of truth로 두지 않고 provenance pointer로 원문에 돌아갈 수 있게 하는 점이 핵심.
+- **Docket**은 Agent가 만든 최종 diff의 각 hunk에 edit provenance와 변경 이후 실제 실행된 test·type/static check·coverage를 연결하고, attribution이 불확실하면 `unknown`으로 남겨 Reviewer가 낮은 evidence 영역부터 보도록 하는 evidence-aware review 패턴을 제공.
+- 9월 14일 Harness Scout에서는 Codex 최근 구현을 바탕으로 **audit/observability metadata와 model-visible payload를 분리**하고, multi-model workflow의 model·effort·tool inventory·approval policy는 turn 전체가 아니라 실제 Tool을 발행한 issuing step에 귀속해야 한다는 운영 원칙을 추가.
+
+### 2. Context Strategy Routing — Strands의 Task별 Compression Policy
+
+[`ai/tools/strands-agents-context-manager.md`](./ai/tools/strands-agents-context-manager.md)
+
+- 기존 durable stash / bounded retrieval 구조에 `auto`와 `agentic` named strategy preset이 추가되어, exploration-heavy 작업과 focused coding 작업에 서로 다른 tool-result truncation·summarization aggressiveness를 적용할 수 있게 됨.
+- `proactive_summarization`, `large_tool_offloading`, `overflow_protection`, `stale_tool_cleanup` 같은 building-block preset도 분리되어 Context 관리가 하나의 고정 알고리즘이 아니라 **task 성격에 따라 라우팅하는 runtime policy**로 구체화.
+- 실제 Harness에는 threshold 숫자를 그대로 복사하기보다 `focused / exploration / log-heavy → conservative / balanced / aggressive`처럼 Task Classifier와 Context Policy를 연결하고 cost/성공률·retry·lost-evidence를 함께 측정하는 방향이 적합.
+
+### 3. PWN — 보안 자동화와 Agent Harness를 결합한 DevSecOps 실행 구조
+
+[`ai/tools/pwn.md`](./ai/tools/pwn.md)
+
+- Ruby 기반 보안 자동화 프레임워크가 `Registry → Dispatch → ToolGuard → Verification → Memory/Learning`의 Agent Runtime으로 확장되어 SAST·Burp·Recon 등 실제 보안 도구 실행과 LLM 판단을 하나의 폐쇄 루프로 연결하는 구조를 분석.
+- Memory, Learning/Mistakes, Reflect, Reward, Policy, ToolGuard, PromptCache, Swarm, MCP까지 장기 실행 Agent에 필요한 책임을 코드 수준에서 분리한 사례로, 일반 Coding Agent보다 **보안 도구 orchestration + 검증**에 초점이 강함.
+- Windows/Perforce 환경에서는 전체 프레임워크 도입보다 Linux worker/container에서 변경 파일을 분석하고 `SAST findings + diff + repository context`를 Reviewer Agent가 검증하도록 하는 DevSecOps 패턴을 선별 적용하는 편이 현실적이라고 평가.
+
+### 4. Perforce·UE5 Harness — 구현 전에 확정할 12개 설계 입력과 경계
+
+[`ai/harness/perforce-ue5-harness-design-inputs.md`](./ai/harness/perforce-ue5-harness-design-inputs.md)
+
+- Perforce를 쓰는 UE5 Agent Harness를 설계하기 전에 업무/완료조건, UE 구성, P4 구성, workspace·동시성, 기준 revision·handoff, 파일 정책, build/test, 실행 자원, AI runtime/context, 권한·데이터 경계, 기존 TeamCity/Hansoft/도구 연동, 복구·운영 평가의 **12개 입력 묶음**을 확인하도록 체크리스트를 추가.
+- Pending CL은 변경 분류 단위이지 물리 파일 격리 수단이 아니므로 독립 편집에는 실제 client/root 분리가 필요하고, `.uasset/.umap` 같은 binary asset은 text code와 별도의 잠금·편집·검증 계약이 필요하다는 점을 명확히 구분.
+- Shelf/CL 인계는 번호만 넘기지 않고 base revision·변경 파일·snapshot/digest·검증 evidence를 함께 묶고, build 성공과 실제 작업 완료 조건도 분리해 재현성과 검증 범위를 설계하도록 정리.
+
+### 5. Claude Prompt Anatomy — 작업 위험도에 따라 Prompt 단계 자체를 라우팅
+
+[`ai/tips/claude-prompt-anatomy.md`](./ai/tips/claude-prompt-anatomy.md)
+
+- 복잡한 Claude 작업을 `Task → Context → Reference → Success Brief → Rules → Conversation → Plan → Alignment`로 분해해 목표·참조 자료·성공 기준·제약·실행 통제를 서로 다른 책임으로 관리하는 실전 프롬프트 패턴을 정리.
+- 모든 작업에 질문·계획·승인을 강제하면 오히려 왕복과 토큰이 늘어나므로 Small은 `Task → Success → Execute`, Medium은 Relevant Context·Constraints·Verify를 추가하고, Large/Risky에서만 전체 단계를 사용하는 **risk-based prompt routing**을 제안.
+- Harness에서는 이를 `task / success_criteria / context_refs / constraints / risk_level`의 Task Contract로 구조화해 `risk_level`에 따라 plan·approval·verification 수준을 결정하도록 확장할 수 있음.
+
+### 6. Google Stitch — DESIGN.md를 사이에 둔 Design Agent → Coding Agent 연결
+
+[`ai/tools/google-stitch.md`](./ai/tools/google-stitch.md)
+
+- Google Stitch를 자연어·음성·이미지·기존 코드에서 UI를 생성하는 도구를 넘어, infinite canvas·Design Agent·실시간 steering·prototype·MCP/SDK를 묶은 **AI-native design workspace**로 분석.
+- 특히 디자인 규칙과 의도를 machine-readable Markdown인 `DESIGN.md`로 내보내 Coding Agent가 소비하게 하는 방식은 `Requirement → Design Agent → DESIGN.md + Prototype → Coding Agent → Review`의 명시적 인터페이스를 만든다는 점에서 재사용 가치가 있음.
+- WPF/사내 관리도구에서는 생성 코드를 그대로 쓰기보다 레이아웃·정보구조·디자인 토큰을 추출하고 구현 Agent가 기존 UI stack에 맞게 재구성하는 PoC가 현실적이라고 평가.
+
+### 기타
+
+- [`ai/Orchestration.md`](./ai/Orchestration.md)와 [`ai/README.md`](./ai/README.md)에 **`trend/` 카테고리**를 추가해 개별 사건인 `news/`와 날짜별·주제별 연속 관찰 자료를 분리하고, 일일 Harness/Context/Token Scout의 canonical 경로를 `ai/trend/`로 정리. 기존 9월 10~13 Scout도 해당 경로로 이동.
+- 루트 [`README.md`](./README.md)에 배포된 Wiki Reader 링크를 추가한 변경은 단순 인덱스/링크 갱신으로 압축.
+- 같은 날 Perforce 문서에 추가했던 Claude 운영안·정정 일부는 별도 저장소에서 관리하기로 하며 원복되었으므로, 최종적으로 `develop`에 남은 **Perforce·UE5 설계 입력 체크리스트**만 주요 지식 변화로 반영.
+
+---
+
+## 2026-09-13
+
+> **19 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 9건**
+
+### 1. Context / Token Engineering — Typed Retention, Model-visible Accounting, Bounded Recap
+
+[`ai/news/ai-harness-token-scout-2026-09-13.md`](./ai/news/ai-harness-token-scout-2026-09-13.md) · [`ai/research/compaction-cliff-knowledge-triage.md`](./ai/research/compaction-cliff-knowledge-triage.md) · [`ai/tips/token-optimization-claude-codex.md`](./ai/tips/token-optimization-claude-codex.md)
+
+- 반복 compaction에서 hard rule과 exact procedure까지 같은 비율로 압축하면 제약 회상이 급격히 무너질 수 있음을 확인하고, Context를 **PINNED / REQUIRED / RETRIEVABLE / EPHEMERAL**로 분류해 정책·승인·정확한 명령은 보존하고 로그부터 줄이는 Knowledge Triage 패턴을 정리.
+- Codex의 최근 구현을 바탕으로 저장 JSON이나 transport envelope 크기가 아니라 **실제로 모델에 노출되는 content**를 기준으로 token budget을 추정하고, `raw_storage_bytes / model_visible_bytes / estimated_input_tokens / actual_input_tokens`를 분리 계측하는 방향을 보강.
+- Subagent session identity와 prompt-cache affinity를 분리하고, handoff는 오래된 whole exchange부터 줄이는 bounded recap과 `goal/completed/unresolved/evidence/next_action` 구조로 만들어 compaction·handoff의 정보 손실과 불필요한 재호출을 줄이는 운영 원칙을 추가.
+
+### 2. Production Coding Harness — 7 Subsystems, Durable State, Workspace Context Gateway
+
+[`ai/research/harness-engineering-source-study.md`](./ai/research/harness-engineering-source-study.md) · [`ai/harness/gsd-pi.md`](./ai/harness/gsd-pi.md) · [`ai/harness/open-terminal.md`](./ai/harness/open-terminal.md)
+
+- Claude Code·Codex·Gemini CLI 등 production coding harness를 실제 소스 기준으로 비교해 **Agent Loop / LLM Integration / Tools / Context / Safety / Orchestration / Extensibility**의 7개 subsystem으로 수렴하며, 범용 framework보다 작은 명시적 runtime loop·deterministic retrieval·JIT context·runtime policy가 반복되는 패턴임을 정리.
+- GSD Pi는 milestone→slice→task를 DB/journal에 durable하게 유지하고 requested/effective model provenance, interrupted state reconciliation, fail-closed recovery, model-visible tool binding을 관리해 장시간 Agent 작업의 복구·검증을 conversation 밖의 상태로 외부화하는 사례를 제공.
+- Open Terminal 분석에서는 Workspace를 외부 메모리이자 실행환경으로 두고 **Context Gateway가 Perforce·Build·TeamCity 같은 대량 출력을 요약한 뒤 실패 시에만 세부 로그를 확장**하는 구조를 제안해 Context I/O를 줄이는 방향을 구체화.
+
+### 3. Agent Knowledge / Reviewer Skills — book-to-skill + No AI Slop
+
+[`ai/skills/book-to-skill.md`](./ai/skills/book-to-skill.md) · [`ai/skills/no-ai-slop.md`](./ai/skills/no-ai-slop.md)
+
+- `book-to-skill`은 긴 PDF/EPUB/DOCX 문서를 작은 `SKILL.md` core/index와 필요할 때만 읽는 `chapters/*.md`로 사전 컴파일해 **compile-time knowledge structuring + runtime progressive disclosure**로 반복 참조 Context 비용을 줄이는 방식을 제시.
+- No AI Slop은 특정 실패 패턴을 명문화하고 최소 수정 후 `eval.md`로 재검증하는 편집 Skill로, 거대한 프롬프트보다 **작은 전문 Reviewer Skill + 명시적 self-eval**을 조합하는 Agent Workflow 설계 패턴이 재사용 가치가 높음.
+
+### 4. DevSecOps Agent Pipeline — Strix + VibeSec
+
+[`ai/tools/strix.md`](./ai/tools/strix.md) · [`ai/skills/vibesec-skill.md`](./ai/skills/vibesec-skill.md)
+
+- Strix는 Orchestrator와 전문 Worker를 분리하고 Kali/Docker sandbox에서 Semgrep·Nuclei·SQLMap·Trivy·Nmap 등 결정론적 도구를 실행해 실제 exploit/PoC까지 검증하는 **Agentic DevSecOps 후단 검증 계층**으로 분석.
+- 대형 Semgrep 결과가 Agent context를 폭주시킨 실제 사례를 통해 보안 도구도 `tool output → filter/truncate/summarize → model`의 결과 예산 계층이 필수임을 확인.
+- VibeSec은 보안 지식을 모든 Worker에 상시 로드하지 않고 웹/API 또는 Security Reviewer 작업에만 선택적으로 주입하는 Skill로, **생성 단계의 shift-left 규칙 + SAST/DAST 같은 deterministic scanner**를 함께 사용하는 구성을 권장.
+
+### 5. Agent-ready Web / Data Tooling — Scrapling, OpenSEO, public-apis
+
+[`ai/tools/scrapling.md`](./ai/tools/scrapling.md) · [`ai/tools/open-seo.md`](./ai/tools/open-seo.md) · [`ai/tools/public-apis.md`](./ai/tools/public-apis.md)
+
+- Scrapling은 Adaptive Scraping·HTTP/브라우저 Fetcher·Spider·MCP·RAG용 targeted Markdown을 결합해 Agent가 전체 HTML 대신 필요한 콘텐츠만 받는 **Web Acquisition Layer**로 활용할 수 있음.
+- OpenSEO는 사람이 쓰는 UI, 원시 기능을 노출하는 MCP, 업무 절차를 정의하는 Agent Skills를 하나의 서비스에 결합해 `Domain Service → Human UI + MCP Tools + Agent Skills`라는 Agent-ready 서비스 패턴을 보여주며 Perforce/TeamCity 같은 내부 도메인에도 일반화 가능.
+- public-apis는 Runtime Tool이 아니라 거대한 API Discovery Dataset으로 보고 `catalog → health/auth 검증 → 공식 문서 재확인 → allowlist → MCP/Tool wrapper` 순서로 승격하는 Tool Discovery 파이프라인을 제안.
+
+### 6. Stateful Domain AI Workflows — ai-job-search + Open Notebook
+
+[`ai/tools/ai-job-search.md`](./ai/tools/ai-job-search.md) · [`ai/tools/open-notebook.md`](./ai/tools/open-notebook.md)
+
+- ai-job-search는 후보자 프로필과 지원 이력을 로컬 상태로 유지하고 `setup → scrape → rank → apply → reviewer → artifact validation → outcome`으로 연결해, 특정 업무 도메인을 **파일 기반 state + command + Skill + Reviewer + final validation**으로 자동화한 Harness 사례를 제공.
+- Open Notebook은 문서·웹·오디오·비디오 수집, Full-text/Semantic RAG, provider abstraction, LangGraph workflow와 background worker를 묶은 self-hosted Research Workspace로, Wiki 앞단의 원자료 수집·검색·질의 계층이나 Agent Research Memory Layer 후보로 평가.
+
+### 7. Unified AI Workspace — Task-specific Studio와 Provider Routing
+
+[`ai/tools/open-generative-ai.md`](./ai/tools/open-generative-ai.md)
+
+- 이미지·영상·오디오·로컬 추론·Agent·Workflow를 하나의 Next.js/Electron shell에 묶고 provider router로 local/cloud backend를 선택하는 구조를 분석.
+- Coding Harness 자체를 대체하기보다는 **공통 Agent/Model Router 위에 Code·Review·Research·Release 같은 task-specific Studio를 배치하는 통합 Workspace UX**의 참고 구조로 평가.
+
+### 8. DevOps Resource Discovery — free-for-dev 최신성 검증
+
+[`ai/tools/free-for-dev.md`](./ai/tools/free-for-dev.md)
+
+- 전달된 `jixserver/free-for-dev`는 실제 최신 커밋이 2017년으로 오래되어 현재 무료 티어 판단에는 부적절하고, 활발히 관리되는 `ripienaar/free-for-dev`를 우선 사용해야 함을 확인.
+- DevOps/PoC 비용 탐색에서는 목록을 최종 사실 데이터가 아니라 후보 discovery index로 사용하고, Agent가 실제 추천하기 직전에 **공식 pricing·무료 한도·보안·서비스 존속 여부를 재검증**하는 Free Stack Finder 패턴을 제안.
+
+### 9. AI Wiki Onboarding — 초보자용 Visual Guidebook
+
+[`ai/guidebook.html`](./ai/guidebook.html)
+
+- Wiki의 AI 자료를 처음 접하는 사람이 Model → Tool/MCP → Skill → Agent → Harness의 관계와 `news / tips / harness / tools / skills / research` 분류를 한눈에 이해할 수 있도록 시각적 입문 가이드를 추가.
+- 토큰/Context, Tool 권한, Skill 재사용, Harness 운영·검증이라는 핵심 개념과 추천 학습 순서를 정리해 기존 지식 베이스의 탐색성과 온보딩 경로를 보강.
+
+---
+
+## 2026-09-12
+
+> **15 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 8건**
+
+### 1. Context / Token Engineering — Request Budget, Turn×Model Telemetry, Source-linked Project Brain
+
+[`ai/news/ai-harness-token-scout-2026-09-12.md`](./ai/news/ai-harness-token-scout-2026-09-12.md) · [`ai/tips/token-optimization-claude-codex.md`](./ai/tips/token-optimization-claude-codex.md) · [`ai/tools/flow-coding-harness.md`](./ai/tools/flow-coding-harness.md)
+
+- Claude Code v2.1.269의 resume/auto-resume/cloud-first-request prompt-cache correctness 개선을 바탕으로 정상 turn뿐 아니라 **interrupt/resume·output-limit auto-resume·compaction 경로까지 cache regression test**에 포함해야 한다는 운영 원칙을 정리.
+- Codex의 최근 구현에서 최종 request 전체의 overhead를 먼저 계산하고 사용자 지침·승인·핵심 evidence를 mandatory로 보존한 뒤 optional evidence만 제거하는 **budget admission control**, 그리고 `turn × 실제 사용 model × token type` 단위 telemetry를 추출.
+- Flow는 transcript 전체 replay 대신 revision·source evidence를 가진 Conversation Notes와 bounded linked retrieval, Auto-Docs/Auto-Skills를 Project Brain으로 묶어 **세션 지식을 검증 가능한 durable context로 승격**하는 패턴을 제시.
+
+### 2. codebase-memory-mcp — 영속 Code Graph를 공통 Agent Memory Layer로 확장
+
+[`ai/tools/codebase-memory-mcp.md`](./ai/tools/codebase-memory-mcp.md)
+
+- 기존 분석을 크게 보강해 Tree-sitter 158개 언어 + 주요 언어 Hybrid LSP, coordination daemon, compact tree output, IaC·cross-service 관계 인덱싱까지 포함하는 **로컬 persistent code graph backend**로 재정리.
+- Claude/Codex가 같은 구조 정보를 재사용해 반복 `grep → read → reference search`를 줄일 수 있고, local working tree를 분석하므로 Git에 종속되지 않아 **Perforce workspace에도 구조적으로 적용 가능**하다고 평가.
+- 자체 benchmark 수치는 실제 저장소에서 재검증해야 하며 Windows daemon/update 안정성, dynamic C++/generated code 관계 정확도 같은 운영 리스크도 추가로 명시.
+
+### 3. Agent Kanban — Session보다 Task를 Durable Context의 Primary Key로 사용
+
+[`ai/tools/agent-kanban-vscode.md`](./ai/tools/agent-kanban-vscode.md) · [`ai/harness/agent-kanban-company-workflow-insights.md`](./ai/harness/agent-kanban-company-workflow-insights.md)
+
+- VS Code의 활성 Task와 Agent 실행을 연결하고 `MEMORY.md`·`TECHNICAL.md`·MCP context·todo를 이용해 중단 후 **Resume 가능한 task-scoped context**를 유지하는 Agent Kanban 구조를 분석.
+- 회사 워크플로우 관점에서는 `Task ID → Agent Runtime → Workspace → SCM Change → CI Evidence`를 하나의 Task Binding Layer로 묶고, session은 교체 가능한 executor로 취급하는 방향을 도출.
+- Perforce에서는 branch/worktree를 **Pending CL / Agent Workspace**로 치환하고 Hansoft·TeamCity까지 task ID로 연결해 Claude 구현과 Codex 리뷰가 같은 durable state를 공유하는 구조를 제안.
+
+### 4. GPT-6 Astra Skills & Prompt — 긴 지침보다 Progressive Disclosure와 명확한 Activation Boundary
+
+[`ai/tips/gpt-6-astra-skills-prompts.md`](./ai/tips/gpt-6-astra-skills-prompts.md)
+
+- OpenAI의 2026-09-11 공식 가이드를 바탕으로 강한 모델에서는 과거의 긴 Skill·AGENTS·prompt scaffolding이 오히려 context 비용과 행동 제약을 만들 수 있음을 정리.
+- `SKILL.md`는 작은 router/control plane으로 유지하고 세부 reference·script는 필요할 때만 읽는 **Progressive Disclosure**, AGENTS.md는 문서 체크리스트보다 invariant와 context routing에 집중하는 방식을 권장.
+- 안전하고 되돌릴 수 있는 local action은 자율 실행하되 외부·파괴적 작업은 approval boundary를 분리하고, 중복 handholding을 제거하면서 완료 계약을 명확히 하는 운영 원칙을 추가.
+
+### 5. Dryforge + Agency Agents — Bounded Autonomy와 역할 자산의 표준화
+
+[`ai/harness/dryforge.md`](./ai/harness/dryforge.md) · [`ai/tools/agency-agents.md`](./ai/tools/agency-agents.md)
+
+- Dryforge는 User / Specification / Plan / Code의 권한을 분리하고 `/ready → 승인 → /go` 흐름에서 구현 HOW는 Agent에 맡기되 완료는 실제 build/test evidence로 증명하는 **bounded-autonomy harness**를 제시.
+- 원시 사용자 의도는 main session에 유지하고 subagent는 intent completeness·final gate 같은 독립 검증에만 사용하는 방식, `cheap map → 필요한 계약만 deep read` 방식이 context 보존 관점에서 유용.
+- Agency Agents는 279 agents × 14 tools 수준으로 확장된 역할 카탈로그와 multi-tool 변환/설치, sequential handoff·parallel work·quality gate 예제를 제공하며, 자체 orchestrator라기보다 **재사용 가능한 역할/업무 규약 자산 계층**으로 평가.
+
+### 6. Agentic 실행 안전 패턴 — Manifest/Checkpoint와 Deterministic Executor
+
+[`ai/tools/openmontage.md`](./ai/tools/openmontage.md) · [`ai/research/windows-ai-pc-caretaker.md`](./ai/research/windows-ai-pc-caretaker.md) · [`ai/skills/oh-my-disk-cleaner.md`](./ai/skills/oh-my-disk-cleaner.md)
+
+- OpenMontage에서 `Manifest → Skill → Tool → Artifact → Checkpoint → Review → Approval`로 복잡한 장시간 작업을 단계화하고, Agent는 orchestration/판단을 맡고 Python Tool과 상태 artifact가 실제 실행·복구를 담당하는 범용 workflow 패턴을 추출.
+- Windows PC Caretaker 조사와 oh-my-disk-cleaner에서는 파일 삭제 같은 위험 작업을 **read-only scan → candidate/manifest → exact approval → dry-run → target revalidation → deterministic executor → verify**로 분리해야 한다는 안전 계약을 확인.
+- 회사 개발 PC에서는 Perforce workspace, Visual Studio/.NET, Unreal 경로를 protected root로 두고 자동 정리는 분석/report까지만 허용하며 실제 삭제는 사용자 승인 뒤 실행하는 방향을 권장.
+
+### 7. shadcn/ui Registry — UI 컴포넌트를 넘어 Agent Project Bootstrap 배포 계층으로 확장
+
+[`ai/tips/ai-ui-shadcn.md`](./ai/tips/ai-ui-shadcn.md)
+
+- 기존 AI UI 공통 vocabulary 분석을 2026 shadcn Registry/CLI 기준으로 보강해, Registry가 component뿐 아니라 `AGENTS.md`, Claude command, config/rule, CI workflow, MCP 설정, migration 같은 **프로젝트 자산 배포 단위**까지 다룰 수 있음을 정리.
+- `shadcn docs/info/build`와 Registry를 이용하면 Agent가 현재 설치 상태와 공식 문서를 구조적으로 조회하고, 조직 표준 UI·Agent 지침·자동화 자산을 같은 bootstrap 경로로 배포하는 패턴을 만들 수 있다고 평가.
+
+### 8. Wiki Reader 자동 배포 — develop Push부터 Live Commit 검증까지 Hardened CI
+
+[`docs/wiki-reader-auto-deploy-analysis.md`](./docs/wiki-reader-auto-deploy-analysis.md) · [`docs/wiki-reader-auto-deploy-design.md`](./docs/wiki-reader-auto-deploy-design.md) · [`docs/wiki-reader-auto-deploy-tasks.md`](./docs/wiki-reader-auto-deploy-tasks.md) · [`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md)
+
+- build-time `content.json` 때문에 develop과 production이 조용히 어긋나던 문제를 해결하기 위해 **develop push → build → test → Vercel deploy → live commit verification** GitHub Actions 경로를 추가.
+- 옛 workflow 재실행이 stale app code와 최신 content를 섞지 못하도록 현재 develop tip과 `GITHUB_SHA`를 비교하고, secret 존재 확인·action SHA pinning·Vercel CLI version pinning·최소 permissions·credential 비보존 등 CI hardening을 적용.
+- 배포 후 live `content.json`을 여러 번 재검증하고 더 최신 배포가 이미 앞섰다면 성공으로 인정하는 방식으로 race를 처리해, **배포 성공 자체보다 실제 서비스가 해당 build 이상을 제공하는지**를 완료 조건으로 삼음.
+
+---
+
+## 2026-09-11
+
+> **8 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. Context / Token 최적화 — Durable Context, Stable Prefix, Same-turn Rewrite, Cost per Success
+
+[`ai/news/ai-harness-token-scout-2026-09-11.md`](./ai/news/ai-harness-token-scout-2026-09-11.md) · [`ai/tools/strands-agents-context-manager.md`](./ai/tools/strands-agents-context-manager.md) · [`ai/tools/token-optimizer-mcp.md`](./ai/tools/token-optimizer-mcp.md) · [`ai/tips/claude-api-cost-optimization.md`](./ai/tips/claude-api-cost-optimization.md)
+
+- Strands Context Manager는 활성 L0 working context와 원본을 보존하는 L1 durable stash를 분리하고, tool별 offload·bounded retrieval·session-derived cache key로 긴 Agent session의 context lifecycle을 관리하는 패턴을 제시.
+- Token Optimizer MCP는 비싼 Tool을 거부한 뒤 다시 호출시키는 `deny → retry`가 추가 turn과 cache-read 비용 때문에 오히려 비싸질 수 있음을 자체 실험으로 확인하고, **같은 Tool call 안에서 outline/compact 결과로 rewrite**하는 방향과 gross saving - expansion debit 형태의 순절감 계측을 강조.
+- Claude API 비용 최적화 가이드는 stable prefix·prompt caching·instruction debt 제거·Effort calibration을 `cost per successful task` 기준으로 함께 최적화하고, AI Harness Scout는 Claude Code v2.1.268의 prefix stability 개선과 Codex compaction을 durable transcript와 분리해야 한다는 운영 원칙까지 통합.
+
+### 2. base-harness — 공통 Harness SoT에서 Claude/Codex/OpenCode 설정을 생성하고 증거로 검증
+
+[`ai/harness/base-harness.md`](./ai/harness/base-harness.md)
+
+- Contract·Skills·Rules·Hooks를 `harness/` 한 곳에서 정의하고 runtime adapter가 Claude Code·Codex·OpenCode용 네이티브 설정을 생성해, 런타임별 수동 복제로 생기는 configuration drift를 줄이는 구조를 분석.
+- Doctor가 `configured → loaded → trusted → fired → enforced → outcome-proven` 단계로 실제 정책 적용 증거를 구분하고, Native Hook이 불가능하면 Contract Rule, 최종적으로 SCM Guard로 내려가는 degradation ladder를 제공.
+- Perforce 환경에서는 Git pre-commit을 **Pending CL/submit validator**로 치환하고 workspace·stream·CL을 registry fact로 관리하는 `Common Harness SoT → Runtime Adapter → Evidence Doctor → Perforce Submit Guard` 패턴이 PoC 가치가 높다고 평가.
+
+### 3. Jarvis OS 4-Part Local AI Stack — Engine / Memory / Input / Face 분리와 작은 Skill 중심 개인 AI
+
+[`ai/harness/jarvis-os-four-part-local-ai-stack.md`](./ai/harness/jarvis-os-four-part-local-ai-stack.md)
+
+- Claude Code를 Engine, Markdown/Obsidian을 Memory, 음성 입력을 Ears, 로컬 Dashboard를 Face로 분리하고, 거대한 단일 prompt 대신 작은 단일 책임 Skill을 조합하는 local-first 개인 AI 아키텍처를 정리.
+- 핵심은 특정 제품 조합보다 **Engine / Memory / Input / UI를 교체 가능한 adapter로 분리**하는 것이며, 실행 상태는 event store, 영속 지식은 Markdown으로 나누는 2-tier state/memory가 더 안정적이라고 평가.
+- 개발 생산성 환경에서는 Claude/Codex + Perforce/TeamCity/UE Skill + MCP/internal CLI + local dashboard로 확장할 수 있고, 기업 환경에서는 음성·Vault·파일 실행 권한을 별도로 통제해야 한다고 정리.
+
+### 4. Wiki Reader DevOps — 빌드 시점 정적 콘텐츠와 배포 트리거 분리로 생기는 Silent Staleness
+
+[`tools/vercel-build-time-content-stale-trap.md`](./tools/vercel-build-time-content-stale-trap.md) · [`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md)
+
+- Wiki Reader가 런타임에 GitHub를 읽는 것이 아니라 빌드 중 `public/content.json`에 콘텐츠를 구워 넣기 때문에, **Vercel Git 연동/배포 트리거가 없으면 develop push만으로는 사이트가 갱신되지 않는** silent staleness 문제를 실제 사례로 기록.
+- 라이브 `content.json`의 source commit과 `develop` HEAD를 비교해 stale 여부를 진단하고, Git 자동 배포 연결 전 Root Directory를 저장소 루트가 아니라 `web`으로 먼저 지정해야 install 단계 실패를 피할 수 있음을 정리.
+- 2026-09-09 이후 배포가 실행되지 않아 28 commits·21 documents가 반영되지 않은 사례를 바탕으로, build-time content 사이트에서는 **content source 변경과 deployment trigger를 반드시 함께 관측**해야 한다는 일반 DevOps 원칙을 도출.
+
+### 기타
+
+- README와 `ai/README.md`에서 과거 `ax/ai/`로 잘못 연결되던 AX/AI 경로를 실제 루트 `ai/` 구조로 정정하고, Wiki Reader 운영 안내 링크를 인덱스에 추가.
+
+---
+
+## 2026-09-10
+
+> **13 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 8건**
+
+### 1. Agent Harness 운영 모델 — Durable State, Runtime Adapter, Local Hive
+
+[`ai/news/ai-harness-scout-2026-09-10.md`](./ai/news/ai-harness-scout-2026-09-10.md) · [`ai/harness/munder-difflin.md`](./ai/harness/munder-difflin.md)
+
+- Harness Scout에서 최근 Coding Harness의 공통 방향을 **durable state + task lifecycle + verification gate + runtime-neutral adapter**로 정리하고, 세션 대화가 아닌 file-backed handoff와 evidence artifact로 작업 연속성을 유지하는 패턴을 추출.
+- Munder Difflin은 Claude Code·Codex 등 기존 CLI를 실제 PTY 프로세스로 실행하면서 registry/task/log/mailbox/memory를 로컬 Hive에 저장하고, 중앙 orchestrator·single-writer·agent별 작업 디렉터리·human/circuit-breaker를 결합하는 로컬 멀티에이전트 실행 계층을 제공.
+- Perforce 환경에서는 Git worktree/commit/PR 개념을 **agent workspace / pending changelist / review-submit gate**로 대응시키고, one workspace per agent + CL ownership + durable handoff + evidence gate를 조합하는 방향이 현실적이라고 평가.
+
+### 2. Agent Skill 운영 — 선택·배포·공급망 보안까지 하나의 Lifecycle로 관리
+
+[`ai/skills/agent-skills-practical-shortlist.md`](./ai/skills/agent-skills-practical-shortlist.md) · [`ai/tools/my-ai-tools.md`](./ai/tools/my-ai-tools.md) · [`ai/tools/skillspector.md`](./ai/tools/skillspector.md)
+
+- 실무 Skill 목록을 **계획/상태 → 구현 규율 → 전문 작업 → 품질 게이트**로 계층화하고, 모든 Skill을 모든 Agent에 노출하지 않고 역할별 lazy-load하는 것이 context 비용과 instruction 충돌을 줄이는 핵심이라고 정리.
+- my-ai-tools는 Claude Code·Codex 등 여러 AI CLI의 설정·MCP·Skills를 Git 기반 Source of Truth로 관리하고 repo→local 배포와 local→repo 역동기화를 제공하는 **AI 개발환경 Configuration as Code** 패턴을 보여준다.
+- NVIDIA SkillSpector는 외부 Agent Skill을 설치하기 전에 정적 분석·선택적 LLM 분석·MCP 위험 검사·SARIF 출력을 수행해, 사내 Skill Registry나 TeamCity 파이프라인의 pre-install security gate로 활용할 수 있다.
+
+### 3. Claude Code 토큰 최적화 — Context 유입량과 재작업을 함께 줄이는 운영법
+
+[`ai/tips/claude-code-token-saving-practical-tips.md`](./ai/tips/claude-code-token-saving-practical-tips.md)
+
+- 서브에이전트를 역할에 맞는 저비용 모델로 라우팅하고 기본 effort를 medium으로 두되 어려운 문제에서만 승격하며, `rg`/`ast-grep`·Explore 등으로 후보를 먼저 좁혀 전체 파일/검색 결과가 Main Context에 들어오는 양을 줄이는 방식을 검증.
+- 사용하지 않는 MCP를 끄고 안정적인 prompt prefix를 유지해 cache 재사용성을 높이며, 논리적 작업 단위가 끝난 뒤 diff를 정리해 동일 변경을 반복해서 읽는 비용을 줄이는 흐름을 제안. Perforce에서는 이를 changelist 단위 상태 정리로 해석한다.
+- 목표를 단순 token 최소화가 아니라 **cost per successful task**로 두고, 공식 문서에서 확인되지 않은 `subagentPromptCacheTtl` 같은 설정은 검증 전 적용하지 않도록 구분.
+
+### 4. AI Agent Framework 7종 — 역할 대화보다 명시적 State/Checkpoint가 중요한 선택 기준
+
+[`ai/research/agent-frameworks-comparison-2026.md`](./ai/research/agent-frameworks-comparison-2026.md)
+
+- AutoGPT·LangChain·Dify·MetaGPT·AutoGen·CrewAI·LangGraph를 동일 범주의 경쟁 제품으로 보지 않고, visual workflow·integration layer·role team·state graph 등 **오케스트레이션 추상화 수준**에 따라 구분.
+- 장기 실행·checkpoint·retry·human-in-the-loop가 필요한 production orchestration은 LangGraph, 빠른 visual PoC는 Dify, 역할 중심 실험은 CrewAI를 우선 검토하며 AutoGen 신규 도입은 후속 Microsoft Agent Framework를 함께 고려하도록 정리.
+- 기존 자체 Harness를 전면 교체하기보다 명시적 state machine·checkpoint·retry 개념을 선택적으로 흡수하고, Perforce에서는 Git 지원 여부보다 workspace 격리·pending CL ownership·복구 상태 관리가 더 중요하다고 평가.
+
+### 5. Semantica — Agent Shared Context를 Graph·Provenance·Decision History로 확장
+
+[`ai/tools/semantica.md`](./ai/tools/semantica.md)
+
+- Vector RAG만으로는 약한 관계·출처·결정 근거·시간축을 보완하기 위해 Knowledge/Context Graph, W3C PROV-O provenance, deterministic reasoning, temporal/decision intelligence를 결합하는 graph-native AI infrastructure를 분석.
+- Orchestrator·Analysis·Work·Review Agent가 동일 Context Graph에서 설계 결정과 근거를 읽고 쓰는 **Shared Context / Decision Layer**로 배치할 수 있으며, 단순 session memory보다 감사 가능성과 multi-hop 관계 탐색에 강점이 있다.
+- Perforce·TeamCity 환경에서는 `Issue → CL → File → Symbol → Build → Crash/Incident → Fix CL` 관계를 그래프로 연결해 변경 이력·빌드·장애·결정을 한 번에 조회하는 PoC 가치가 높다고 평가.
+
+### 6. GPT-6 Astra / Codex Desktop — Prompt보다 Harness Contract를 구체화
+
+[`ai/news/gpt-6-astra.md`](./ai/news/gpt-6-astra.md)
+
+- 연속 2개 커밋에서 기존 Astra 문서를 보강해 **합리적 가정과 action bias, 완료까지 지속, 저장소 탐색 우선, 세션 간 authorization/state 유지, mid-turn steering, compaction 이후 중복 작업 방지**를 Codex Desktop형 Harness Contract로 구체화.
+- Subagent 위임 조건과 risk-based verification을 명시하고, `configuration_update`로 prompt/cache prefix를 유지하면서 단계별 reasoning 강도를 바꾸는 운영 패턴을 정리.
+- CL4R1T4S의 Codex Desktop prompt 수집본은 공식 OpenAI 저장소가 아닌 제3자 자료이므로 내부 프롬프트 원본으로 단정하지 않고, 공개 Model Guidance와 교차되는 Harness 설계 원칙을 연구 자료로만 활용하도록 경계를 명시.
+
+### 7. OpenAlice — Persistent Workspace와 Managed Skill Update Lifecycle
+
+[`ai/tools/openalice.md`](./ai/tools/openalice.md)
+
+- 트레이딩 도메인 도구이지만 Harness 관점에서는 Claude Code·Codex 같은 native Agent를 **파일·Git history·Issue·schedule·provenance가 유지되는 Workspace**에 연결해 세션 이후에도 연구와 후속 작업이 이어지는 구조가 핵심.
+- Skill을 `.agents/skills`의 primary와 runtime mirror로 분리하고, install/update/remove/restore를 preview한 뒤 local customization과 upstream을 three-way comparison하며 atomic replacement·commit·rollback/recovery까지 처리하는 관리 패턴을 제공.
+- 특정 도메인 실행 자체보다 **Workspace provenance + self-scheduling + managed Skill lifecycle + human approval**을 사내 Agent Harness에 재사용할 가치가 높다고 평가.
+
+### 8. 기타 — ChatGPT Slash-style Prompt Label 검증
+
+[`ai/tips/chatgpt-slash-style-prompt-labels.md`](./ai/tips/chatgpt-slash-style-prompt-labels.md)
+
+- `/explain`, `/summarize`, `/rewrite`, `/debug`, `/plan` 등 SNS에서 명령어처럼 소개되는 표현 대부분은 고정 기능을 호출하는 숨은 command가 아니라 모델이 자연어로 해석하는 **prompt shorthand/label**이라는 점을 현재 항목 기준으로 재검증.
+- `/` 자체가 기능이나 품질을 보장하지 않으며 대상·길이·제약·출력 형식을 함께 지정해야 안정적인 결과를 얻을 수 있고, Study Mode 같은 실제 제품 shortcut/UI 기능과 prompt label을 구분해야 한다고 정리.
+
+---
+
+## 2026-09-09
+
+> **22 commits · 핵심 주제 9건**
+
+### 1. Context / Token 최적화 — Skill Progressive Disclosure + Context Mode + Bounded Review
+
+[`ai/skills/skill-file-context-optimization.md`](./ai/skills/skill-file-context-optimization.md) · [`ai/tools/context-mode.md`](./ai/tools/context-mode.md) · [`ai/tips/astra-plus-coding-usage-strategy.md`](./ai/tips/astra-plus-coding-usage-strategy.md)
+
+- 대형 `SKILL.md`를 단순 압축하지 않고 **작은 control plane/router + 필요 시 로드하는 references + deterministic scripts**로 분해해 `reference tokens × load probability` 관점의 평균 Context 비용을 낮추는 Progressive Disclosure 방법론을 정리.
+- Context Mode는 대형 Read·로그·MCP 결과를 LLM Context에 직접 쌓는 대신 **Sandbox/SQLite/FTS5에서 계산·검색하고 필요한 결과만 반환**하며, 세션 이벤트도 retrieval 방식으로 복구하는 Context Gateway 패턴을 제공.
+- Astra Plus 운용에서는 reasoning level보다 context surface와 agent loop가 더 큰 비용 요인이 될 수 있으므로 **Sol이 구현·테스트 → 작은 evidence packet → Astra bounded diagnosis/review**로 역할을 분리하는 전략을 제안.
+
+### 2. GPT-6 Astra 운영 지침 + Read-only Planner / Write-enabled Worker 패턴
+
+[`ai/news/gpt-6-astra.md`](./ai/news/gpt-6-astra.md) · [`ai/harness/codex-with-chatgpt.md`](./ai/harness/codex-with-chatgpt.md)
+
+- Astra 문서에 공식 Prompting/Migration Guidance를 보강해 **자율 완료 편향, Skill/AGENTS.md instruction conflict 감사, 명시적 Subagent 위임, 변경 위험도에 맞춘 테스트 범위, `configuration_update` 기반 동적 reasoning**을 Harness 운영 규칙으로 구체화.
+- Codex with ChatGPT는 ChatGPT 웹을 Reason/Plan/Review, Codex를 Edit/Shell/Git/Test로 분리하고 **읽기 전용 MCP data plane + 실행 권한이 있는 Worker** 구조로 서로 다른 컨텍스트·사용량·권한 경계를 조합.
+- 공통적으로 강한 모델에 전체 저장소와 실행 루프를 열기보다 판단 범위·권한·전달 Context를 좁혀 Agent 효율성과 안전성을 함께 높이는 방향을 보여준다.
+
+### 3. Multi-Agent Orchestration / Router — Delegation Gate와 결과 기반 라우팅
+
+[`ai/harness/codex-astra-luna-orchestrator.md`](./ai/harness/codex-astra-luna-orchestrator.md) · [`ai/harness/slm-multi-agent-router.md`](./ai/harness/slm-multi-agent-router.md)
+
+- Codex Astra Luna Orchestrator는 **고성능 Root/Reviewer + 빠른 Explorer/Worker/Tester**를 역할별로 나누고, delegation gate·bounded contract·one-writer ownership·독립 작업만 병렬화하는 규칙으로 불필요한 orchestration 비용을 제어.
+- SLM Router 연구는 0.6B급 모델이 agent 선택·keyword·시간 범위를 생성하고, SFT 이후 실제 downstream retrieval 품질을 reward로 RL해 **의도상 맞는 Agent가 아니라 실제 결과가 좋은 Agent**를 선택하도록 보정하는 접근을 제시.
+- 두 사례 모두 모델 이름보다 **작업 난이도·결과 품질·비용을 관측해 라우팅 정책을 데이터로 조정**하는 것이 핵심임을 보여준다.
+
+### 4. Team Harness / Learning Platform — ECC + TeamAI CLI
+
+[`ai/harness/ecc.md`](./ai/harness/ecc.md) · [`ai/tools/teamai-cli.md`](./ai/tools/teamai-cli.md)
+
+- ECC는 `plan → test → implement → review → verify → remember → improve` 루프와 Skills·Agents·Hooks·Memory·Security를 여러 Coding Harness에 설치하고, **현재 Context는 작게 유지하고 나머지 상태·학습은 persistent artifact로 외부화**하는 운영 계층을 지향.
+- TeamAI CLI는 Git 저장소를 팀 Harness의 제어면으로 사용해 Skills/Rules/Agents/Hooks/MCP를 Claude Code·Codex 등으로 배포하고, Recall·Codebase Graph·friction 기반 Learning을 통해 **Execute → Understand → Learn → Improve** 루프를 팀 단위로 확장.
+- 둘 다 자동 학습 결과를 곧바로 규칙에 덮어쓰기보다 review/verification과 versioned knowledge를 거치는 방식이 Enterprise Agent 운영에 중요하다고 평가.
+
+### 5. Agent Skill 설계·출력 UX — Google Skills + i-have-adhd + im-not-ai
+
+[`ai/skills/google-skills.md`](./ai/skills/google-skills.md) · [`ai/skills/i-have-adhd.md`](./ai/skills/i-have-adhd.md) · [`ai/skills/im-not-ai.md`](./ai/skills/im-not-ai.md)
+
+- Google 공식 Skills에서 **작은 trigger/policy/workflow + references/assets 분리, 실행 전 validation, tool output limit/filter/projection** 등 Skill을 지식 문서가 아니라 실행 정책으로 쓰는 패턴을 추출.
+- i-have-adhd는 코딩 Agent 응답을 설명 우선에서 **Action First · 현재 상태 재표시 · 오류=위치/원인/해결 · 하나의 구체적 next action** 중심으로 재구성하는 Response UX Skill로 분석.
+- im-not-ai는 한국어 후처리 자체보다 deterministic pre-score로 light/standard/heavy를 라우팅하고 **single-call-first로 반복 rulebook/context loading을 줄이는 비용 최적화 패턴**이 Skill Pipeline 설계에 참고 가치가 있다고 정리.
+
+### 6. Spotify Shunt — 공개 구현 기준으로 Context Shunting 구조 구체화
+
+[`ai/harness/spotify-agent-architecture.md`](./ai/harness/spotify-agent-architecture.md)
+
+- 기존 개념 분석을 Spotify의 공개 `portal-ai-plugins` 구현 기준으로 갱신해, Claude Code `PreToolUse` Hook이 기본 350줄 초과 full Read와 Bash 우회를 실제로 차단하고 targeted read는 허용하는 **강제형 Large Read Guardrail**을 확인.
+- Portal CLI Actions Registry의 `aika:invoke-chat`, `bulk-read`/`code-write` script, worker mode resolve/pin, one-shot worker, direct-to-disk generation 등 실제 배관과 설정을 보강.
+- `prompt는 suggestion, hook은 architecture`라는 원칙을 코드 수준 구현으로 확인했고, 메인 모델은 reasoning·precise edit에 집중하고 I/O-heavy 작업만 Worker로 빼는 경계를 더 명확히 했다.
+
+### 7. Claude Managed Agents — Scheduled Deployments와 Vaults
+
+[`ai/news/claude-managed-agents-scheduled-deployments-vaults.md`](./ai/news/claude-managed-agents-scheduled-deployments-vaults.md)
+
+- Claude Managed Agents가 cron 기반 반복 실행과 pause/resume/archive를 지원해 일회성 대화형 Agent를 **지속 운영되는 Scheduled Worker**로 확장.
+- Vault는 실제 secret을 Agent sandbox에 직접 노출하지 않고 **network boundary에서 allowlisted domain 요청에만 credential을 주입**해 CLI/API/MCP 연동의 secret 노출 면을 줄인다.
+- 결정론적인 build/deploy는 TeamCity·GitHub Actions에 유지하고, Wiki digest·로그 분석·상태 점검처럼 매 실행마다 AI 판단이 필요한 정기 업무만 Agent scheduler로 분리하는 기준을 제시.
+
+### 8. Wiki Reader — 검색 가능한 자료실과 날짜별 업데이트 페이지 운영화
+
+[`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md) · [`docs/wiki-updates-design.md`](./docs/wiki-updates-design.md)
+
+- Markdown Wiki를 검색·폴더/태그 필터·정렬·트리/리스트·모바일 읽기·안전한 Markdown 렌더링으로 탐색하는 hosted reader를 구현하고 검색/정렬 재계산 제거와 손상된 localStorage 설정 방어 등 runtime hardening을 적용.
+- `SUMMARY.md`를 일반 자료실에서 분리해 `/?page=updates`에서 날짜 최신순으로 읽고 원문 문서로 이동하도록 구성했으며, 기존 `?doc=SUMMARY.md` 주소도 호환.
+- PR 병합 후 production에 수동 배포하고 테스트·빌드·모바일 검증을 완료했으며, Vercel Git 자동 배포는 GitHub 저장소 접근 승인 전까지 미연결 상태로 기록.
+
+### 9. 기타 신규 지식 — TabZipsa + System Design Notes
+
+[`tools/tabzipsa.md`](./tools/tabzipsa.md) · [`ai/research/system-design-notes.md`](./ai/research/system-design-notes.md)
+
+- TabZipsa를 여러 Chrome 창의 탭을 한 패널에서 관리하고 AI가 네이티브 탭 그룹으로 분류·정렬하는 경량 업무 도구로 정리하면서, 탭 제목 등 외부 전송 정보와 회사 환경 보안 검토 포인트를 함께 기록.
+- System Design Notes를 scaling·rate limiting·consistent hashing·chat/news feed 등 대표 패턴을 담은 학습형 reference corpus로 분석하고, Agent에는 전체를 고정 Context로 넣기보다 **필요한 챕터만 retrieval하는 Architecture Skill/RAG** 형태를 권장.
+
+---
+
 ## 2026-09-08
 
 > **2 commits · 핵심 주제 2건**
@@ -79,7 +567,7 @@
 
 - AI Coding Agent가 개발 프로세스 전체를 장악하는 거대한 프레임워크보다 **요구사항 정렬, 도메인 모델링, TDD, 디버깅, 코드 리뷰** 같은 기존 엔지니어링 규율을 작고 조합 가능한 Skill로 제공하는 접근을 정리.
 - `CONTEXT.md`에 프로젝트의 공통 용어와 도메인 어휘를 축적해 Agent의 장황한 설명과 명명 불일치를 줄이고, 세션을 넘어 재사용 가능한 **공유 Context 인터페이스**로 활용하는 패턴을 분석.
-- user-invoked orchestration skill과 model-invoked reusable discipline을 분리하고, Standards/Spec을 서로 다른 Subagent가 병렬 검토하는 방식처럼 **작은 Skill 조합 + 독립 검증**으로 품질을 높이는 구조를 제시.
+- user-invoked orchestration skill과 model-invoked reusable discipline을 분리하고, Standards/Spec을 서로 다른 Subagent가 병렬 검토하는 방식처럼 **작은 Skill 조합 + 독립 검증**으로 품질을 높이는 구조를 제안.
 
 ### 2. Linear UI/UX — 고밀도 생산성 도구의 일관된 작업 모델
 
@@ -227,7 +715,6 @@
 - `low → medium → high → xhigh/max`를 작업 난이도에 따라 선택하는 effort 라우팅과, 최신 정보가 중요한 low-effort 작업에는 별도 Search Policy를 두는 방식을 제안.
 - thinking block·prompt cache를 보존하기 위해 이전 turn을 수정하지 않는 append-only 기록과 compaction boundary를 강조하고, 장기 작업에서는 추가 허락을 반복 요구하지 않도록 완료 조건과 scope control을 명시하도록 권장.
 - Subagent를 실행한 뒤 Lead Agent가 idle하지 않고 자신의 분석·구현을 계속하는 **비동기 Subagent + 별도 wait/join** 구조를 통해 Agent Team의 wall-clock time을 줄이는 Harness 패턴을 정리.
-
 ---
 
 ## 2026-08-31
@@ -413,7 +900,7 @@
 [`DeepSeek-V4-Flash.md`](./DeepSeek-V4-Flash.md)
 
 - 1M 토큰 컨텍스트와 MoE 구조를 가진 DeepSeek-V4-Flash를 **비용 민감형 Coding/Agent Worker 모델** 후보로 분석.
-- 모든 작업을 최고가 모델에 맡기기보다 `Planner/Reviewer → V4-Flash Worker → Build/Test → Reviewer` 형태의 계층형 모델 라우팅을 제안.
+- 모든 작업을 최고가 모델에 맡기보다 `Planner/Reviewer → V4-Flash Worker → Build/Test → Reviewer` 형태의 계층형 모델 라우팅을 제안.
 - CI 로그 분석, 대규모 코드베이스 탐색, 반복 수정 Worker, 문서/RAG 등 처리량 중심 AX 워크로드와 자체 평가 지표를 정리.
 
 ### 4. Toss Open API 자동 트레이딩 사례 조사
@@ -597,7 +1084,6 @@
 
 [`ax/skills/gsd-core.md`](./ax/skills/gsd-core.md)
 
-- GSD Core를 AI 개발 Workflow / Context Engineering Framework 관점으로 다시 정리.
 - `Discuss → Plan → Execute → Verify → Ship` 흐름과 fresh-context subagent 기반 Context Rot 대응을 상세화.
 - 기존 `gsd-build/get-shit-done`에서 `open-gsd/gsd-core`로 이어진 현재 프로젝트 관계와 지원 Runtime을 정리.
 - 장기 Agent 개발에서 상태를 모델 기억보다 `STATE.md`, `CONTEXT.md` 같은 파일 기반 artifact로 유지하는 관점을 강조.
@@ -635,7 +1121,7 @@
 - Hermes Profile을 이름·역할·모델·메모리·Skill을 가진 **영구 Agent**로 운영하는 Bot Mode를 정리.
 - Bot 간 `@mention`, Direct Message, Group Chat, Routine, multi-machine routing 등을 하나의 Desktop UX로 제공.
 - `Profile + Persistent Memory + Skill Isolation + Routine + Bot-to-Bot Messaging`을 결합한 개인 Agent Team 구성에 특히 유용.
-- 2026-08-20 기준 빠르게 개발 중인 기능이므로 중요 작업에 바로 전면 도입하기보다는 테스트 Bot/Profile로 검증 후 확대하는 편이 안전.
+- 2026-08-20 기준 빠르게 개발 중인 기능이므로 중요 작업에 바로 전면 도입하기보다 테스트 Bot/Profile로 검증 후 확대하는 편이 안전.
 
 ### 기타
 

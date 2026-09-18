@@ -1,202 +1,176 @@
 ---
 title: Agency Agents
-tags: [AX, AI-Agent, Claude-Code, Codex, Cursor, Multi-Agent, Agent-Prompt]
-updated: 2026-08-24
+category: tools
+tags: [AX, AI-Agent, Claude-Code, Codex, Multi-Agent, Agent-Prompt]
+source: https://github.com/msitarzewski/agency-agents
+updated: 2026-09-12
 ---
 
 # Agency Agents
 
-## 한줄 요약
-
-**Agency Agents(The Agency)**는 개발·디자인·마케팅·PM·보안 등 역할별 전문 AI 에이전트 정의를 모아 Claude Code, Codex, Cursor, Gemini CLI, OpenCode 등 여러 AI 코딩 환경에서 재사용할 수 있게 만든 오픈소스 에이전트 라이브러리다.
+> 전문 역할 프롬프트를 대규모 카탈로그로 관리하고 여러 AI 코딩 도구에 변환·설치하는 Agent Engineering 자산 저장소.
 
 ## 프로젝트 개요
 
-- 저장소: https://github.com/msitarzewski/agency-agents
-- 라이선스: MIT
-- 핵심 철학: 범용 프롬프트 하나보다 역할·성격·업무 프로세스·산출물·성공 지표가 명확한 전문 에이전트를 사용한다.
-- 주요 영역: Engineering, Design, Product, Project Management, Testing, Security, Marketing, Sales, Strategy, Finance, Game Development 등.
-- Claude Code뿐 아니라 GitHub Copilot, Antigravity/Gemini, OpenCode, OpenClaw, Cursor, Aider, Windsurf, Kimi Code, Codex, Osaurus, Hermes, Mistral Vibe 등으로 변환·설치할 수 있다.
+Agency Agents(The Agency)는 개발, 디자인, PM, 테스트, 보안, 마케팅, 게임 개발 등 다양한 직무의 전문 에이전트를 Markdown 정의로 제공한다. 자체 LLM 런타임이라기보다 역할 정의, 변환기, 설치 계층이 핵심이다. 2026-09-09 최신 커밋 기준 279 agents × 14 tools 변환 검증이 언급될 정도로 카탈로그와 지원 대상이 크게 확장되었다.
+
+Claude Code에서는 원본 Markdown agent를 네이티브로 사용하며, 다른 호스트는 변환/설치 스크립트를 통해 대응한다. 공식 데스크톱 앱도 별도 제공되지만 앱 자체 역시 agent runtime은 아니다.
 
 ## 해결하려는 문제
 
-일반적인 AI 코딩 에이전트는 한 세션 안에서 설계, 구현, 리뷰, UX, 테스트 등 서로 다른 역할을 동시에 수행하면서 관점과 품질 기준이 흐려지기 쉽다. Agency Agents는 역할별 시스템 프롬프트에 가까운 정의를 분리하여 다음 문제를 해결한다.
-
-1. 역할별 전문성 부족
-2. 작업마다 반복되는 긴 프롬프트 작성
-3. 팀/프로젝트 간 AI 작업 방식의 불일치
-4. Claude Code, Cursor, Codex 등 도구별 프롬프트 자산의 파편화
-5. 결과물의 완료 조건과 품질 기준이 불명확한 문제
+- 한 범용 에이전트가 설계·구현·리뷰·UX·테스트를 모두 수행할 때 역할별 품질 기준이 흐려지는 문제
+- 반복적인 역할 프롬프트 작성 비용
+- 프로젝트/팀마다 달라지는 AI 작업 방식
+- Claude Code, Codex, Cursor 등 호스트별 프롬프트 자산 파편화
+- 작업의 deliverable과 success criteria가 불명확한 문제
 
 ## 핵심 기능
 
-### 전문 에이전트 카탈로그
+### 전문 Agent Catalog
 
-각 에이전트는 단순 직무명이 아니라 Identity & Memory, Core Mission, Critical Rules, Technical Deliverables, Workflow Process, Success Metrics, Communication Style 등을 포함한다.
+각 에이전트는 단순 persona보다 Identity, Mission, Rules, Deliverables, Workflow, Success Metrics, Communication Style 등을 포함하는 재사용 가능한 업무 역할 정의에 가깝다.
 
-대표 예:
-- Frontend Developer
-- Backend Architect
-- AI Engineer
-- DevOps Automator
-- Rapid Prototyper
-- UI Designer / UX Researcher / UX Architect
-- Security 관련 에이전트
-- Reality Checker 등 검증 역할
+### Multi-tool 배포
 
-### Multi-tool 변환 및 설치
+원본 agent definitions를 도구별 형식으로 변환하고 설치한다. Claude Code는 `~/.claude/agents/`에 직접 설치하며 GitHub Copilot, Gemini 계열, OpenCode, Cursor, Aider, Windsurf, OpenClaw, Codex, Hermes 등 다양한 호스트를 지원하는 방향으로 확장되고 있다.
 
-`scripts/convert.sh`가 원본 에이전트 정의를 대상 도구 형식으로 변환하고 `scripts/install.sh`가 설치한다.
+### Workflow Examples
 
-예:
-- Claude Code → `~/.claude/agents/`
-- GitHub Copilot → `~/.github/agents/`
-- Cursor → `.cursor/rules/*.mdc`
-- OpenCode → `.opencode/agents/`
-- Aider → 단일 `CONVENTIONS.md`
-- OpenClaw → 에이전트별 workspace/SOUL.md/AGENTS.md/IDENTITY.md
-- Codex 등도 통합 대상에 포함
+`examples/`에는 단순 역할 목록 외에도 Startup MVP, Landing Page, Book Chapter, Memory 연동, NEXUS Spatial Discovery 같은 multi-agent workflow 예제가 있다.
 
-division 또는 agent 단위로 필요한 역할만 설치할 수 있어 전체 카탈로그를 무조건 컨텍스트에 넣지 않아도 된다.
+Startup MVP 예시는 Sprint Prioritizer와 UX Researcher의 병렬 작업 → Backend Architect → Frontend Developer/Rapid Prototyper → Reality Checker → Growth Hacker → 최종 Reality Check 흐름을 제시한다.
+
+핵심 패턴은 sequential handoff, parallel work, quality gate, context passing이다. 특히 예제는 에이전트 간 shared memory를 전제로 하지 않고 이전 agent output을 다음 prompt에 전달하도록 명시한다.
 
 ## 아키텍처
 
 ```text
-Agent Markdown Definitions
-        │
-        ├─ engineering/
-        ├─ design/
-        ├─ security/
-        ├─ testing/
-        ├─ product/
-        └─ ...
-        │
-        ▼
- scripts/convert.sh
-        │
-        ├─ Claude Code format
-        ├─ Cursor rules
-        ├─ OpenCode agents
-        ├─ Aider conventions
-        ├─ Gemini skills
-        └─ 기타 tool-specific format
-        │
-        ▼
- scripts/install.sh
-        │
-        ▼
-각 AI Coding Agent Runtime
+Agent Markdown Catalog
+  ├─ engineering/
+  ├─ design/
+  ├─ game-development/
+  ├─ security/testing/...
+  └─ divisions.json
+          │
+          ▼
+   convert / install layer
+          │
+          ├─ Claude Code agents
+          ├─ Copilot agents
+          ├─ Cursor rules
+          ├─ Gemini/OpenCode
+          ├─ Codex
+          └─ Hermes plugin 등
+          │
+          ▼
+     Host Agent Runtime
 ```
 
-즉 자체 LLM 런타임이나 오케스트레이터라기보다 **에이전트 역할 정의 + 변환기 + 설치 계층**에 가깝다. 실제 실행·툴 호출·컨텍스트 관리는 Claude Code/Codex/Cursor 같은 호스트가 담당한다.
-
-## 장점
-
-- 역할별 프롬프트를 처음부터 설계할 필요가 없다.
-- 역할, 프로세스, 산출물, 성공 기준까지 포함해 단순 persona prompt보다 구체적이다.
-- 동일한 에이전트 자산을 여러 AI 도구에 이식할 수 있다.
-- MIT 라이선스로 사내 표준에 맞게 수정하기 쉽다.
-- division/agent 단위 설치가 가능해 필요한 역할만 선택할 수 있다.
-- 에이전트 정의 구조가 명확해 사내 전문 에이전트 템플릿의 레퍼런스로 좋다.
-
-## 단점
-
-- 에이전트가 전문적으로 보이는 것과 실제 모델의 전문성이 증가하는 것은 별개다. 품질은 기반 모델과 제공 컨텍스트에 크게 의존한다.
-- 많은 역할을 설치하면 어떤 에이전트를 언제 호출할지 선택 비용이 커진다.
-- 역할 간 자동 handoff, dependency graph, shared memory, task queue 같은 진짜 multi-agent orchestration은 핵심 기능이 아니다.
-- 일부 정의는 특정 기술 스택이나 작성자의 업무 철학에 편향될 수 있어 조직별 커스터마이징이 필요하다.
-- 긴 역할 프롬프트는 토큰 소비를 증가시킬 수 있다.
-- 호스트별 agent/rule/skill 개념이 달라 변환 후 동작 의미가 완전히 동일하다고 보장하기 어렵다.
-
-## 기존 도구와 비교
-
-| 구분 | Agency Agents | 일반 Claude/Codex Agent 정의 | CrewAI/AutoGen류 |
-|---|---|---|---|
-| 핵심 | 전문 역할 라이브러리 | 프로젝트별 사용자 정의 역할 | Multi-agent 실행 프레임워크 |
-| 실행 엔진 | 없음, 호스트 사용 | Claude/Codex | 자체 orchestration runtime |
-| 역할 카탈로그 | 매우 큼 | 직접 작성 | 직접 작성 중심 |
-| Multi-tool 이식 | 강점 | 제한적 | 프레임워크 종속 |
-| 자동 handoff | 제한적 | 호스트 기능 의존 | 핵심 기능 |
-| 도입 난이도 | 낮음 | 낮음~중간 | 중간~높음 |
-| 적합 용도 | 역할 프롬프트 표준화 | 개별 프로젝트 최적화 | 복잡한 agent workflow |
-
-Agency Agents의 경쟁력은 새로운 agent runtime을 만드는 데 있지 않고 **검증 가능한 역할 프롬프트 자산을 카탈로그화하고 여러 도구로 배포하는 방식**에 있다.
-
-## 활용 사례
-
-1. 구현 전 Backend Architect에게 설계를 검토시키고 Frontend/Backend Developer에게 구현을 맡긴 뒤 Reality Checker 또는 테스트 역할로 최종 검증한다.
-2. CI/CD 변경은 DevOps Automator, 보안 검토는 Security 역할처럼 작업 유형별 전문 reviewer를 붙인다.
-3. UI 작업에서 UX Architect → UI Designer → Frontend Developer 순으로 관점을 분리한다.
-4. 조직에서 자주 반복되는 업무를 자체 Agent Markdown으로 추가하여 AI 업무 표준으로 사용한다.
-
-## 활용 아이디어
-
-### 1. 사내 Agent Catalog의 베이스 템플릿
-
-Agency Agents의 구조를 그대로 복사하기보다 `Identity → Mission → Rules → Deliverables → Workflow → Success Metrics` 스키마를 사내 에이전트 표준으로 채택할 가치가 높다.
-
-예를 들어 다음과 같은 조직 특화 에이전트를 만들 수 있다.
-- WPF/.NET Reviewer
-- Unreal Tooling Engineer
-- Perforce Workflow Specialist
-- TeamCity Pipeline Reviewer
-- Internal Tool UX Reviewer
-
-### 2. Planner → Worker → Reviewer 조합
-
-단일 에이전트를 호출하는 방식보다 역할을 세 단계로 묶는 패턴이 실용적이다.
-
-```text
-Architect / Planner
-       ↓
-Implementation Agent
-       ↓
-Reality Checker / Reviewer
-```
-
-특히 마지막 Reviewer에게 구현 에이전트와 다른 성공 기준을 주면 self-review 편향을 줄일 수 있다.
-
-### 3. 에이전트 자동 선택 Router
-
-작업 입력을 분석해 적절한 에이전트를 선택하는 얇은 Router를 추가하면 Agency Agents를 단순 프롬프트 모음에서 실질적인 Agent System으로 확장할 수 있다.
+Workflow 관점에서는 다음처럼 볼 수 있다.
 
 ```text
 User Task
-   ↓
-Task Classifier
-   ↓
-Agent Selector
-   ↓
-Selected Agency Agent
-   ↓
-Reviewer
+   │
+   ▼
+Planner / Specialist A
+   │ output/context
+   ├──────────────┐
+   ▼              ▼
+Specialist B   Specialist C
+   └──────┬───────┘
+          ▼
+     Implementer
+          ▼
+   Reality Checker
+          │
+      fail│ pass
+          ├──→ specialist 재작업
+          └──→ 완료
 ```
 
-### 4. 필요한 에이전트만 로딩
+중요한 점은 기본 저장소가 이 그래프를 강제 실행하는 orchestration engine은 아니라는 것이다. 실제 호출, 세션, tool use, context 관리는 호스트가 담당한다. 다만 Hermes 통합처럼 일부 대상에서는 실제 specialist delegation을 위한 plugin 계층도 발전하고 있다.
 
-전체 카탈로그를 항상 활성화하지 말고 작업별로 필요한 agent definition만 동적 로딩하는 방식이 토큰 효율 면에서 유리하다. 저장소 자체도 division/agent 선택 설치를 지원하므로 이 방향과 잘 맞는다.
+## 장점
 
-### 5. Agent 품질 평가 체계
+- 사내 Agent Catalog 설계 시 참고할 수 있는 방대한 역할 샘플
+- 역할뿐 아니라 프로세스·산출물·성공 기준까지 정의되어 persona prompt보다 실무적
+- 동일 agent asset을 여러 호스트로 배포할 수 있음
+- MIT 라이선스로 조직 특화 역할로 개조하기 쉬움
+- workflow 예제를 통해 Planner → Worker → Reviewer 패턴을 빠르게 실험 가능
+- 최근에는 변환 산출물과 installer에 대한 회귀 검증이 강화되어 단순 prompt dump보다 engineering asset에 가까워지고 있음
 
-Agency Agents의 Success Metrics 개념을 확장해 각 역할에 테스트 케이스와 평가 기준을 붙이면 에이전트 프롬프트 변경을 회귀 테스트할 수 있다.
+## 단점 및 한계
+
+- 전문 역할 prompt가 기반 모델 자체의 전문성을 높이는 것은 아님
+- 수백 개 역할은 선택 비용과 관리 비용을 증가시킴
+- 모든 agent를 상시 로딩하면 token/context 낭비 가능성이 큼
+- 기본 workflow의 context handoff는 명시적 전달에 의존하며 shared memory/task graph가 자동 제공되는 것은 아님
+- 호스트마다 agent/rule/skill 의미가 달라 변환 결과가 완전히 동등하다고 볼 수 없음
+- 커뮤니티 기여가 빠른 만큼 조직 도입 전 prompt 품질, 보안 지침, tool 권한을 별도 검증해야 함
+- 메인 저장소에는 GitHub Releases가 없어 버전 고정/변경 추적은 commit/tag 정책을 별도로 고려할 필요가 있음
+
+## 활용 사례
+
+- Backend Architect → Developer → Reality Checker 형태의 개발 품질 게이트
+- UX Researcher → UI Designer → Frontend Developer 형태의 UI 작업 분업
+- DevOps/Security/Testing reviewer를 변경 유형에 따라 선택 호출
+- 조직 전용 WPF/.NET, Unreal, Perforce, TeamCity specialist agent 정의의 템플릿
+- 프로젝트별 최소 agent set을 만들어 Claude Code/Codex에 배포
+
+## 기존 도구와 비교
+
+| 구분 | Agency Agents | 프로젝트별 Agent 정의 | CrewAI/AutoGen류 |
+|---|---|---|---|
+| 핵심 | 역할 자산 카탈로그/배포 | 프로젝트 최적화 역할 | 실행 오케스트레이션 |
+| 실행 엔진 | 기본적으로 호스트 사용 | 호스트 사용 | 자체 runtime 중심 |
+| 역할 카탈로그 | 매우 큼 | 직접 작성 | 직접 작성 중심 |
+| Multi-tool 이식 | 강점 | 제한적 | 프레임워크 종속 |
+| 자동 handoff | 호스트/통합에 의존 | 호스트에 의존 | 핵심 기능 |
+| 적합 용도 | Agent Engineering 표준화 | 특정 프로젝트 최적화 | 복잡한 workflow 자동화 |
+
+## 활용 아이디어
+
+### 바로 적용 가능
+
+전체 카탈로그 설치보다 역할 정의 스키마와 우수 agent 몇 개를 선별해 사내 표준 템플릿으로 활용하는 것이 좋다. 예: Planner, Backend Architect, Implementer, Test/Reality Checker, Release/DevOps 역할.
+
+### PoC 가치 있음
+
+현재 개발 harness에 `Task Classifier → Agent Selector → Specialist → Reviewer`를 추가하고 Agency Agents를 role catalog로만 사용하는 구조가 적합하다. 이렇게 하면 수백 개 agent prompt를 항상 context에 넣지 않고 필요한 정의만 lazy-load할 수 있다.
 
 ```text
-agent.md
-examples/
-evals/
-  input-01.md
-  expected-01.md
-metrics.yaml
+Main Session / Orchestrator
+        │
+        ├─ task classify
+        ▼
+   Agent Registry
+        │ select + lazy load
+        ▼
+   Specialist Session
+        │ artifact/result
+        ▼
+ Independent Reviewer
+        │
+        └─ pass/fix loop
 ```
 
-이렇게 구성하면 단순 프롬프트 컬렉션을 버전 관리 가능한 **Agent Engineering 자산**으로 발전시킬 수 있다.
+Perforce 환경에서는 agent마다 독립 workspace를 무조건 만드는 것보다 Analysis/Review 역할은 read-only 또는 동일 변경 목록을 읽게 하고 실제 파일 수정 Worker만 전용 workspace를 갖게 하는 구성이 운영 비용을 줄일 수 있다.
 
-## 참고 링크
+### 아이디어 참고
 
-- Agency Agents: https://github.com/msitarzewski/agency-agents
-- 공식 앱: https://agencyagents.app
-- CONTRIBUTING: https://github.com/msitarzewski/agency-agents/blob/main/CONTRIBUTING.md
+`Identity → Mission → Critical Rules → Deliverables → Workflow → Success Metrics` 구조와 agent별 eval을 결합해 사내 Agent Engineering 규격으로 발전시키는 것이 저장소를 그대로 설치하는 것보다 가치가 높다.
 
-## Tags
+### 현재는 도입 가치 낮음
 
-`AX` `AI Agent` `Claude Code` `Codex` `Cursor` `Agent Engineering` `Multi-Agent` `Prompt Engineering`
+수백 개 agent를 전사 공용으로 한꺼번에 설치하고 사용자가 직접 이름을 골라 호출하는 방식. 역할 중복, discoverability, token/context, 유지보수 문제가 커질 가능성이 높다.
+
+## 결론
+
+Agency Agents의 핵심 가치는 '279개의 에이전트가 있다'는 숫자보다 **전문 역할을 버전 관리 가능한 자산으로 정의하고 여러 AI 호스트로 배포하는 Agent Catalog 패턴**에 있다. 실제 개발 harness에는 전체 도입보다 5~10개 핵심 역할을 선별하고 Router + lazy loading + 독립 Reviewer를 결합하는 방식이 더 실용적이다.
+
+## 참고 자료
+
+- Repository: https://github.com/msitarzewski/agency-agents
+- Claude Code integration: https://github.com/msitarzewski/agency-agents/tree/main/integrations/claude-code
+- Workflow examples: https://github.com/msitarzewski/agency-agents/tree/main/examples
+- Official app releases: https://github.com/msitarzewski/agency-agents-app/releases
