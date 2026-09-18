@@ -891,7 +891,7 @@
 
 ### 3. DeepSeek V4 Flash 실사용 평가 + Opus/Fable Harness 구체화
 
-[`ai/research/deepseek-v4-flash.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/research/deepseek-v4-flash-real-world-usage.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/harness/claude-opus-fable-deepseek-v4-flash.md`](./ai/harness/claude-opus-fable-deepseek-v4-flash.md)
+[`ai/research/deepseek-v4-flash.md`](./ai/research/deepseek-v4-flash.md) · [`ai/research/deepseek-v4-flash-real-world-usage.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/harness/claude-opus-fable-deepseek-v4-flash.md`](./ai/harness/claude-opus-fable-deepseek-v4-flash.md)
 
 - V4 Flash 0731을 단독 만능 모델보다 **명확한 계획을 실행하는 저비용 Coding/Tool Worker**로 평가하고, OpenCode·Hermes 등 실사용 후기를 통해 짧고 명확한 Task에서 강하고 장기 Planning·목표 유지에는 약점이 있음을 정리.
 - 권장 구조를 `Opus/Fable Analyze·Plan → Flash Execute → deterministic Build/Test/Diff Gate → Opus/Fable Review`로 구체화.
