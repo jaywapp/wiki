@@ -12,6 +12,7 @@
 
 | 문서 | Status | Version | Updated | Tags |
 |---|---|---:|---|---|
+| [Task Token Meter](task-token-meter.md) | Idea | 0.1 | 2026-09-19 | ai, claude-code, codex, token, harness, developer-tools, observability |
 | [Claude Workspace Orchestrator](claude-workspace-orchestrator.md) | Idea | 0.1 | 2026-09-04 | claude-code, multi-agent, orchestrator, workspace, automation, deployment |
 | [BeScore Reboot](bescore-reboot.md) | Idea | 0.1 | 2026-08-26 | sports, live-score, web, football, bescore |
 | [Marvelog](marvelog.md) | Idea | 0.1 | 2026-08-26 | marvel, checklist, watch-tracking, sharing, recommendation, entertainment |
