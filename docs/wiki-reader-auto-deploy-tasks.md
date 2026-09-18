@@ -31,9 +31,11 @@
 | 16 | 워크플로 비활성화 | Claude | opus | low | 14 | - | - | `gh workflow list` = `disabled_manually` | done |
 | 17 | API로 develop production 배포, 라이브 확인 | Claude | opus | low | 15,16 | - | - | 배포 `READY`, 라이브 `commit` = `9cf0dbf`, 문서 237개 | done |
 | 18 | 워크플로 파일 삭제, 가이드·트러블슈팅·자동 배포 문서 갱신 | Claude | opus | low | 17 | - | `.github/workflows/deploy-wiki-reader.yml`, `docs/wiki-reader-guide.md`, `tools/vercel-build-time-content-stale-trap.md`, `docs/wiki-reader-auto-deploy-*.md` | 문서 재확인, `git diff` | done |
-| 19 | 커밋·push·PR 생성 | Claude | opus | low | 18 | - | - | PR 열림 | done (사용자 요청) |
-| 20 | 병합 push로 자동 배포 확인: Vercel 배포 생성, 라이브 `commit` = 병합 커밋 | Claude | opus | low | 19 | - | - | 프로젝트 배포 목록, 라이브 `content.json` | todo (PR 병합 후) |
-| 21 | 저장소 시크릿 `VERCEL_TOKEN`·`VERCEL_ORG_ID`·`VERCEL_PROJECT_ID` 삭제, Vercel 토큰 revoke | 사용자 | - | low | 16 | - | - | `gh secret list` | 제안 |
+| 19 | 커밋·push·PR 생성 | Claude | opus | low | 18 | - | - | PR 열림 | done (PR #17) |
+| 20 | 병합 push로 자동 배포 확인: Vercel 배포 생성, 라이브 `commit` = 병합 커밋 | Claude | opus | low | 19 | - | - | 프로젝트 배포 목록, 라이브 `content.json` | done (2026-09-19: #8·#15·#16·#17 병합 push마다 production 배포 자동 생성, `READY`. 라이브 `commit` = #17 병합 커밋 `4db0157`, 문서 248개) |
+| 21 | 저장소 시크릿 `VERCEL_TOKEN`·`VERCEL_ORG_ID`·`VERCEL_PROJECT_ID` 삭제, Vercel 토큰 revoke | 사용자 | - | low | 16 | - | - | `gh secret list` | todo (사용자 직접 실행. 시크릿 저장소 쓰기는 Claude 권한 설정에서 막혀 있다) |
 | 22 | (선택) Build Command에 `npm test` 추가, preview 브랜치 제한 | 사용자 판단 | - | low | 20 | - | `web/vercel.json` 또는 Vercel 설정 | preview 배포로 확인 | 제안 |
 
 작업 13~17은 같은 Vercel 프로젝트 설정을 차례로 바꾸는 작업이라 순서대로 처리했다. 작업 15는 연결 직후 `productionBranch`가 `master`로 잡힌 것을 보고 추가했다.
+
+작업 20에서 #12 병합 커밋(`aa44c48`)은 별도 production 배포로 보이지 않았다. 병합이 수 초 간격으로 이어져 다음 배포에 합쳐진 것으로 보이며, 빌드는 항상 develop tip을 동기화하므로 그 문서도 라이브 인덱스에 포함됐다.
