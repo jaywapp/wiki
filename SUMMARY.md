@@ -9,6 +9,44 @@
 
 ---
 
+## 2026-09-18
+
+> **5 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
+
+### 1. AI Harness Token Scout — Context Projection, Review Cache, Skill Catalog Invalidation
+
+[`ai/trend/ai-harness-token-scout-2026-09-18.md`](./ai/trend/ai-harness-token-scout-2026-09-18.md)
+
+- Claude Code v2.1.274의 deferred MCP startup, Monitor 결과+종료 알림 통합, lean inline `/code-review`를 통해 **준비되지 않은 capability와 불필요한 reviewer topology를 첫 turn부터 물리지 않는** 지연 materialization 패턴을 정리. 특히 build/test 완료 이벤트에 결과·exit status·evidence pointer를 함께 넣어 notification-only model turn을 없애는 방향을 제안.
+- Codex Guardian의 최근 제한사항을 Worker가 아니라 Reviewer에만 투영하는 **role별 Context Projection**, transcript/permission을 stable prefix로 유지하는 Reviewer prompt-cache layout, score·authorization·tool coverage를 atomically publish하는 ReviewSnapshot을 결합해 cache reuse와 review freshness를 동시에 다루는 구조를 분석.
+- Deep Agents의 `skills_metadata=None` invalidation/reload, fork/isolated Skill catalog inheritance semantics와 공통 `RunSpec → RunResult` runtime adapter 사례를 통해 Prompt/Skill text를 매번 줄이는 것보다 **catalog 자체를 cache하고 필요한 시점에만 무효화**하는 방향을 제시.
+
+### 2. WeKnora — RAG·Agent·Wiki를 결합한 Self-hosted Knowledge Infrastructure
+
+[`ai/tools/weknora.md`](./ai/tools/weknora.md)
+
+- Tencent WeKnora를 문서 수집·Hybrid RAG·ReAct Agent·MCP/Skill·세션 지속 Sandbox·자동 Markdown Wiki·장기 메모리를 한 지식 플랫폼에 묶는 구조로 분석. 같은 Knowledge Base를 Q&A, Agent, Wiki에서 재사용하고 revision/diff/rollback까지 제공하는 점이 핵심.
+- v0.8.0의 Docker/E2B/Cube 기반 Skill Sandbox는 shell/file/artifact/network 작업을 세션 단위로 실행하며, Claude/Codex에는 모든 장기 문서를 직접 넣는 대신 WeKnora MCP/RAG에서 **필요한 chunk만 선택적으로 공급**하는 Context/Token 절감 계층으로 PoC 가치가 있음.
+- Git Markdown을 SoT로 유지하고 WeKnora를 derived index/Knowledge backend로 두는 구성이 현실적이며, 운영 복잡도·sandbox 권한·라이선스 상태는 Enterprise 도입 전 별도 검증이 필요.
+
+### 3. Google ARTEMIS — Coding Agent의 Android Closed-loop 실행·검증 계층
+
+[`ai/tools/google-artemis.md`](./ai/tools/google-artemis.md)
+
+- 자연어 테스트를 실제 Android device/emulator의 관찰·탭·입력·앱 실행·Screenshot/Logcat 수집으로 연결하고 MCP로 Claude Code·Codex에 제공하는 Android automation toolkit을 분석. accessibility hierarchy를 우선하고 OCR/vision/coordinate로 fallback하는 구조가 특징.
+- 단순 작업은 빠른 Flash, 계획·checkpoint·diagnostics가 필요한 작업은 Pro로 라우팅하며, 오래된 screenshot과 완료 step은 visual summary/history chunk로 압축하고 필요 시 다시 검색·재생해 **장시간 Agent 테스트의 context 증가를 제어**.
+- 코드 수정→APK build→설치→실기기 조작→로그/화면 검증→재수정의 self-verification loop에 유용하지만, ADB/accessibility 권한·비결정성·공개 보안 이슈는 제한된 device와 정책 guardrail로 검증해야 함.
+
+### 4. BrowserSkill — 실제 로그인 Chromium을 공유하는 Harness-independent Browser Capability
+
+[`ai/skills/browser-skill.md`](./ai/skills/browser-skill.md)
+
+- Tencent BrowserSkill은 Claude Code·Codex 같은 shell-capable Agent가 `bsk` CLI·local daemon·Chromium extension을 통해 **사용자의 실제 로그인 상태를 가진 Chrome/Edge**를 별도 Agent Window에서 조작하게 하는 Browser Skill.
+- 사용자 탭은 명시적으로 borrow/return하고 CAPTCHA·MFA는 human takeover로 처리하며, 페이지 변경마다 `observe → action → observe`로 fresh reference를 다시 얻는 안전한 실행 규칙을 둠. VOM semantic observation·file transfer·recorder/eval도 제공.
+- 복잡한 브라우저 로직은 deterministic CLI/daemon에 두고 Skill은 호출 규칙·안전 정책만 유지해 **Skill context를 얇게 만드는 실행 분리 패턴**이 재사용 가치가 높으며, TeamCity 배포 후 smoke test·Perforce 업무 웹 도구 연결 같은 PoC에 적합.
+
+---
+
 ## 2026-09-17
 
 > **11 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
@@ -853,7 +891,7 @@
 
 ### 3. DeepSeek V4 Flash 실사용 평가 + Opus/Fable Harness 구체화
 
-[`ai/research/deepseek-v4-flash.md`](./ai/research/deepseek-v4-flash.md) · [`ai/research/deepseek-v4-flash-real-world-usage.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/harness/claude-opus-fable-deepseek-v4-flash.md`](./ai/harness/claude-opus-fable-deepseek-v4-flash.md)
+[`ai/research/deepseek-v4-flash.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/research/deepseek-v4-flash-real-world-usage.md`](./ai/research/deepseek-v4-flash-real-world-usage.md) · [`ai/harness/claude-opus-fable-deepseek-v4-flash.md`](./ai/harness/claude-opus-fable-deepseek-v4-flash.md)
 
 - V4 Flash 0731을 단독 만능 모델보다 **명확한 계획을 실행하는 저비용 Coding/Tool Worker**로 평가하고, OpenCode·Hermes 등 실사용 후기를 통해 짧고 명확한 Task에서 강하고 장기 Planning·목표 유지에는 약점이 있음을 정리.
 - 권장 구조를 `Opus/Fable Analyze·Plan → Flash Execute → deterministic Build/Test/Diff Gate → Opus/Fable Review`로 구체화.
