@@ -1,5 +1,8 @@
 # 위키 리더 자동 배포 — 설계
 
+> 2026-09-19 방식 B(Vercel Git 연동)로 전환하고 워크플로를 삭제했다. 현재 구성은 맨 아래
+> "2026-09-19 전환 후 구성"을 본다. 그 앞의 파이프라인·보안 결정은 폐기된 방식 A의 기록이다.
+
 ## 확인된 요구사항
 
 `develop` push마다 리더를 production에 배포하고, 배포된 결과가 실제로 그 커밋의 콘텐츠인지 확인한다.
@@ -57,3 +60,45 @@
 2. 병합 직후 첫 실행: 각 단계 통과 여부, 특히 `vercel build`가 토큰 없이 성공하는지,
    `.vercel/output/static/content.json` 경로가 맞는지, `npm test`가 러너에서 통과하는지.
 3. 실행 후: 라이브 `content.json`의 `commit`과 develop HEAD 비교.
+
+## 2026-09-19 전환 후 구성
+
+### 배포 흐름
+
+`develop` push(PR 머지 포함) → Vercel GitHub App 웹훅 → Vercel이 `web`에서 `npm install` →
+`npm run build:fresh`(sync → vite build) → `dist` 배포 → production 별칭(`jaywapp-wiki.vercel.app`) 갱신.
+다른 브랜치와 PR은 같은 빌드를 preview로 배포한다.
+
+| Vercel 설정 | 값 | 이유 |
+|---|---|---|
+| Git 연결 | `github:jaywapp/wiki` | 저장소 push를 배포 트리거로 쓴다 |
+| Production Branch | `develop` | 저장소 기본 브랜치이자 동기화 스크립트가 읽는 브랜치. 연결 직후 `master`로 잡혀 바꿨다 |
+| Root Directory | `web` | 저장소 루트에 `package.json`이 없다 |
+| Build Command / Output | `npm run build:fresh` / `dist` | `web/vercel.json`에 있는 기존 값 그대로 |
+
+캐시 헤더와 보안 헤더는 `web/vercel.json`의 `headers`가 그대로 적용된다.
+
+### 방식 A와 비교해 달라진 점
+
+| 항목 | 방식 A (폐기) | 방식 B (현재) |
+|---|---|---|
+| 토큰 | GitHub 시크릿에 Vercel 토큰 보관 | 필요 없음. Vercel GitHub App 권한으로 동작 |
+| 테스트 게이트 | 배포 전 `npm test` | 없음. 빌드만 통과하면 배포 |
+| 옛 커밋 재배포 방지 | develop tip 가드 | 없음. 다만 동기화가 항상 develop tip을 읽어 콘텐츠는 최신이다 |
+| 라이브 검증 | 워크플로가 라이브 `content.json` 커밋 확인 | 없음. 필요하면 수동으로 비교 |
+| PR preview | 만들지 않음 | 모든 브랜치·PR에 생성. 콘텐츠는 develop 기준 |
+| 수동 재배포 | `web`에서 `vercel deploy --prebuilt` | 대시보드 Redeploy 또는 `POST /v13/deployments`(`gitSource`) |
+
+### 후속 판단 사항
+
+- **테스트 게이트 복구**: Vercel Build Command를 `npm run build:fresh && npm test`로 바꾸면 테스트 실패 시
+  배포가 멈춘다. 빌드 시간이 늘고, 테스트가 빌드 컨테이너에서 통과하는지 먼저 확인해야 한다.
+- **preview 범위**: 자동화 브랜치 push마다 preview 빌드가 돈다. `web/vercel.json`의 `git.deploymentEnabled`로
+  브랜치를 제한할 수 있다.
+- **시크릿 정리**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`는 더 쓰지 않는다. 토큰 revoke와 시크릿 삭제는 사용자 작업이다.
+
+### 검증 전략
+
+1. 전환 직후: 프로젝트 API의 `link.repo`, `link.productionBranch`, `rootDirectory` 확인.
+2. API로 develop 배포를 만들어 `READY`와 라이브 `content.json`의 `commit` == develop HEAD 확인.
+3. 이 문서를 담은 PR의 병합 push로 자동 배포가 생기는지, 라이브 `commit`이 병합 커밋으로 바뀌는지 확인.
