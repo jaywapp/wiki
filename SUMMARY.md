@@ -9,6 +9,89 @@
 
 ---
 
+## 2026-09-19
+
+> **14 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 9건**
+
+### 1. AI Harness Token Scout — Stable/Dynamic Prompt Boundary, Capability Snapshot, Scoped Knowledge
+
+[`ai/trend/ai-harness-token-scout-2026-09-19.md`](./ai/trend/ai-harness-token-scout-2026-09-19.md)
+
+- Claude Code v2.1.275/276의 명시적 static/dynamic system-prompt cache boundary, compaction/resume cache-miss 수정, forked subagent 전달 보강을 바탕으로 **정적 규칙·정책은 stable prefix, Pending CL·최신 evidence 같은 작업 상태는 dynamic tail**에 두는 계약을 정리.
+- Codex의 capability/environment snapshot 사례에서는 실행 중 설정 변화가 현재 turn을 흔들지 않도록 immutable snapshot을 잡고, UI metadata가 아니라 behavior를 바꾸는 필드만 Skill/MCP cache invalidation에 반영하는 원칙을 도출. Perforce client·mapping도 같은 turn-boundary state로 다루도록 제안.
+- Token Optimizer MCP v7.1의 project-scoped knowledge injection과 27-run 비교, Better Harness의 대형 evidence externalization을 통해 **프로젝트 identity는 Orchestrator가 신뢰 가능한 값으로 전달하고, 큰 증거는 파일/pointer로 빼며, token/request와 request 수를 함께 계측**하는 방향을 보강.
+
+### 2. Prompt Refinement Tools — Target Session 밖의 Prompt Preprocessor / Compiler
+
+[`ai/research/prompt-refinement-tools.md`](./ai/research/prompt-refinement-tools.md)
+
+- 브라우저·데스크톱·IDE에서 `rough prompt → hotkey → rewrite → clipboard/in-place replace → target AI`로 동작하는 공개 구현을 조사하고, 이를 **대상 Claude/Codex 세션과 분리된 입력 전처리 계층**으로 정리.
+- Skill 안에서 prompt를 다듬는 방식과 달리 target session의 Context를 소비하지 않는 장점이 있지만, prompt inflation·hallucinated requirement·외부 backend 보안 위험이 있어 local rule/on-device model/승인 endpoint를 우선하도록 권고.
+- 실제 효과는 원문·정제문 token, rewrite latency/cost, target task token, clarification 횟수, first-try success를 함께 측정해 downstream 재작업 감소가 전처리 비용보다 큰지 검증하도록 제안.
+
+### 3. only-cli (oc) — Web Read를 Progressive Disclosure로 바꾸는 Cheap First Layer
+
+[`ai/tools/only-cli-oc.md`](./ai/tools/only-cli-oc.md)
+
+- raw HTML이나 대형 accessibility snapshot을 그대로 모델에 넣는 대신 기본 약 500-token의 번호 기반 compact view와 `do/find/read/next`로 필요한 부분만 확장하는 read-only Web CLI를 분석.
+- `Search → URL 확보 → oc → JS/interaction 필요 시 Browser/Playwright fallback`으로 라우팅하면 Claude Code·Codex가 같은 저비용 Web Read 계층을 공유할 수 있고, page/session 재사용으로 네트워크 호출과 모델 입력을 함께 줄일 수 있음.
+- 프로젝트 자체 benchmark는 큰 절감치를 보고하지만 독립 검증이 아니므로, 사내 문서·GitHub·공식 문서 작업에서 실제 task token·성공률·정확도·latency를 같이 측정하는 PoC가 필요.
+
+### 4. Workspace Harness — Read-only MVP와 Windows Terminal 멀티 프로젝트 운영 구조
+
+[`docs/workspace-harness-analysis.md`](./docs/workspace-harness-analysis.md) · [`docs/workspace-harness-design.md`](./docs/workspace-harness-design.md) · [`docs/workspace-harness-execution-tasks.md`](./docs/workspace-harness-execution-tasks.md) · [`docs/windows-terminal-workspace-guide.md`](./docs/windows-terminal-workspace-guide.md)
+
+- Codex·Claude의 실제 기능과 규칙 충돌을 조사한 뒤, root Orchestrator가 프로젝트별 작업을 전달하고 질문·응답·결과를 회수하는 Workspace Harness의 분석·설계·작업계획과 **읽기 전용 왕복 검증 MVP**를 문서화.
+- Windows Terminal은 왼쪽 Orchestrator와 오른쪽 프로젝트 창을 분리하고 각 프로젝트 탭을 AI + 로그/테스트 PowerShell로 나누며, Codex를 기본·Claude를 대체 실행기로 사용하는 실제 로컬 운영 구성을 추가.
+- 기존 Terminal 설정을 보존하며 관리 대상 항목만 idempotent하게 병합하고 백업·JSON 검증·복구 경로를 두는 등, 별도 GUI를 만들기 전에 기존 터미널을 Harness UI substrate로 활용하는 방향을 구체화.
+
+### 5. Code-Virtualize 재검토 — 구현 확대 전에 LSP 중복·Recall·Freshness 가설을 검증
+
+[`ai/harness/code-virtualize-feedback-claude.md`](./ai/harness/code-virtualize-feedback-claude.md) · [`ai/harness/code-virtualize.md`](./ai/harness/code-virtualize.md)
+
+- 기존 `.cv` 설계를 비판적으로 검토해 `cv_find/cv_get/cv_impact`가 LSP·Serena와 상당 부분 겹치며, **참조 일부만 누락된 HIT+VALID 결과가 가장 위험한 failure mode**라는 점을 추가.
+- 세션마다 전체 인덱스를 만들고 버리는 구조보다 file-hash 기반 영속 cache + 조회 시 mtime/hash freshness 확인을 권장하고, UE5 macro/generated/Blueprint와 C# DI/reflection/XAML처럼 정적 분석이 놓치기 쉬운 참조는 이름 기반 grep과 차이를 함께 보여주는 confidence 구조를 제안.
+- 토큰 절감 가설은 구현 전에 기존 Claude JSONL에서 전체 파일 read·반복 read 비율을 먼저 계측하고, benchmark에는 기존 방식+범위 읽기 지시, LSP/Serena 비교군과 reference recall·통계적 반복을 포함하도록 수정 방향을 제시.
+
+### 6. Task Token Meter — Session 누적이 아닌 Turn/Task 비용을 Log-first로 계측
+
+[`idea/task-token-meter.md`](./idea/task-token-meter.md) · [`idea/task-token-meter-claude-feedback.md`](./idea/task-token-meter-claude-feedback.md)
+
+- Claude Code·Codex 작업의 session 전체 누적값이 아니라 **개별 Turn/Task 단위 실제 usage**를 외부 CLI가 수집·정규화·ledger에 기록하고, Harness/Context 최적화 전후의 비용을 비교하는 Observability 아이디어를 추가.
+- 후속 실측 검토에서 경계를 Hook start/stop에 의존하지 않고 Claude `promptId`, Codex `turn_id/root_turn_id`를 source of truth로 삼아 Ledger를 재계산 가능한 파생 데이터로 두도록 재설계. MVP는 Hook 없이 transcript 조회만으로도 시작할 수 있다고 평가.
+- Claude subagent와 Codex child thread를 루트 turn에 귀속하고, 중복 기록은 마지막/최대 usage를 사용하며, Codex cached input·reasoning subset과 Claude 5m/1h cache write를 분리해 **Normalized Usage의 이중 계산과 잘못된 Processed 합계**를 피하도록 구체화.
+
+### 7. Wiki Reader 자동 배포 — 실패한 GitHub Actions에서 Vercel Git Integration으로 전환·검증
+
+[`docs/wiki-reader-auto-deploy-analysis.md`](./docs/wiki-reader-auto-deploy-analysis.md) · [`docs/wiki-reader-auto-deploy-design.md`](./docs/wiki-reader-auto-deploy-design.md) · [`docs/wiki-reader-auto-deploy-tasks.md`](./docs/wiki-reader-auto-deploy-tasks.md) · [`docs/wiki-reader-guide.md`](./docs/wiki-reader-guide.md)
+
+- 기존 GitHub Actions 배포가 2026-09-11~19 동안 **64회 실패·성공 0회**였고 모두 `vercel pull`의 Project Settings 조회에서 막혀 live site가 수동 배포 시점에 정체된 사실을 확인.
+- 배포 방식을 `develop push → Vercel GitHub App → web root에서 build:fresh → production alias`로 전환하고 기존 workflow를 비활성화·삭제. Production Branch가 오래된 `master`로 잡히는 함정과 submodule 내부 `vercel git connect` 실패도 운영 지식으로 기록.
+- 병합 후 실제 production deploy와 live `content.json` commit 이동을 검증했고, 연속 merge 중 한 commit은 개별 deploy가 coalesce됐어도 최신 build에 내용이 포함됨을 확인. 불필요해진 GitHub Actions Vercel secrets도 삭제해 운영 상태를 정리.
+
+### 8. oh-my-disk-cleaner — Windows 실측으로 Locale·분석 정확도·Skill Context 한계 확인
+
+[`ai/skills/oh-my-disk-cleaner.md`](./ai/skills/oh-my-disk-cleaner.md)
+
+- Windows 11 한국어 로캘에서 직접 설치·실행해 `monitor_disk.py`의 Unicode 진행률 문자가 cp949에서 크래시하는 문제와 `--json`/`--no-progress` 우회법을 확인.
+- `Largest Directories`는 AppData 103GB를 통째로 누락하고 Documents를 실측 30.4GB 대비 0.02GB로 보고하는 등 최대 약 1500배 오차가 있어 **디렉터리 용량 진단에는 사용 금지**로 결론을 보정. 반면 drive usage·large file·dry-run cleanup은 제한적으로 유효.
+- 46KB `SKILL.md`가 매 세션 Context를 크게 쓰고 존재하지 않는 API 의사 코드까지 포함해, 실제 Agent는 문서 전체를 신뢰하기보다 script `--help`와 deterministic output을 우선하는 편이 안전하다고 평가.
+
+### 9. Vlytics — V리그 데이터 미러링·통계·Multi-AI 예측 성능 검증 플랫폼
+
+[`idea/vlytics.md`](./idea/vlytics.md)
+
+- KOVO V리그 남녀부의 경기·세트·팀·선수 기록을 V-Mirror에 장기 축적하고, V-Engine이 Feature·통계 baseline·GPT/Claude/Gemini 예측을 같은 snapshot 기준으로 실행하는 개인용 데이터/예측 플랫폼 아이디어를 구체화.
+- 경기 1시간 전 prediction snapshot을 고정하고 종료 후 실제 결과와 비교해 승패·세트스코어·핸디캡·O/U뿐 아니라 Brier Score·Log Loss·Calibration까지 장기 측정하도록 설계.
+- AI가 통계 계산 자체를 대신하지 않고 deterministic Feature/Stat 계층 뒤에 독립 분석기로 배치하며, model·prompt·feature version과 token usage·latency까지 함께 남겨 어떤 변경이 실제 예측 품질 향상에 기여했는지 검증하도록 함.
+
+### 기타
+
+- [`AGENTS.md`](./AGENTS.md)의 `D:\\work`·`D:\\work\\wiki` 절대 경로를 제거하고 저장소 루트를 파일 위치 기준으로 해석하도록 바꿔 멀티 저장소 공통 계약을 이식 가능하게 정리.
+- `SUMMARY.md`의 과거 DeepSeek V4 Flash 링크 1건을 실제 문서 경로로 복구한 변경은 링크 정정으로만 처리.
+
+---
+
 ## 2026-09-18
 
 > **5 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 4건**
@@ -260,7 +343,7 @@
 [`ai/tools/open-generative-ai.md`](./ai/tools/open-generative-ai.md)
 
 - 이미지·영상·오디오·로컬 추론·Agent·Workflow를 하나의 Next.js/Electron shell에 묶고 provider router로 local/cloud backend를 선택하는 구조를 분석.
-- Coding Harness 자체를 대체하기보다는 **공통 Agent/Model Router 위에 Code·Review·Research·Release 같은 task-specific Studio를 배치하는 통합 Workspace UX**의 참고 구조로 평가.
+- Coding Harness 자체를 대체하기보다 **공통 Agent/Model Router 위에 Code·Review·Research·Release 같은 task-specific Studio를 배치하는 통합 Workspace UX**의 참고 구조로 평가.
 
 ### 8. DevOps Resource Discovery — free-for-dev 최신성 검증
 
@@ -800,7 +883,7 @@
 
 - **Prompt Master**를 단순 prompt template 모음보다 `rough request → intent extraction → target-tool routing → scope/approval/done/verification을 갖춘 Task Contract`로 변환하는 **Prompt Compiler Skill**로 평가하고, Coding Agent 앞단의 경량 Prompt Gateway/Quality Gate로 활용하는 아이디어를 제안.
 - `/cheatsheet`, `/blueprint`, `/flashcards`, `/mindmap`은 숨겨진 ChatGPT 공식 명령어가 아니라 원하는 출력 형태를 축약해서 지정하는 **prompt label**로 정리하고, 팀 차원의 `/research`, `/review`, `/rootcause` 같은 intent vocabulary를 실제 Skill Router로 확장하는 방향을 제안.
-- Claude Code에서 Tool Call 파라미터의 한국어가 다른 정상 한글 음절로 치환되는 특정 증상은 `\uXXXX` escape 생성 오류 가능성이 있으며, `CLAUDE.md`에서 비 ASCII tool parameter를 **literal UTF-8로 작성하도록 강제**하는 prompt-level workaround와 회귀 검증 방법을 정리.
+- Claude Code에서 Tool Call 파라미터의 한국어가 다른 정상 한글 음절로 치환되는 특정 증상은 `\\uXXXX` escape 생성 오류 가능성이 있으며, `CLAUDE.md`에서 비 ASCII tool parameter를 **literal UTF-8로 작성하도록 강제**하는 prompt-level workaround와 회귀 검증 방법을 정리.
 
 ### 6. Agent가 읽고 만드는 외부 지식·UI — Design System, Archify, Instagram Reels
 
