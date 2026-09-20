@@ -9,6 +9,20 @@
 
 ---
 
+## 2026-09-20
+
+> **2 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 1건**
+
+### 1. AI Harness Token Scout — Resume Cache, Turn-boundary Compaction, Context Build Mode, Token Efficiency 실증
+
+[`ai/trend/ai-harness-token-scout-2026-09-20.md`](./ai/trend/ai-harness-token-scout-2026-09-20.md)
+
+- Claude Code v2.1.277/278에서 resume·subagent의 prompt cache correctness를 보강하고 Auto mode classifier를 server-side로 이동한 변화를 바탕으로, **resume을 단순 session 복원이 아니라 stable serialization을 유지하는 cache-compatible replay로 다루고 routing 비용도 별도 telemetry로 계측**해야 한다는 원칙을 정리. `AGENTS.md` fallback은 공통 bootstrap을 작게 유지하는 방향으로 활용 가능.
+- Codex는 final response 이후 context pressure가 높을 때만 수행하는 **post-turn opportunistic compaction**과 `Full / StartupPrewarm / InjectItems` context build mode 분리를 추가. History/evidence 기록처럼 실제 reasoning이 없는 상태 변경에서는 Skill discovery를 생략하고, 실행 시에만 full capability를 materialize하는 `HistoryOnly vs Execution Context` 구조로 일반화.
+- NVIDIA SoL-Pi는 Action Fusion·ObservationPack·evidence-grounded reducer·economic compaction으로 EdgeBench에서 유사 성능을 유지하며 **recorded token traffic 44.7~49.0% 감소, API cost 약 1/3 감소**를 보고. 별도 Harness 실증 연구 176 matched settings에서는 deterministic elision을 먼저 적용하고 필요한 경우에만 LLM summary를 쓰며, durable evidence와 model-facing retrieval을 구분하고 model/role별 Tool surface를 조정하는 것이 효율적이라는 결과를 제시.
+
+---
+
 ## 2026-09-19
 
 > **14 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 9건**
