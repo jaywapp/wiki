@@ -9,6 +9,21 @@
 
 ---
 
+## 2026-09-21
+
+> **2 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 1건**
+
+### 1. AI Harness Token Scout — Child-direct Interaction, Approval Batching, Harness Supply-chain, Managed Agent Runtime
+
+[`ai/trend/ai-harness-token-scout-2026-09-21.md`](./ai/trend/ai-harness-token-scout-2026-09-21.md)
+
+- Codex subagent가 parent relay 없이 MCP 사용자 입력을 직접 요청할 수 있게 된 변화를 바탕으로, **작업 정보 입력·인증과 파괴적 권한 승인을 분리**하고 child는 필요한 interaction을 직접 처리하되 submit·workspace mapping 변경 같은 고위험 승인은 root Orchestrator에 남기는 구조를 제안. 질문을 만든 Agent와 답을 소비하는 Agent를 일치시켜 handoff turn과 context serialization을 줄이는 효과도 정리.
+- Deep Agents Talon의 concurrent approval batching에서 같은 approval round·policy·risk class의 독립 Tool 승인을 하나의 사용자 결정으로 묶되 action identity와 audit record는 개별 보존하는 **Interaction Coalescing** 패턴을 추출. Perforce Harness에서는 동일 범위의 독립 write는 batch하되 submit·삭제·서로 다른 depot/workspace scope는 분리하도록 권고.
+- `Scanning the Harness` 연구는 3,171개 저장소에서 **16.0%의 setup에 confirmed security defect**를 확인하고, unpinned MCP·과도한 shell pre-approval·Skill 설치 위험을 실증. `harness-eval`의 deterministic rule과 `harness.lock`을 이용해 Skill/MCP/Hook의 source commit·hash·권한을 고정하고 TeamCity preflight에서 configuration supply-chain을 검사하는 방향을 제안.
+- OpenAI Agents API 사례에서는 managed session·compaction·recovery·subagent orchestration을 모델 호출과 분리된 **Execution/Runtime Environment**로 다루는 관점을 보강. 모델을 교체해도 durable task state·evidence·interaction policy는 Harness 계층에 유지하는 구조가 장기 Agent 운영에 적합하다고 평가.
+
+---
+
 ## 2026-09-20
 
 > **2 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 1건**
