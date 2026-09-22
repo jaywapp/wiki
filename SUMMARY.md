@@ -9,6 +9,28 @@
 
 ---
 
+## 2026-09-22
+
+> **3 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 2건**
+
+### 1. AI Harness Token Scout — Semantic Compaction, Preview-first Messaging, Causal Telemetry, Mutation Ownership
+
+[`ai/trend/ai-harness-token-scout-2026-09-22.md`](./ai/trend/ai-harness-token-scout-2026-09-22.md)
+
+- Codex의 thread 응답 축약이 단순 byte truncation에서 **최종 답변·ID·cursor·status·phase·evidence pointer 같은 semantic/protocol 필드는 보존하고 verbose content만 줄이는 방식**으로 바뀐 사례를 분석. Agent 메시지도 ID-only 알림 대신 짧은 preview + pointer를 실어 불필요한 재조회 turn을 줄이는 Progressive Disclosure 패턴으로 정리.
+- 비동기 Skill/Tool 비용은 완료 시점의 active turn이 아니라 dispatch 시점의 `turn_id/task_id/model/skill/policy`를 capture해 원래 원인에 귀속하는 **causal telemetry** 원칙을 도출. TeamCity build·UE test·장시간 `p4 sync` 같은 늦게 끝나는 작업의 token/cost/latency를 왜곡 없이 계산하도록 제안.
+- Deep Agents의 동일 파일 병렬 mutation 차단을 일반화해 멀티에이전트 병렬화보다 **mutable resource ownership**을 먼저 관리하고, Perforce에서는 canonical depot path 기준 `MutationLease`로 동일 파일 작업을 serialize하도록 권고. LongHorizon-Harness의 fresh context + verified durable state + independent audit, Context Privilege Escalation 연구까지 결합해 장기 작업의 상태·권한 경계를 보강.
+
+### 2. Why MCP Was Always a Bad Idea — Lazy Capability Discovery와 선택적 Integration Boundary
+
+[`ai/research/why-mcp-was-always-a-bad-idea.md`](./ai/research/why-mcp-was-always-a-bad-idea.md)
+
+- 최신 Coding Agent에서는 많은 MCP Tool schema를 매 turn 미리 노출하는 **eager discovery가 Context bloat·Tool 선택 복잡도·반복 schema token 비용**을 만들며, 이미 존재하는 CLI/API와 shell/code execution이 상당수 wrapper 역할을 대체할 수 있다는 비판을 분석.
+- 대안으로 `Static Tool Schema → Dynamic Capability Discovery → Code/Sandbox Execution` 흐름, search/execute 같은 최소 discovery interface, CLI/API capability cache를 제안. 여러 API 호출을 sandbox 내부 코드로 처리하고 compact result만 반환하면 intermediate tool-call context도 줄일 수 있음.
+- 다만 Enterprise에서는 MCP가 credential isolation·permission boundary·audit/logging·authorization flow를 제공하는 **통제 가능한 integration boundary**가 될 수 있으므로 전면 제거보다 `Native CLI → Direct API → 통제가 필요한 capability만 MCP` 순으로 선택하고, server별 schema token·실제 사용률·동일 CLI/API 존재 여부를 계측해 판단하는 방향이 현실적이라고 정리.
+
+---
+
 ## 2026-09-21
 
 > **2 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 1건**
