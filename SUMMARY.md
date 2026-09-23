@@ -9,6 +9,28 @@
 
 ---
 
+## 2026-09-23
+
+> **3 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 2건**
+
+### 1. AI Harness Token Scout — MCP Description Budget, Skill Catalog Cache, Resume Capsule, Guardian Context
+
+[`ai/trend/ai-harness-token-scout-2026-09-23.md`](./ai/trend/ai-harness-token-scout-2026-09-23.md)
+
+- Claude Code v2.1.280에서 `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`로 MCP Tool description 예산을 조절하고 Hook output offload 크기·횟수를 telemetry로 관찰할 수 있게 된 변화를 분석. Opus 5.5의 1M context와 낮아진 cache-read 비용까지 결합해 **큰 context를 미리 채우기보다 role별 Tool schema budget + stable prefix + selective materialization**을 유지하는 Router PoC를 제안.
+- Codex는 cloud Skill catalog를 매 turn 다시 discovery하지 않고 auth/resource generation 기반으로 cache하며, compaction checkpoint에 runtime·turn·settings를 담은 **Resume Capsule**을 저장하고 child progress는 compaction 입력에는 쓰되 이후 raw history에서는 제거하는 방향으로 진화. Guardian도 review context를 thread-owned stable context로 다루도록 보강됨.
+- Deep Agents Code 0.1.73은 provider별 prompt-cache retention countdown과 nested-agent cost breakdown을 durable하게 남겨, cache가 몇 token인지뿐 아니라 **언제 만료되는지와 child/role별 실제 비용이 어디서 발생했는지**를 계측하는 운영 패턴을 제공.
+
+### 2. Context Portal (ConPort) — Project Memory를 구조화된 Retrieval Layer로 외부화
+
+[`ai/tools/context-portal.md`](./ai/tools/context-portal.md)
+
+- 프로젝트별 SQLite에 Product/Active Context, Decision, Progress, System Pattern, Custom Data를 구조화해 저장하고 관계를 Knowledge Graph로 연결하며 FTS + vector semantic search로 필요한 항목만 다시 꺼내는 **local-first MCP project memory**를 분석.
+- CLAUDE.md나 Markdown Memory Bank 전체를 반복 로딩하는 대신 `작업/결정 저장 → 관계 구성 → 다음 세션에서 관련 context만 retrieval`하는 구조라 장기 Coding Agent의 session handoff와 context virtualization 후보로 가치가 있음. 실제 평가는 input token, retrieval Tool call, 과거 결정 recall, stale context 비율, session continuity로 비교하도록 제안.
+- 다만 memory write discipline, MCP 호출 비용, embedding/ChromaDB 운영 의존성, stale graph, workspace-local DB의 협업·동기화 한계가 있어 즉시 표준화보다는 PoC가 적합. Code-Virtualize류의 symbol/index 계층과 ConPort의 project decision memory를 분리해 Context Resolver에서 조합하는 방향도 제시.
+
+---
+
 ## 2026-09-22
 
 > **3 commits 확인 · SUMMARY 자동 갱신 1건 제외 · 핵심 주제 2건**
