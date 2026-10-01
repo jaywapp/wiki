@@ -253,3 +253,5 @@ PostgreSQL 권한 변경 SQL의 성공 응답만으로 접근 차단을 판정�
 큐 권한을 관리할 수 없다면 큐에 인증 값을 저장하지 않는 호출 방식을 검토한다. 동기 `http` 확장도 선택지지만 DB 연결을 호출 시간만큼 점유하므로 워커 제한과 연결/요청 제한을 맞추고, 업무 행을 잠근 채 외부 워커를 기다리지 않는다. 요청 헤더·응답 원문·예외 원문을 저장하지 않으며 HTTP 상태·처리 개수·고정 오류 분류만 기록한다. 확장 버전에 따라 redirect 추적을 끌 수 없거나 디버그 로그에 헤더가 포함될 수 있으므로 라이브러리 소스와 운영 로그 수준을 함께 확인한다. [Supabase http](https://supabase.com/docs/guides/database/extensions/http) · [pgsql-http](https://github.com/pramsey/pgsql-http)
 
 업무 알림의 실제 검증에는 켠 기기와 같은 종류만 끈 기기를 동시에 두면 수신과 차단을 함께 확인할 수 있다. 설정 저장·서버 대상 계산·ticket·receipt·휴대전화 표시·탭 이동은 각각 기록한다. 직접 공급자에 보낸 테스트 알림의 성공을 DB outbox와 자동 워커 경로 전체 통과로 보고하지 않는다.
+
+pgsql-http 버전에 따라 POST redirect 추적을 비활성화하는 옵션이 없을 수 있다. 임의 인증 헤더는 redirect에도 전달될 수 있으므로 장기 시크릿을 사용하는 경우 고정 HTTPS 목적지·TLS 검증과 표준 Authorization의 교차 호스트 제한을 확인한다. 실제 동작 검사는 시크릿 대신 공개 가상 marker를 사용하고, 목적지의 정상 응답과 marker 부재를 함께 확인한다. 403 오류 응답에 marker가 없다는 사실은 redirect 보호 통과 증거가 아니다. C 확장의 DEBUG 로그가 요청 헤더를 출력하는지도 확인한다. [libcurl 인증 전달 정책](https://curl.se/libcurl/c/CURLOPT_UNRESTRICTED_AUTH.html) · [pgsql-http 1.6 소스](https://github.com/pramsey/pgsql-http/blob/v1.6.0/http.c)
