@@ -161,3 +161,9 @@ EAS credentials의 Android 상위 메뉴에서 `Google Service Account`를 선�
 Windows PTY에서 대화형 CLI가 지연되면 로그인 실패나 키 업로드 실패를 추정하지 않는다. 이미 성공한 업로드를 다시 수행하기 전에 같은 계정·프로젝트·패키지의 자격 증명 메타데이터를 조회해 상태를 확인한다. 공식 CLI 구현의 조회·연결 함수를 진단에 활용할 경우 설치 버전에 따른 내부 API이며 안정된 공개 SDK로 간주하지 않는다. 프로젝트 식별을 먼저 검증하고 FCM 용도만 다루며 토큰·개인 키·전체 응답을 출력하지 않는다.
 
 FCM 연결 확인은 실제 기기 수신 확인과 다르다. 발송 OFF로 함수 배포를 확인한 뒤 승인된 테스트 회원과 실제 Android에서 ticket·receipt·화면 표시를 각각 검증한다. 로컬 서비스 계정 키를 보관할 때는 암호화 보관본의 복원 일치를 확인하고 일시 평문 사본을 제거한다. 어느 단계에서도 비밀 파일을 Git 또는 공개 APK Release에 넣지 않는다.
+
+## 10. GitHub runner의 Android 도구 PATH
+
+Android SDK가 설치된 runner에서도 `sdkmanager: command not found`가 발생할 수 있다. `ANDROID_HOME`이 있는지와 command-line tools 아래 실제 sdkmanager·avdmanager 위치를 먼저 확인한다. SDK 환경변수가 설정돼 있다는 사실만으로 해당 bin 디렉토리가 PATH에 포함됐다고 가정하지 않는다. 도구를 찾았으면 실행 권한을 검사하고 GitHub의 `GITHUB_PATH` 파일에 bin 경로를 등록해 다음 step에서 사용한다. 에뮬레이터와 adb도 같은 SDK를 사용하도록 환경을 확인한다.
+
+command-line tools는 latest 경로 또는 설치 버전 디렉토리에 있을 수 있다. runner 이미지의 실제 디렉토리와 공식 목록을 기준으로 찾고, SDK 설치·라이선스·네이티브 빌드 실패를 각각 구분한다. YAML/셸 문법 검사만으로 실제 Android 빌드 성공을 선언하지 않는다. [공식 Ubuntu runner 도구 목록](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md) · [GitHub PATH 등록](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#adding-a-system-path)
