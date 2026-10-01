@@ -226,3 +226,18 @@ CI 공간 probe는 예상 빌드 점유량만큼 임시 파일에 실제 블록�
 부팅 실패 artifact에는 진단 로그뿐 아니라 이미 빌드·서명 검사를 통과한 APK와 체크섬도 보존하면 다시 빌드하는 비용을 줄일 수 있다. 설치·smoke가 미완료인 APK임을 명시하고 공개 배포 성공과 구분한다. 실패 여부와 관계없이 수집하도록 업로드 조건을 구성하며 키·자격 증명 파일은 포함하지 않는다. [GitHub workflow artifact 보존](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/storing-and-sharing-data-from-a-workflow)
 
 위 절차는 공간 부족을 조기에 발견하고 증거를 남기기 위한 일반 설계다. 특정 CI 수정의 부팅·설치·자동 배포 성공을 확인한 결과가 아니다.
+
+## 13. UI XML 생성 실패와 시스템 팝업을 따로 진단
+
+UI 검사의 XML parse 오류만으로 전송 방식의 결함을 확정하지 않는다. `uiautomator dump`의 응답·종료 코드와 실제 파일 원문을 따로 보존하고, 명령이 끝났지만 파일 생성은 실패한 경우를 구분한다. 화면이 idle 상태가 되지 않았다는 명시적인 응답만 횟수·시간 제한을 두고 재시도하며, 끝내 실패하면 검사 실패로 기록한다. 오래된 XML을 현재 화면으로 인정하거나 임의로 XML 앞부분을 잘라 통과시키지 않는다.
+
+```bash
+adb -s "$device_serial" shell uiautomator dump /sdcard/layout.xml > dump-response.txt 2>&1
+adb -s "$device_serial" pull /sdcard/layout.xml ./layout.xml
+```
+
+파일을 `adb pull`로 복사해 원문을 먼저 저장한 뒤 파싱하면 오류 발생 시 입력 바이트를 확인할 수 있다. stdout으로 읽은 결과와 파일을 각각 보존하면 두 방식의 내용이 실제로 다른지도 비교할 수 있다. 정상 XML인데 앱 제목이 없다면 package·resource-id·표시 문구를 확인하여 시스템 권한창, 시스템 UI 응답 없음, 앱 충돌창, 실제 앱 화면을 구분한다. [공식 ADB 파일 복사](https://developer.android.com/tools/adb#copyfiles)
+
+부팅 프로퍼티와 ADB 연결만으로 앱 검사 준비를 완료 처리하지 않는다. 잠금 해제 후 홈 화면이 연속된 최신 덤프에 나타나고 시스템 오류 팝업이 없는지 확인한다. 준비 단계에도 전체 제한·개별 ADB 제한을 적용하고 덤프 생성 실패 때 이전 파일을 재사용하지 않는다. 시스템 또는 앱 응답 없음 팝업을 자동으로 닫아 정상 판정하지 않는다. 실패 시 XML·스크린샷·제한된 logcat을 함께 보존한다. 로그와 화면에 계정·토큰이 있는지 확인하고 비공개 검사 자료를 공개 위키로 옮기지 않는다.
+
+CPU 소프트웨어 렌더링에서 해상도를 낮춘다면 dp 화면 크기도 계산한다. `dp = px × 160 / density`이므로 해상도와 density를 같은 비율로 줄이면 기존 논리 화면 크기를 유지할 수 있다. 예를 들어 900×1800 / 360dpi와 600×1200 / 240dpi는 모두 400×800dp다. 해상도만 낮추고 density를 유지하면 메뉴가 아래로 숨겨져 검사 기준 자체가 바뀔 수 있다. 실제 화면 크기와 접근 가능한 제어를 확인하고 자원 부족·팝업 원인 해결과 화면 검증 성공을 구분한다. 에뮬레이터 설정 항목은 설치된 SDK의 `hardware-properties.ini`와 현재 공식 도움말을 확인한다. [공식 에뮬레이터 옵션](https://developer.android.com/studio/run/emulator-commandline)
