@@ -18,7 +18,7 @@
 - [architecture/](architecture/) — 아키텍처
 - [deep-research/](deep-research/) — 심층 리서치
 - [idea/](idea/README.md) — 서비스·기능·업무 개선·개발 프로젝트 아이디어 백로그
-- [Expo 푸시 설정과 비동기 검증](docs/expo-push-setup-notes.md) — EAS 로그인·UUID, FCM 파일, 예약 경쟁 조건, DB·애니메이션 검증, Windows CLI 인증, Release 초안 조회
+- [Expo 푸시 설정과 비동기 검증](docs/expo-push-setup-notes.md) — EAS 로그인·UUID, FCM 파일, 예약 경쟁 조건, DB·애니메이션 검증, Windows CLI 인증, Release 초안 조회, FCM v1 기존 키 연결
 
 ## AX / AI
 

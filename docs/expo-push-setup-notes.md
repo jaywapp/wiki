@@ -151,3 +151,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not read release metadata' }
 초안 검증과 공개 게시는 각각 기록한다. `draft=true`, 예상 파일 개수·이름, 업로드 상태, 크기와 digest를 확인한 결과만으로 무인증 다운로드나 자동 CI 게시 완료를 선언하지 않는다. 검증 전에 공개하지 않고, 공개된 Release를 재업로드로 덮어쓰지 않는다.
 
 이 문서의 명령과 예시는 독립적으로 작성한 설명용 자료다. 계정 로그인, EAS 연결, 자격 증명 업로드, 실제 DB 검사와 기기 녹화를 수행했다는 근거를 대신하지 않는다.
+
+## 9. EAS Android FCM v1 메뉴와 기존 키 연결
+
+EAS credentials의 Android 상위 메뉴에서 `Google Service Account`를 선택하면 Play Store 제출용과 Push Notifications (FCM V1) 용도를 구분할 수 있다. 이름에 Legacy가 있는 메뉴는 다른 인증 방식이므로 FCM v1에 사용하지 않는다. 메뉴의 set up은 로컬 서비스 계정 JSON 업로드와 기존 키 연결을 포함한다. 실제 동작과 선택할 파일을 확인한 뒤 진행한다. [Expo Android 푸시 인증 안내](https://docs.expo.dev/push-notifications/fcm-credentials/)
+
+`google-services.json`은 앱 빌드에 필요한 Firebase client 설정이고, 서비스 계정 JSON은 서버에서 FCM v1 발송을 인증하는 비밀이다. 동일한 파일로 취급하지 않는다. 필요한 Firebase 프로젝트와 Android 패키지에 해당하는 FCM 전용 서비스 계정 키를 Expo의 해당 앱 credentials에 연결한 뒤, 키 업로드와 Android 연결 결과를 각각 확인한다.
+
+Windows PTY에서 대화형 CLI가 지연되면 로그인 실패나 키 업로드 실패를 추정하지 않는다. 이미 성공한 업로드를 다시 수행하기 전에 같은 계정·프로젝트·패키지의 자격 증명 메타데이터를 조회해 상태를 확인한다. 공식 CLI 구현의 조회·연결 함수를 진단에 활용할 경우 설치 버전에 따른 내부 API이며 안정된 공개 SDK로 간주하지 않는다. 프로젝트 식별을 먼저 검증하고 FCM 용도만 다루며 토큰·개인 키·전체 응답을 출력하지 않는다.
+
+FCM 연결 확인은 실제 기기 수신 확인과 다르다. 발송 OFF로 함수 배포를 확인한 뒤 승인된 테스트 회원과 실제 Android에서 ticket·receipt·화면 표시를 각각 검증한다. 로컬 서비스 계정 키를 보관할 때는 암호화 보관본의 복원 일치를 확인하고 일시 평문 사본을 제거한다. 어느 단계에서도 비밀 파일을 Git 또는 공개 APK Release에 넣지 않는다.
