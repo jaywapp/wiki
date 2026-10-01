@@ -214,3 +214,15 @@ adb devices -l > "$diagnostics_dir/adb-devices.txt" 2>&1
 ```
 
 부팅 대기는 프로세스 생존 확인(`kill -0 "$emulator_pid"`), 대상 장치의 `sys.boot_completed=1` 확인, 전체 시간제한을 분리한다. 각 adb 호출에도 시간제한을 두어 연결 대기가 전체 제한을 넘지 않게 한다. 프로세스가 먼저 종료되면 즉시 실패로 처리하고 종료 코드와 로그를 남긴다. 살아 있지만 부팅 완료가 제한 시간 내 확인되지 않은 경우는 별도 시간초과로 기록한다. 실패 시 장치 목록·디스크·메모리를 다시 저장하고, APK 설치 이전 실패에서도 이 파일들을 artifact로 업로드한다. 장치 연결만으로 부팅 완료나 APK 검사 통과를 선언하지 않는다. [에뮬레이터 실행·진단 옵션](https://developer.android.com/studio/run/emulator-commandline)
+
+## 12. 네이티브 빌드 후 에뮬레이터 디스크 여유 검증
+
+부팅만 따로 성공한 runner라도 네이티브 빌드 후에는 캐시·중간 산출물·APK가 공간을 소모한다. AVD 생성·KVM 확인과 디스크 여유 검사를 분리하고, SDK 준비 전·빌드 후·에뮬레이터 시작 전 같은 파일시스템의 `df`를 기록한다. GitHub의 runner 사양 표를 현재 여유 공간으로 해석하지 않는다. [GitHub-hosted runner 사양](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+
+CI 공간 probe는 예상 빌드 점유량만큼 임시 파일에 실제 블록을 할당한 상태에서 부팅 검사를 수행하는 방법이다. sparse 파일은 실제 디스크 점유를 모사하지 못할 수 있으므로 할당 전후 `df` 차이를 확인한다. probe 파일은 검사가 끝날 때 해제하되 부팅 중에는 유지한다. 점유량·최소 여유는 프로젝트 빌드 측정값을 근거로 정하고, 검사를 시작하기 전에 최소 공간 미달이면 즉시 실패시킨다. 모사 통과와 실제 빌드·설치·검사 통과를 별도로 기록한다.
+
+미사용 toolchain을 정리한다면 GitHub-hosted Linux 임시 runner인지 확인하는 가드를 먼저 둔다. self-hosted나 개발자 머신에서는 실행하지 않는다. 현재 이미지의 공식 도구 목록과 업무 의존성을 확인한 뒤 .NET·Swift·Haskell·CodeQL 등 이번 job이 사용하지 않는 도구만 고정 목록으로 지정한다. 디렉토리 추측이나 광범위한 패턴 삭제를 피하고, Android SDK·Java·Node·Python은 빌드와 검사에 필요한 보존 대상으로 둔다. 이 목록은 모든 프로젝트에 적용하는 삭제 권장이 아니다. [공식 runner 이미지·도구 목록](https://github.com/actions/runner-images)
+
+부팅 실패 artifact에는 진단 로그뿐 아니라 이미 빌드·서명 검사를 통과한 APK와 체크섬도 보존하면 다시 빌드하는 비용을 줄일 수 있다. 설치·smoke가 미완료인 APK임을 명시하고 공개 배포 성공과 구분한다. 실패 여부와 관계없이 수집하도록 업로드 조건을 구성하며 키·자격 증명 파일은 포함하지 않는다. [GitHub workflow artifact 보존](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/storing-and-sharing-data-from-a-workflow)
+
+위 절차는 공간 부족을 조기에 발견하고 증거를 남기기 위한 일반 설계다. 특정 CI 수정의 부팅·설치·자동 배포 성공을 확인한 결과가 아니다.
