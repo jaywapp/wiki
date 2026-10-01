@@ -167,3 +167,50 @@ FCM 연결 확인은 실제 기기 수신 확인과 다르다. 발송 OFF로 함
 Android SDK가 설치된 runner에서도 `sdkmanager: command not found`가 발생할 수 있다. `ANDROID_HOME`이 있는지와 command-line tools 아래 실제 sdkmanager·avdmanager 위치를 먼저 확인한다. SDK 환경변수가 설정돼 있다는 사실만으로 해당 bin 디렉토리가 PATH에 포함됐다고 가정하지 않는다. 도구를 찾았으면 실행 권한을 검사하고 GitHub의 `GITHUB_PATH` 파일에 bin 경로를 등록해 다음 step에서 사용한다. 에뮬레이터와 adb도 같은 SDK를 사용하도록 환경을 확인한다.
 
 command-line tools는 latest 경로 또는 설치 버전 디렉토리에 있을 수 있다. runner 이미지의 실제 디렉토리와 공식 목록을 기준으로 찾고, SDK 설치·라이선스·네이티브 빌드 실패를 각각 구분한다. YAML/셸 문법 검사만으로 실제 Android 빌드 성공을 선언하지 않는다. [공식 Ubuntu runner 도구 목록](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md) · [GitHub PATH 등록](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#adding-a-system-path)
+
+## 11. AVD 생성 경로와 에뮬레이터 탐색 경로 일치
+
+`avdmanager create avd`가 성공해도 실행기가 같은 AVD를 찾는다는 뜻은 아니다. `Unknown AVD name`과 즉시 종료가 보이면 부팅 시간제한을 늘리기 전에 생성된 `.ini`와 데이터 경로, 두 프로세스의 환경을 비교한다. KVM 사용 가능·메모리 여유·디스크 여유는 별도 조건이며 AVD 탐색 성공의 근거가 되지 않는다.
+
+공식 문서에서 `ANDROID_USER_HOME`은 SDK 사용자 설정, `ANDROID_EMULATOR_HOME`은 에뮬레이터 설정, `ANDROID_AVD_HOME`은 AVD 파일 디렉토리다. 실행기의 AVD 탐색 순서는 `ANDROID_AVD_HOME`, `ANDROID_USER_HOME/avd`, 기본 `$HOME/.android/avd`다. 생성기와 실행기에 동일한 환경을 전달하고 임시 Android 홈 아래로 경로를 모은다. SDK 설치 경로인 `ANDROID_HOME`과 구분한다. [Android 환경 변수](https://developer.android.com/tools/variables)
+
+다음은 Bash 독립 예시다. SDK와 지정 system image가 설치돼 있고 도구 PATH가 준비됐다는 전제이며 이름·이미지는 설명용이다. 생성과 실행을 다른 CI step으로 나누면 이 세 환경 변수를 다음 step에도 전달한다.
+
+```bash
+set -euo pipefail
+android_ci_home="$(mktemp -d)"
+export ANDROID_USER_HOME="$android_ci_home"
+export ANDROID_EMULATOR_HOME="$android_ci_home"
+export ANDROID_AVD_HOME="$android_ci_home/avd"
+mkdir -p "$ANDROID_AVD_HOME"
+
+avd_name="example_ci"
+image_package="system-images;android-36;google_apis;x86_64"
+printf 'no\n' | avdmanager create avd \
+  -n "$avd_name" -k "$image_package" \
+  -p "$ANDROID_AVD_HOME/$avd_name.avd"
+
+test -f "$ANDROID_AVD_HOME/$avd_name.ini"
+avdmanager list avd
+emulator -list-avds
+```
+
+`-p`는 AVD 데이터 디렉토리를 지정한다. `.ini`가 존재하고 두 도구의 목록에 같은 이름이 나타나는지 확인한 후 실행한다. 이 예시는 경로를 명시하는 패턴이며 실제 수정 후 CI 부팅·설치·검사가 성공했다는 증거가 아니다. 설치된 도구 버전의 도움말도 확인한다. [avdmanager 경로 옵션](https://developer.android.com/tools/avdmanager)
+
+### 설치 전에 실패해도 진단 파일 보존
+
+stdout만 보고 있으면 에뮬레이터 조기 종료의 원인을 잃을 수 있다. 시작 전부터 파일에 저장하고 실패 여부와 관계없이 artifact를 수집한다. 아래는 위 예시에 이어 사용하는 수집 패턴이다. 진단 디렉토리는 CI artifact 업로드 경로로 지정한다.
+
+```bash
+diagnostics_dir="./emulator-diagnostics"
+mkdir -p "$diagnostics_dir"
+emulator -accel-check > "$diagnostics_dir/acceleration.txt" 2>&1 || true
+df -h > "$diagnostics_dir/disk.txt" 2>&1
+free -h > "$diagnostics_dir/memory.txt" 2>&1
+emulator -avd "$avd_name" -port 5554 -no-window -no-audio \
+  -no-snapshot -verbose > "$diagnostics_dir/emulator.log" 2>&1 &
+emulator_pid=$!
+adb devices -l > "$diagnostics_dir/adb-devices.txt" 2>&1
+```
+
+부팅 대기는 프로세스 생존 확인(`kill -0 "$emulator_pid"`), 대상 장치의 `sys.boot_completed=1` 확인, 전체 시간제한을 분리한다. 각 adb 호출에도 시간제한을 두어 연결 대기가 전체 제한을 넘지 않게 한다. 프로세스가 먼저 종료되면 즉시 실패로 처리하고 종료 코드와 로그를 남긴다. 살아 있지만 부팅 완료가 제한 시간 내 확인되지 않은 경우는 별도 시간초과로 기록한다. 실패 시 장치 목록·디스크·메모리를 다시 저장하고, APK 설치 이전 실패에서도 이 파일들을 artifact로 업로드한다. 장치 연결만으로 부팅 완료나 APK 검사 통과를 선언하지 않는다. [에뮬레이터 실행·진단 옵션](https://developer.android.com/studio/run/emulator-commandline)
