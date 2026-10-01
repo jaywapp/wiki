@@ -125,3 +125,26 @@ GitHub의 immutable releases가 활성화된 경우 게시 후 자산과 연결�
 코드 검사 성공만으로 에뮬레이터나 실제 계정 설치가 검증되었다고 기록하지 않는다. 실제 계정이 필요한 흐름을 시험하지 않았으면 미검증으로 명시한다. API 24–27 호환성은 해당 API 기기에서, API 28 이상 경로는 별도 기기에서 확인한다. 최초 설치와 기존 버전에서의 업데이트도 구분한다.
 
 이 메모는 공식 문서와 공개 소스에 근거한 절차 설명이다. 예시 코드는 특정 앱에서 실행·컴파일한 결과가 아니며, XML 예시는 재현 결과를 대신하지 않는다. 공개 검증 기록에는 개인 계정, 인증 정보와 내부 다운로드 주소를 포함하지 않는다.
+
+## 5. 공개 APK 채널과 비공개 소스를 나누기
+
+소스가 비공개인 앱도 APK 전용 공개 저장소에서 설치 파일을 제공할 수 있다. 공개 릴리즈 자산은 GitHub 계정 없이 받을 수 있으므로 앱의 회원 기능 권한은 앱 로그인·서버 권한으로 관리한다. 공개 저장소에는 배포 파일·체크섬·정제된 변경 안내를 두고, 소스 커밋·내부 로그를 공개 릴리즈 본문에 자동으로 넣지 않는다. [릴리즈 자산 API](https://docs.github.com/en/rest/releases/assets)
+
+소스 저장소의 Actions가 다른 저장소에 릴리즈를 올릴 때는 게시 대상의 권한을 별도로 준비한다. 기본 GITHUB_TOKEN을 모든 저장소의 쓰기 토큰으로 가정하지 않는다. 공개 배포 저장소만 Contents:write를 허용한 전용 토큰이나 GitHub App 설치 토큰을 사용하고, 소스 조회에는 기존 워크플로 토큰을 사용할 수 있다. [워크플로 인증 공식 안내](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
+
+### 공개 자산 조회와 REST 호출 한도
+
+익명 REST 호출의 기본 한도는 출발 IP별 시간당60회다. 릴리즈20개와 릴리즈별 작은 자산2개를 모두 REST로 읽으면 한 번에41회를 쓰므로, 성공 캐시10분만으로 충분하지 않을 수 있다. 이는 호출 수를 계산한 예시이며 실제 부하 측정값이 아니다. [REST 호출 한도](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)
+
+공개 릴리즈 목록은 REST로 읽고, 자산은 browser_download_url로 다운로드하는 구성을 검토한다. 허용된 공개 저장소의 HTTPS URL·태그·파일명을 검증하고, 자산 및 CDN 요청에 저장소 토큰을 전달하지 않는다. 목록 호출을 줄이는 캐시·동시 요청 병합도 함께 적용한다. 공개 파일의 바이트 크기·체크섬 검증과 회원 기능의 서버 권한 검사는 각각 유지한다.
+
+### draft 검증에는 release ID 사용
+
+태그 생성과 draft 공개 순서에 따라 by-tag REST 조회가404를 반환할 수 있으므로, 게시 전 자산 검증은 draft의 release ID를 확보하여 수행한다. GitHub CLI의 release view JSON에는 databaseId가 있다. [CLI 공식 안내](https://cli.github.com/manual/gh_release_view)
+
+```bash
+release_id=$(gh release view "$tag" --repo "$release_repo" --json databaseId --jq .databaseId)
+gh api "repos/$release_repo/releases/$release_id" > draft-release.json
+```
+
+ID를 사용하는 것은 접근 권한을 바꾸는 작업이 아니다. draft에 대한 권한이 있는 인증 환경에서 자산의 업로드 완료·크기·digest를 확인하고, 모든 검증이 끝난 뒤 공개한다. 공개 태그의 대상은 공개 저장소 안에서 실제로 존재하는 커밋으로 선택한다.
