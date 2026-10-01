@@ -114,4 +114,20 @@ try {
 
 `screenrecord`와 `adb pull`은 Android 공식 녹화 절차를 사용한다. 앱 시작 전부터 녹화하고 최소 두 주기를 비교할 수 있는 길이를 확보한다. 원래 scale 값과 복원 확인, 기기/OS, 녹화 구간과 관찰 결과를 기록한다. 호스트나 프로세스가 강제 종료되면 `finally` 실행을 보장할 수 없으므로 원래 값을 이용해 복원 상태를 확인한다. [Android adb 녹화 공식 안내](https://developer.android.com/tools/adb#screenrecord)
 
+## 7. Windows Supabase CLI의 명령별 인증 호환 확인
+
+로그인 후 `projects list`는 성공하지만 `secrets list`만 `Access token not provided`로 실패하면, 로그인 전체가 실패했다고 단정하지 않는다. v2.102.0의 동일 Windows 설치에서 이 차이를 재현했으며 함께 배포된 `supabase-go.exe`로 시크릿 메타데이터 조회에 성공했다. 이 결과는 해당 설치 환경에 대한 관찰이며 모든 Windows 설치나 최신 CLI의 문제를 뜻하지 않는다.
+
+공식 v2.102.0 소스에서 `projects list`와 기존 `login`은 Go 실행 파일로 전달된다. `secrets list`는 TypeScript 구현과 별도 자격 증명 읽기 경로를 사용한다. 따라서 먼저 버전·설치 위치·프로필을 확인하고 같은 환경에서 명령별 결과를 비교한다. 구체적인 자격 증명 백엔드 실패 원인은 별도 진단 없이 단정하지 않는다. [프로젝트 조회 처리](https://github.com/supabase/cli/blob/v2.102.0/apps/cli/src/legacy/commands/projects/list/list.handler.ts), [시크릿 조회 처리](https://github.com/supabase/cli/blob/v2.102.0/apps/cli/src/legacy/commands/secrets/list/list.handler.ts), [자격 증명 읽기](https://github.com/supabase/cli/blob/v2.102.0/apps/cli/src/legacy/auth/legacy-credentials.layer.ts)
+
+공식 설치에 함께 있는 기존 실행 파일을 확인한 뒤 읽기 전용 명령으로 접근을 검증할 수 있다. 다음 경로와 프로젝트 식별자는 설명용 자리표시자다.
+
+```powershell
+$cliGoBinary = 'C:\path\to\official-install\bin\supabase-go.exe'
+& $cliGoBinary --version
+& $cliGoBinary secrets list --project-ref '<project-ref>' --output json
+```
+
+시크릿 목록은 이름과 digest 메타데이터이며 비밀 원문을 반환하지 않는다. 원문을 디버그 로그나 명령 인수에 넣지 않는다. 검증된 실행 파일과 버전을 기록하고, CLI 업그레이드는 해당 문제의 해결 여부를 재확인한 뒤 판단한다. [공식 Go 실행 파일 탐색](https://github.com/supabase/cli/blob/v2.102.0/apps/cli/src/shared/legacy/go-proxy.layer.ts), [공식 시크릿 목록 구현](https://github.com/supabase/cli/blob/v2.102.0/apps/cli-go/internal/secrets/list/list.go)
+
 이 문서의 명령과 예시는 독립적으로 작성한 설명용 자료다. 계정 로그인, EAS 연결, 자격 증명 업로드, 실제 DB 검사와 기기 녹화를 수행했다는 근거를 대신하지 않는다.
