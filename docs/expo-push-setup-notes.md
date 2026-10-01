@@ -130,4 +130,24 @@ $cliGoBinary = 'C:\path\to\official-install\bin\supabase-go.exe'
 
 시크릿 목록은 이름과 digest 메타데이터이며 비밀 원문을 반환하지 않는다. 원문을 디버그 로그나 명령 인수에 넣지 않는다. 검증된 실행 파일과 버전을 기록하고, CLI 업그레이드는 해당 문제의 해결 여부를 재확인한 뒤 판단한다. [공식 Go 실행 파일 탐색](https://github.com/supabase/cli/blob/v2.102.0/apps/cli/src/shared/legacy/go-proxy.layer.ts), [공식 시크릿 목록 구현](https://github.com/supabase/cli/blob/v2.102.0/apps/cli-go/internal/secrets/list/list.go)
 
+## 8. GitHub Release 초안은 ID로 조회
+
+Release 초안 생성과 파일 업로드는 성공했는데 태그로 조회하는 REST 요청이 404를 반환할 수 있다. 초안에 대응하는 Git 태그가 아직 생성되지 않은 상태에서는 조회 실패를 토큰 쓰기 권한 부족으로 단정하지 않는다. 먼저 GitHub CLI로 초안의 숫자 ID를 조회한 뒤 해당 ID의 REST 경로에서 실제 asset 메타데이터를 확인한다. [GitHub CLI Release 조회](https://cli.github.com/manual/gh_release_view), [GitHub Release ID 조회 API](https://docs.github.com/en/rest/releases/releases#get-a-release)
+
+다음은 저장소와 태그를 설명용 자리표시자로 둔 PowerShell 예시다.
+
+```powershell
+$releaseRepository = 'owner/repository'
+$releaseTag = '<release-tag>'
+$releaseId = gh release view $releaseTag --repo $releaseRepository --json databaseId --jq .databaseId
+if ($LASTEXITCODE -ne 0 -or $releaseId.Trim() -notmatch '^[1-9][0-9]*$') {
+    throw 'Could not resolve release ID'
+}
+$releaseApiPath = 'repos/' + $releaseRepository + '/releases/' + $releaseId.Trim()
+gh api $releaseApiPath --jq '{draft:.draft,asset_count:(.assets|length)}'
+if ($LASTEXITCODE -ne 0) { throw 'Could not read release metadata' }
+```
+
+초안 검증과 공개 게시는 각각 기록한다. `draft=true`, 예상 파일 개수·이름, 업로드 상태, 크기와 digest를 확인한 결과만으로 무인증 다운로드나 자동 CI 게시 완료를 선언하지 않는다. 검증 전에 공개하지 않고, 공개된 Release를 재업로드로 덮어쓰지 않는다.
+
 이 문서의 명령과 예시는 독립적으로 작성한 설명용 자료다. 계정 로그인, EAS 연결, 자격 증명 업로드, 실제 DB 검사와 기기 녹화를 수행했다는 근거를 대신하지 않는다.
