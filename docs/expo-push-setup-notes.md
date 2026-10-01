@@ -241,3 +241,15 @@ adb -s "$device_serial" pull /sdcard/layout.xml ./layout.xml
 부팅 프로퍼티와 ADB 연결만으로 앱 검사 준비를 완료 처리하지 않는다. 잠금 해제 후 홈 화면이 연속된 최신 덤프에 나타나고 시스템 오류 팝업이 없는지 확인한다. 준비 단계에도 전체 제한·개별 ADB 제한을 적용하고 덤프 생성 실패 때 이전 파일을 재사용하지 않는다. 시스템 또는 앱 응답 없음 팝업을 자동으로 닫아 정상 판정하지 않는다. 실패 시 XML·스크린샷·제한된 logcat을 함께 보존한다. 로그와 화면에 계정·토큰이 있는지 확인하고 비공개 검사 자료를 공개 위키로 옮기지 않는다.
 
 CPU 소프트웨어 렌더링에서 해상도를 낮춘다면 dp 화면 크기도 계산한다. `dp = px × 160 / density`이므로 해상도와 density를 같은 비율로 줄이면 기존 논리 화면 크기를 유지할 수 있다. 예를 들어 900×1800 / 360dpi와 600×1200 / 240dpi는 모두 400×800dp다. 해상도만 낮추고 density를 유지하면 메뉴가 아래로 숨겨져 검사 기준 자체가 바뀔 수 있다. 실제 화면 크기와 접근 가능한 제어를 확인하고 자원 부족·팝업 원인 해결과 화면 검증 성공을 구분한다. 에뮬레이터 설정 항목은 설치된 SDK의 `hardware-properties.ini`와 현재 공식 도움말을 확인한다. [공식 에뮬레이터 옵션](https://developer.android.com/studio/run/emulator-commandline)
+
+## 14. 푸시 정상 운영 전환과 관리형 DB 권한
+
+제한된 테스트 계정 목록을 정상 운영 모드로 바꿀 때는 기존 활성 회원·종류별 동의·현재 기기 바인딩·허용 프로젝트·업무 수신 범위 검증을 유지한다. 발송 중지 상태에서도 outbox가 쌓일 수 있으므로 운영 시작 시각을 기록하고 이전 변경 알림을 제외한다. 예약 알림은 첫 실행 때 새 outbox로 생성될 수 있어 생성 시각만으로 과거 알림을 막지 못한다. 원래 예정 시각에도 시작 기준을 적용한다. 공급자가 이미 수락한 ticket의 receipt는 회원이 수신을 끈 이후에도 확인하되 새 발송과 구분한다.
+
+PostgreSQL 권한 변경 SQL의 성공 응답만으로 접근 차단을 판정하지 않는다. 객체 소유자가 다른 관리형 역할이면 `REVOKE`가 warning만 남기고 실제 권한은 유지될 수 있다. `has_table_privilege`, `has_sequence_privilege`, `has_function_privilege`와 객체 owner/ACL을 운영에서 확인한다. 로컬 fixture의 객체 소유자가 운영과 같다는 보장이 없으므로 fixture 검사와 운영 catalog 확인을 별도 증거로 둔다. [PostgreSQL REVOKE](https://www.postgresql.org/docs/current/sql-revoke.html)
+
+`pg_net`은 요청 큐에 HTTP 헤더를 저장한다. 설치 버전의 기본 권한과 실제 객체 소유자를 확인하고, 장기 인증 값을 넣기 전에 앱 역할의 큐 읽기·수정 권한이 차단됐는지 검증한다. Vault에서 값을 읽었다는 사실만으로 다음 저장 경로까지 안전해지지 않는다. Cron의 성공은 비동기 요청 접수만 뜻할 수 있으므로 응답의 HTTP 상태도 확인한다. [Supabase pg_net](https://supabase.com/docs/guides/database/extensions/pg_net) · [공식 확장 SQL](https://github.com/supabase/pg_net/blob/master/sql/pg_net.sql)
+
+큐 권한을 관리할 수 없다면 큐에 인증 값을 저장하지 않는 호출 방식을 검토한다. 동기 `http` 확장도 선택지지만 DB 연결을 호출 시간만큼 점유하므로 워커 제한과 연결/요청 제한을 맞추고, 업무 행을 잠근 채 외부 워커를 기다리지 않는다. 요청 헤더·응답 원문·예외 원문을 저장하지 않으며 HTTP 상태·처리 개수·고정 오류 분류만 기록한다. 확장 버전에 따라 redirect 추적을 끌 수 없거나 디버그 로그에 헤더가 포함될 수 있으므로 라이브러리 소스와 운영 로그 수준을 함께 확인한다. [Supabase http](https://supabase.com/docs/guides/database/extensions/http) · [pgsql-http](https://github.com/pramsey/pgsql-http)
+
+업무 알림의 실제 검증에는 켠 기기와 같은 종류만 끈 기기를 동시에 두면 수신과 차단을 함께 확인할 수 있다. 설정 저장·서버 대상 계산·ticket·receipt·휴대전화 표시·탭 이동은 각각 기록한다. 직접 공급자에 보낸 테스트 알림의 성공을 DB outbox와 자동 워커 경로 전체 통과로 보고하지 않는다.
