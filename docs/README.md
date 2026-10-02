@@ -34,6 +34,10 @@
 - [설계](windows-terminal-workspace-design.md)
 - [작업 계획](windows-terminal-workspace-tasks.md)
 
+## Android 네이티브 빌드
+
+- [Windows RN·Expo 긴 경로 오류](windows-react-native-path-length.md) — 짧은 경로에서 재빌드하고 소스·설정·ABI·서명을 확인하는 절차. Android API 36 방문자 검사 42개 통과.
+
 ## 워크스페이스 오케스트레이션 하네스
 
 - [분석](workspace-harness-analysis.md) — 확인 기능·로컬 근거·미확인 사항

@@ -46,6 +46,7 @@
 - [워크스페이스 하네스 작업 계획](docs/workspace-harness-tasks.md) — 병렬 조사 결과와 다음 구현 작업
 - [워크스페이스 하네스 구현 진행](docs/workspace-harness-execution-tasks.md) — 읽기 전용 왕복 검증과 관리 하네스 후속 구현
 - [Windows Terminal 멀티 프로젝트 설정](docs/windows-terminal-workspace-guide.md) — 오케스트레이터와 프로젝트 터미널 배치·사용법
+- [Windows RN·Expo Android 긴 경로 오류](docs/windows-react-native-path-length.md) — 짧은 검증 경로, 순차 복사·설치와 소스·APK 비교 절차
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계
 
 ## 관련 링크
