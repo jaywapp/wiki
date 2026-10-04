@@ -48,6 +48,7 @@
 - [Windows Terminal 멀티 프로젝트 설정](docs/windows-terminal-workspace-guide.md) — 오케스트레이터와 프로젝트 터미널 배치·사용법
 - [Windows RN·Expo Android 긴 경로 오류](docs/windows-react-native-path-length.md) — 짧은 검증 경로, 순차 복사·설치와 소스·APK 비교 절차
 - [Supabase Auth Admin과 기존 프로필 연결](docs/supabase-auth-admin-profile-linking.md) — INSERT 이후 서버 metadata UPDATE 순서, 신뢰 경계와 재연결 방지 검사
+- [Private Storage 프로필 사진 안전 설계](docs/supabase-private-avatar-storage.md) — 소유권 RLS, 이미지 재인코딩, CAS 참조 전환·삭제 보호와 서명 URL 수명
 - [docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md](docs/superpowers/specs/2026-06-12-ad-revenue-app-factory-design.md) — 광고 수익 앱 공장 설계
 
 ## 관련 링크
