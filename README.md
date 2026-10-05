@@ -57,3 +57,5 @@
 - 블로그: [jaywapp.tistory.com](https://jaywapp.tistory.com/)
 - 위키 웹: [jaywapp-wiki.vercel.app](https://jaywapp-wiki.vercel.app/)
 - 위키 저장소: [wiki](https://github.com/jaywapp/wiki)
+
+- [Android APK 발행 검증 근거](docs/android-apk-release-evidence.md) — 설치한 APK와 공개 다운로드의 서명·해시·업데이트 계약 대조 및 성공 화면 증거 보존.

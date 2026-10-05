@@ -44,3 +44,5 @@
 - [설계 초안](workspace-harness-design.md) — 작업 전달·질문·응답·결과 회수
 - [작업 계획](workspace-harness-tasks.md) — 조사 완료 기준과 후속 구현 의존성
 - [구현 재개 분석](workspace-harness-execution-analysis.md) · [설계](workspace-harness-execution-design.md) · [진행 상태](workspace-harness-execution-tasks.md) — 별도 workspace-harness 프로젝트의 구현·검증
+
+- [Android APK 발행 검증 근거](android-apk-release-evidence.md) — 설치한 APK와 공개 다운로드의 서명·해시·업데이트 계약 대조 및 성공 화면 증거 보존.
