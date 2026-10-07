@@ -15,6 +15,7 @@
 - [dotnet/](dotnet/) — .NET / WPF
 - [teamcity/](teamcity/) — TeamCity / CI·CD
 - [ue5/](ue5/) — Unreal Engine 5 / 빌드 환경
+- [soccer/fconline-player-images.md](soccer/fconline-player-images.md) — FC Online(NEXON Open API) 선수 이미지 URL·대체 순서·이용약관 요점
 - [architecture/](architecture/) — 아키텍처
 - [deep-research/](deep-research/) — 심층 리서치
 - [idea/](idea/README.md) — 서비스·기능·업무 개선·개발 프로젝트 아이디어 백로그
