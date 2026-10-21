@@ -18,6 +18,7 @@
 - [architecture/](architecture/) — 아키텍처
 - [deep-research/](deep-research/) — 심층 리서치
 - [idea/](idea/README.md) — 서비스·기능·업무 개선·개발 프로젝트 아이디어 백로그
+- [React Native Android APK 업데이트 검증](docs/react-native-android-update-notes.md) — API별 서명 확인, 접근성 busy 상태, 릴리즈 자산과 검증 근거
 
 ## AX / AI
 
