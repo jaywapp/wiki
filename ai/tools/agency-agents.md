@@ -3,7 +3,7 @@ title: Agency Agents
 category: tools
 tags: [AX, AI-Agent, Claude-Code, Codex, Multi-Agent, Agent-Prompt]
 source: https://github.com/msitarzewski/agency-agents
-updated: 2026-09-12
+updated: 2026-10-22
 ---
 
 # Agency Agents
@@ -167,6 +167,24 @@ Perforce 환경에서는 agent마다 독립 workspace를 무조건 만드는 것
 ## 결론
 
 Agency Agents의 핵심 가치는 '279개의 에이전트가 있다'는 숫자보다 **전문 역할을 버전 관리 가능한 자산으로 정의하고 여러 AI 호스트로 배포하는 Agent Catalog 패턴**에 있다. 실제 개발 harness에는 전체 도입보다 5~10개 핵심 역할을 선별하고 Router + lazy loading + 독립 Reviewer를 결합하는 방식이 더 실용적이다.
+
+## 2026-10-22 보강: 운영 및 도입 판단
+
+### 설치·배포
+- 저장소는 직무별 Markdown Agent 정의와 변환·설치 스크립트를 중심으로 구성된다.
+- CLI의 division/agent 단위 선택 설치와 dry-run을 활용해 필요한 역할만 배포하는 방식이 권장된다.
+- Windows/macOS/Linux용 데스크톱 설치 앱이 별도 제공된다. 지원 도구별 기능 동등성은 확인이 필요하다.
+
+### 실무 PoC 제안
+1. Codebase Onboarding, Architect, Implementer, Reviewer, DevOps 역할 중 5개 이내로 시작한다.
+2. 기존 단일 Agent 대비 10개 동일 작업에서 성공률, 수정 범위, 리뷰 결함, 토큰 사용량을 비교한다.
+3. 역할 정의는 필요 시에만 로드하고, 구현 Worker에만 쓰기 권한을 부여한다.
+4. Perforce·TeamCity·Unreal Engine 정책은 별도 조직 규칙으로 보완한다.
+
+### 도입 리스크
+- 역할 수 증가가 품질 향상을 보장하지 않는다.
+- Agent 간 자동 handoff 및 shared memory는 기본 카탈로그의 기능이 아니라 호스트/오케스트레이션에 의존한다.
+- Enterprise 보안·권한·Windows 실기기 검증 및 모델별 비용 벤치마크는 별도 수행해야 한다.
 
 ## 참고 자료
 
