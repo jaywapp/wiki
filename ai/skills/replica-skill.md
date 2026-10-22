@@ -9,7 +9,7 @@ tags:
   - reverse-engineering
   - app-clone
 source: https://github.com/Jakeschincariol/replica-skill
-updated: 2026-10-07
+updated: 2026-10-22
 ---
 
 # Replica Skill
@@ -315,3 +315,11 @@ Replica Skill의 핵심 가치는 "AI에게 앱을 복제시키는 프롬프트"
 - `replica-diff/SKILL.md`
 - `replica-entrepreneur/SKILL.md`
 - `replica-deploy/SKILL.md`
+
+
+## 2026-10-22 재검토
+
+- 기존 문서의 11개 Skill, 파일 기반 산출물 전달, parity 검증, clean-room 제한 분석을 유지한다.
+- 도입 권고: 전체 워크플로우 일괄 채택보다 `replica-recon`, `replica-entrepreneur`, `replica-test`의 단계적 PoC를 우선한다.
+- 특히 경쟁 앱의 기능 목록과 사용자 불만을 구조화하고, 구현 후 회귀 테스트를 연결하는 데 활용 가치가 있다.
+- 저장소의 최신 활동량 및 성숙도 수치는 별도 실시간 검증 전까지 기존 조사 시점의 기록으로 취급한다.
