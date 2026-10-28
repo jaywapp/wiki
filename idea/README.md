@@ -12,6 +12,7 @@
 
 | 문서 | Status | Version | Updated | Tags |
 |---|---|---:|---|---|
+| [짬 — 2011년 군 생활 육성 시뮬레이션](jjam.md) | Planning | 0.1 | 2026-10-28 | jjam, military, simulation, nostalgia, 2011, korean-army, game, leaderboard, mvp |
 | [고정지출 알림 앱](fixed-expense-notification-app.md) | Planning | 0.1 | 2026-10-28 | android, personal-finance, fixed-expenses, salary, budget, notification, mvp |
 | [Task Token Meter](task-token-meter.md) | Idea | 0.1 | 2026-09-19 | ai, claude-code, codex, token, harness, developer-tools, observability |
 | [Claude Workspace Orchestrator](claude-workspace-orchestrator.md) | Idea | 0.1 | 2026-09-04 | claude-code, multi-agent, orchestrator, workspace, automation, deployment |
