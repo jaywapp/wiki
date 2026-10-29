@@ -237,3 +237,6 @@ Run에 **task_id / attempt_id / child_id / p4_client / base_revision / cl / tool
 5. 일반적 Prompt Compression, RAG Re-ranking, Model Routing, Tool Output Summarization, Subagent Context Isolation은 오늘 새로운 소스·차별적 실험이 확인된 것만 기록했다. 검증되지 않은 절감률을 만들어 채우지 않았다.
 
 **오늘 판정:** **구조·내구성·Latency에서 의미 있는 변경 다수 확인, 신규 청구 비용/토큰 절감 정량 실측은 없음.** 우선 재현은 **ToolSet Digest + Cross-thread Cache Prefix + Host Output Budget + Conditional No-model Polling**, 그 다음 **P4 Durable Ledger/Guardian Approval** 순으로 추천한다.
+
+
+<!-- republished: 2026-10-30T07:39+09:00 -->
