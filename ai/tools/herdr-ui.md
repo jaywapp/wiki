@@ -45,6 +45,32 @@ Herdr 본체를 먼저 설치한다: https://herdr.dev/
 ## 활용 판단
 여러 Claude Code/Codex 등 CLI 에이전트를 병렬 운용하는 개인·소규모 개발팀에 PoC 가치가 높다. 기존 Herdr를 실행 계층으로 사용한다면 UI는 관제·리뷰 계층으로 적합하다. Windows/Enterprise에서는 WSL 연결, endpoint protection, 설치 권한, 사내 Git/Proxy 및 원격 접근 정책을 검증한다. Herdr UI를 별도 중앙 서버형 팀 대시보드로 간주해서는 안 된다.
 
+
+## Orca와 비교 (기존 로컬 프로젝트 기준)
+
+여기서 Orca는 일반적인 동명 외부 제품이 아니라 기존 Wiki에서 언급한 `D:\\work\\orca` 프로젝트다. 원본 코드를 직접 열람하거나 실행한 검증은 하지 않았으며, [Workspace Harness 분석](../../docs/workspace-harness-analysis.md)과 [설계](../../docs/workspace-harness-design.md)에 기록된 README 관찰만을 사용한다.
+
+| 평가 기준 | Herdr UI + Herdr | Orca (기존 Wiki에 기록된 범위) |
+|---|---|---|
+| 핵심 역할 | 지속 터미널 세션의 네이티브 GUI 관제·리뷰 | 작업 추적·후속 지시·완료 알림 중심의 재사용 후보 |
+| 세션 소유 | Herdr 데몬이 PTY·프로세스 유지 | 실행 아키텍처 미확인 |
+| Agent 상태 | GUI에 상태 표시 | 작업 추적 언급, 상태 감지 방식 미확인 |
+| 후속 지시 | 터미널 및 GUI에서 에이전트와 상호작용 | Steering 기능 README에 언급 |
+| Git Worktree | 지원 | README에 지원 언급 |
+| 완료 알림 | UI의 상태·대기 표시 | README에 알림 기능 언급 |
+| Diff 리뷰 | Side-by-side Diff 및 라인 피드백 | 미확인 |
+| 세션 복구·원격 접속 | 데몬 기반 유지·재접속, Teleport 등 | 미확인 |
+| Windows | 네이티브 빌드 제공, 일부 SSH 기능 제약 | 실행 검증 필요 |
+| 검증 수준 | 공개 공식 설명 및 소스 구조 기준 | 기존 로컬 README 요약만 확인, 설치/동작 검증 없음 |
+
+### 권장 판단
+- 여러 CLI 코딩 에이전트의 **실행 세션 관제와 코드 리뷰**가 주목적이라면 Herdr UI가 직접적인 후보이다.
+- **작업 추적·Steering·완료 알림**이 핵심이면 Orca의 실제 API와 데이터 모델을 먼저 검증해야 한다.
+- 병행 운영은 가능한 통합 시나리오일 뿐 검증된 통합이 아니다. Orca가 작업 오케스트레이션을 맡고 Herdr가 실행 계층을 맡는 구성을 검토하려면 작업 ID·세션 ID 매핑, 중복 Worktree 관리, 권한 경계, 재시작 복구를 실험해야 한다.
+- 우선 PoC: 동일 Windows 환경에서 에이전트 2개를 실행해 상태 인식, 후속 지시, 알림, Diff, 세션 복구, Worktree 충돌을 측정한다.
+
+**잠정 결론:** Herdr UI는 검증 가능한 공개 GUI 제품이며 Orca는 내부 프로젝트의 기능·실행 수준을 추가 확인해야 하는 비교 대상이다. 성능·안정성·우열을 확정할 근거는 부족하다.
+
 ## 관련 Wiki
 - [Herdr 본체](./herdr.md) — 지속 세션·Agent Runtime의 구조와 운영
 
