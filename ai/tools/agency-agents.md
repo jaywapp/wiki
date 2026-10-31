@@ -3,7 +3,7 @@ title: Agency Agents
 category: tools
 tags: [AX, AI-Agent, Claude-Code, Codex, Multi-Agent, Agent-Prompt]
 source: https://github.com/msitarzewski/agency-agents
-updated: 2026-10-22
+updated: 2026-11-01
 ---
 
 # Agency Agents
@@ -192,3 +192,23 @@ Agency Agents의 핵심 가치는 '279개의 에이전트가 있다'는 숫자�
 - Claude Code integration: https://github.com/msitarzewski/agency-agents/tree/main/integrations/claude-code
 - Workflow examples: https://github.com/msitarzewski/agency-agents/tree/main/examples
 - Official app releases: https://github.com/msitarzewski/agency-agents-app/releases
+
+
+## 2026-11-01 재조사: 최신 원본 대조
+
+### 확인된 사항
+- 공식 README는 역할 정의의 Identity, Mission, Workflow, Deliverables, Success Metrics를 명시한다.
+- Windows/macOS/Linux용 별도 데스크톱 앱을 안내하며 Claude Code, Cursor, Codex, Gemini 등의 설치를 지원한다고 밝힌다.
+- `scripts/convert.sh` 및 `scripts/install.sh`가 있으며 `--division`, `--agent`, `--dry-run` 선택 설치를 제공한다.
+- 프로젝트는 **역할 카탈로그 및 변환/설치 계층**으로, 자체 orchestration runtime·shared memory·자동 복구 엔진을 제공한다고 볼 근거는 없다.
+- 기존 문서의 279개/14개 도구 수치는 과거 특정 시점 수치이며 현재 정확한 수량으로 인용하지 않는다.
+
+### 실무 평가 보강
+- **바로 적용 가능**: Architect, Implementer, Reviewer, QA 등 핵심 역할의 산출물·성공 기준을 내부 템플릿에 반영.
+- **PoC 가치 있음**: Task Router → 필요한 역할만 로드 → Worker → 독립 Reviewer. 동일 작업에서 품질·토큰·호출 비용을 비교.
+- **주의**: 역할 프롬프트가 많다고 전문성이 자동 향상되지 않으며, 외부 에이전트 지침의 명령·권한·비밀정보 취급 정책은 도입 전 감사가 필요.
+- Trail Code와는 상보적이다. Agency Agents는 **누가 어떻게 일하는가**, Trail Code는 **코드와 팀이 무엇을 알고 있는가**를 보완한다.
+
+### 최신 확인 출처
+- https://github.com/msitarzewski/agency-agents/blob/main/README.md
+- https://github.com/msitarzewski/agency-agents-app/releases
