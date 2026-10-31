@@ -1,12 +1,12 @@
 ---
-title: AI 웹디자인 레퍼런스 사이트 5선
+title: AI 웹디자인 레퍼런스 및 구현 워크플로
 category: design
 tags: [web-design, inspiration, ai-design, landing-page, typography, motion]
 source: "Threads 게시물 스크린샷 (textura.eu)"
-updated: 2026-10-24
+updated: 2026-11-01
 ---
 
-# AI 웹디자인 레퍼런스 사이트 5선
+# AI 웹디자인 레퍼런스 및 구현 워크플로
 
 ## 핵심 요약
 Threads 계정 textura.eu의 추천 게시물에 소개된 웹디자인 참고 사이트 다섯 곳을 목적별로 정리한다. 아래 기능 설명은 **게시물에 기재된 주장**이며 각 서비스의 최신 기능, 가격, 라이선스는 별도 확인이 필요하다.
@@ -38,3 +38,47 @@ Threads 계정 textura.eu의 추천 게시물에 소개된 웹디자인 참고 �
 - https://landdding.com
 - https://fontinlogo.com
 - https://60fps.design
+
+## 추가 레퍼런스 10선 및 AI 구현 워크플로 (2026-11-01)
+
+아래는 사용자가 제공한 사이트 설명을 바탕으로 정리한 용도별 가이드다. 서비스별 현재 요금제·코드 라이선스·리브랜딩 상태는 개별 검증이 필요하다.
+
+| 사이트 | 주 용도 | URL |
+| --- | --- | --- |
+| Awwwards | 수상작, 3D, 모션 디자인 | https://www.awwwards.com |
+| Landbook | SaaS 및 스타트업 랜딩페이지 | https://land-book.com |
+| Lapa Ninja | 업종별 랜딩페이지와 UI | https://www.lapa.ninja |
+| One Page Love | 원페이지 사이트 | https://onepagelove.com |
+| Recent (구 Godly로 소개됨) | 실험적 웹디자인 | https://recent.design |
+| SiteInspire | 미니멀 기업·브랜드 웹사이트 | https://www.siteinspire.com |
+| Dribbble | 버튼·카드·대시보드 UI 시안 | https://dribbble.com |
+| Behance | 브랜드 및 웹디자인 프로젝트 사례 | https://www.behance.net |
+| 21st.dev | React UI 컴포넌트 구현 참고 | https://21st.dev |
+| Uiverse | CSS 기반 버튼·로딩·인터랙션 코드 | https://uiverse.io |
+
+### 추천 절차
+1. Awwwards·Landbook에서 산업군과 시각 방향을 선정한다.
+2. 선택한 URL의 레이아웃, 타이포그래피, 색상, 여백, 스크롤·애니메이션을 분석한다.
+3. 원본 로고·이미지·문구를 복제하지 않고 고유 콘텐츠와 디자인 토큰을 설계한다.
+4. React·Tailwind CSS로 반응형 컴포넌트를 구현한다. 21st.dev·Uiverse의 코드는 라이선스와 의존성을 확인한 후 활용한다.
+5. Playwright 등 실제 브라우저에서 데스크톱·모바일 화면, 키보드 접근성, reduced-motion, 성능을 검증한다.
+
+### Claude Code / Codex 재사용 프롬프트
+
+```text
+다음 레퍼런스 웹사이트의 디자인을 분석해 독창적인 홈페이지를 제작해 줘.
+레퍼런스 URL: [주소 입력]
+1. 레이아웃, 타이포그래피, 색상, 여백 분석
+2. 스크롤 효과와 애니메이션 분석
+3. 모바일 반응형 구조 설계
+4. React, Tailwind CSS로 구현
+5. 원본 로고, 이미지, 문구는 복제하지 않기
+6. 실제 브라우저에서 모바일과 PC 검증
+레퍼런스의 디자인 원칙을 참고하되 독창적인 결과물로 완성해 줘.
+```
+
+### 검증 및 주의
+- 본 추가 항목은 사용자 제공 URL·설명에 기반한다. 각 사이트의 최신 운영 상태와 상용 라이선스는 독립 검증하지 않았다.
+- 구현 코드를 복사하기 전에 출처·라이선스·패키지 보안·접근성을 확인한다.
+- 기존 Godly 링크와 Recent의 관계는 사용자 설명이며 별도 공식 확인이 필요하다.
+- 정리일: 2026-11-01.
