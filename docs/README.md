@@ -1,5 +1,7 @@
 # wiki 문서 규칙
 
+- [제목 자동 포커스 테두리](programmatic-heading-focus.md) — 자동 초점과 버튼의 키보드 표시를 구분하는 수정·검증
+
 - 웹 리더 실행 안정성: [분석](runtime-hardening-analysis.md) · [설계](runtime-hardening-design.md) · [작업](runtime-hardening-tasks.md)
 
 ## 위키 웹 리더
