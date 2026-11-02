@@ -20,6 +20,7 @@
 - [deep-research/](deep-research/) — 심층 리서치
 - [idea/](idea/README.md) — 서비스·기능·업무 개선·개발 프로젝트 아이디어 백로그
 - [React Native Android APK 업데이트 검증](docs/react-native-android-update-notes.md) — API별 서명 확인, 접근성 busy 상태, 릴리즈 자산과 검증 근거
+- [Railway 콘솔 배포 검증](docs/railway-console-deployment.md) — HTTPS 콘솔 권한, SQLite 백업·데이터 보존, 실제 HTTP 확인
 
 ## AX / AI
 

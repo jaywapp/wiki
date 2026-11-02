@@ -1,5 +1,7 @@
 # wiki 문서 규칙
 
+- [Railway 콘솔 배포 검증](railway-console-deployment.md) — HTTPS 콘솔을 통한 SQLite 백업, 배포와 데이터 보존 확인
+
 - 웹 리더 실행 안정성: [분석](runtime-hardening-analysis.md) · [설계](runtime-hardening-design.md) · [작업](runtime-hardening-tasks.md)
 
 ## 위키 웹 리더
