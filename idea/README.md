@@ -12,7 +12,7 @@
 
 | 문서 | Status | Version | Updated | Tags |
 |---|---|---:|---|---|
-| [Google Sheets 기반 모임 관리 서비스](google-sheets-group-management.md) | Planning | 0.2 | 2026-11-06 | google-sheets, group-management, membership, accounting, attendance, serverless, subscription, ai-vision, mvp |
+| [팀프레드 (TeamPread) — Google Sheets 기반 모임 관리](teampread.md) | Planning | 0.3 | 2026-11-06 | teampread, google-sheets, group-management, membership, accounting, attendance, serverless, subscription, ai-vision, mvp |
 | [짬 — 2011년 군 생활 육성 시뮬레이션](jjam.md) | Planning | 0.1 | 2026-10-28 | jjam, military, simulation, nostalgia, 2011, korean-army, game, leaderboard, mvp |
 | [고정지출 알림 앱](fixed-expense-notification-app.md) | Planning | 0.1 | 2026-10-28 | android, personal-finance, fixed-expenses, salary, budget, notification, mvp |
 | [Task Token Meter](task-token-meter.md) | Idea | 0.1 | 2026-09-19 | ai, claude-code, codex, token, harness, developer-tools, observability |
