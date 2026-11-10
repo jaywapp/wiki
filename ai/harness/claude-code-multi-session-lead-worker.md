@@ -9,12 +9,14 @@ tags:
   - windows-terminal
   - troubleshooting
 source: station 허브 파일럿 (2026-11-09)
-updated: 2026-11-09
+updated: 2026-11-11
 ---
 
 # Claude Code 다중 세션 운영 (팀장·담당자)
 
 station 허브(`D:\station`)에서 Claude Code 세션을 **팀장(lead)** 과 **담당자(worker)** 로 나눠 운영한 방식과, 파일럿에서 확인한 함정을 정리한다. 모든 내용은 2026-11-09 파일럿에서 직접 확인한 것이다.
+
+> 2026-11-11: station 허브는 이 방식을 걷어내고 과업 세션 방식으로 바꿨다. 아래 내용은 기록이고, 이유는 문서 끝 "station 허브에서 걷어낸 이유"에 있다.
 
 ## 구조
 
@@ -76,8 +78,43 @@ Claude 세션 안에서 연 탭은 `CLAUDE_CODE_CHILD_SESSION` 등의 환경 변
 | `--continue` 이어받기 | 통과 |
 | busy 중 메시지 큐잉 | 미검증(실사용에서 관찰 필요) |
 
+## station 허브에서 걷어낸 이유 (2026-11-11)
+
+하루 써 본 뒤 허브에서는 이 방식을 걷어냈다. 세션 기록으로 확인한 사실은 다음과 같다.
+
+- 실행 중이던 허브 세션 5개가 모두 허브 루트에서 인자 없이 `claude`로 시작됐다. 실행 스크립트로 띄운 팀장 세션은 파일럿 한 번뿐이었다.
+- 세션 이름은 `lead-<role>`이 아니라 과업마다 사용자가 직접 붙였다.
+- 위임은 담당자 세션이 아니라 세션 안 서브에이전트로 했다. 담당자 세션 기록이 남은 레포는 3곳(세션 5개)이고 그중 둘은 파일럿이었다.
+- 세션마다 MCP 서버를 따로 띄워 1.2~1.4GB를 쓴다. 담당자를 띄우면 그만큼 더 든다. 여유 메모리가 1~3GB인 머신에서는 부담이 컸다.
+
+### 대신 택한 방식
+
+- 과업 하나를 허브 세션 하나가 끝까지 맡는다. 허브 루트에서 `claude`로 시작하고, 실행 스크립트와 역할 프롬프트는 두지 않는다.
+- 규칙은 허브 `CLAUDE.md` 한 곳에 둔다. 특정 스크립트로 띄운 세션에만 규칙이 적용되던 문제가 없어진다.
+- 위임은 세션 안 서브에이전트로 하고, 커밋·push·PR은 세션이 한다.
+- "레포 하나 = 작업자 하나" 보장이 없어지므로, 레포를 고치기 전에 `git status`를 보고 다른 과업의 변경이 있으면 worktree에서 작업한다.
+- 허브에서 잘 쓰지 않는 MCP 서버(telegram 플러그인, chrome-devtools)를 기본으로 껐다. 세션당 약 0.5GB가 줄어든다(추정).
+
+### 프로젝트 단위로 MCP 서버를 끄는 방법
+
+두 방법 모두 헤드리스 세션(`claude -p ... --output-format stream-json --verbose`)의 `init` 이벤트에서 확인했다.
+
+| 대상 | 끄는 곳 | 확인한 결과 |
+|---|---|---|
+| 플러그인이 띄우는 서버 | 프로젝트 `.claude/settings.json`의 `enabledPlugins`에 `"<플러그인>@<마켓플레이스>": false` | 플러그인과 그 MCP 서버가 목록에서 사라짐 |
+| 사용자 범위 MCP 서버 | `~/.claude.json`의 `projects["<경로>"].disabledMcpServers`에 서버 이름 | 상태가 `disabled`로 나옴 |
+
+- `~/.claude.json`은 실행 중인 세션이 다시 쓰는 파일이다. 직접 고친 뒤 값이 남아 있는지 다시 확인한다.
+- 설정을 바꿔도 이미 떠 있는 세션에는 적용되지 않는다. 필요한 세션에서는 `/mcp`에서 켠다.
+
+### 교훈
+
+- 새 운영 구조를 만들기 전에 실제 세션 기록(어디서 어떻게 시작했는지, 무엇으로 위임했는지)을 먼저 본다.
+- 위 "함정과 해결"은 다중 세션을 다시 쓸 때 그대로 유효하다.
+
 ## 관련 문서
 
-- station 허브 `docs/workflow.md` — 운영 가이드
-- station 허브 `docs/specs/2026-11-09-orchestrator-workflow-design.md` — 설계 배경
+- station 허브 `docs/workflow.md` — 운영 가이드(2026-11-11부터 과업 세션 기준)
+- station 허브 `docs/specs/2026-11-09-orchestrator-workflow-design.md` — 팀장·담당자 설계 배경(대체됨)
+- station 허브 `docs/specs/2026-11-10-task-session-workflow-design.md` — 과업 세션 방식 설계
 - [Claude Code Agent Teams](claude-code-agent-teams.md)
