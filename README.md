@@ -30,6 +30,7 @@
 - [ai/tips/](ai/tips/) — 설정, 운영, 토큰·비용 최적화, 문제 해결
 - [ai/harness/](ai/harness/) — Claude/Codex 등 모델·에이전트 실행 하니스와 워크플로우
 - [Claude Code 다중 세션 운영](ai/harness/claude-code-multi-session-lead-worker.md) — 팀장·담당자 세션 구조, wt 실행 패턴, 환경 변수·신뢰·메시지 함정
+- [station 허브 조립 설명서](ai/harness/station-hub-first-day-guide.md) — 허브에서 처음 일하는 사람용. 폴더 구성, 금지 사항, 과업 세션 8단계를 그림과 순서로 정리
 - [ai/tools/](ai/tools/) — 에이전트 도구·MCP·프레임워크·오픈소스 분석
 - [ai/skills/](ai/skills/) — Agent Skill 및 작업 능력 확장
 - [ai/research/](ai/research/) — 비교·검토·심층 분석
